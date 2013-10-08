@@ -167,8 +167,9 @@ public:
 	bool isActive() const noexcept;
 	bool isActive(const string& aHubUrl) const noexcept;
 
-	void lockRead() noexcept { cs.lock_shared(); }
-	void unlockRead() noexcept { cs.unlock_shared(); }
+	//void lockRead() noexcept { cs.lock_shared(); }
+	//void unlockRead() noexcept { cs.unlock_shared(); }
+	SharedMutex& getCS() { return cs; }
 
 	const Client::List& getClients() const noexcept { return clients; }
 	void getOnlineClients(StringList& onlineClients) const noexcept;

@@ -48,8 +48,10 @@ WindowSearch::WindowSearch(const std::string &str):
 
     // hidden column for identifying the rows
     insert_column(new display::Column("User-TTH"));
+	insert_column(new display::Column("User", 10, 15, 30));
     insert_column(new display::Column("Slots", 6, 7, 8));
-    insert_column(new display::Column("Size", 10, 10, 10));
+    insert_column(new display::Column("Size", 11, 11, 15));
+	insert_column(new display::Column("Date", 11, 11, 11));
     insert_column(new display::Column("File name", 50, 200, 200));
     resize();
 
@@ -100,16 +102,14 @@ void WindowSearch::handleMatchQueue() {
 	}
 }
 
-SearchResultPtr WindowSearch::get_result()
-{
-    SearchResultPtr result;
-    std::string cid = get_text(0, get_selected_row());
-    std::string::size_type n = cid.find('-');
-    std::string tth = cid.substr(n+1);
+SearchResultPtr WindowSearch::get_result() {
+    auto cid = get_text(0, get_selected_row());
+    auto n = cid.find('-');
+    auto tth = cid.substr(n+1);
     cid = cid.substr(0, n);
 
     for(unsigned int i=0; i<m_results.size(); ++i) {
-        result = m_results[i];
+        auto result = m_results[i];
         if(cid == result->getUser().user->getCID().toBase32() &&
            tth == result->getTTH().toBase32())
         {
@@ -164,7 +164,8 @@ void WindowSearch::search(const std::string &str)
     set_name("Search:" + m_search);
 
     m_lastSearch = GET_TICK();
-    SearchManager::getInstance()->search(m_search, 0, SearchManager::TYPE_ANY, SearchManager::SIZE_DONTCARE, Util::toString(Util::rand()), Search::MANUAL);
+	token = Util::toString(Util::rand());
+	SearchManager::getInstance()->search(m_search, 0, SearchManager::TYPE_ANY, SearchManager::SIZE_DONTCARE, token, Search::MANUAL);
 }
 
 void WindowSearch::handle_line(const std::string &line)
@@ -273,9 +274,8 @@ void WindowSearch::on(SearchManagerListener::SR, const SearchResultPtr& result)
 
 std::string escape_and_get_filename(const std::string &str)
 {
-    std::string temp = strings::escape(Util::getFileName(str));
-    std::string::size_type i = temp.rfind("\\");
-    return (i != std::string::npos) ? temp.substr(i + 1) : temp;
+    auto temp = strings::escape(Util::getFileName(str));
+	return Util::toAdcFile(temp);
 }
 
 void WindowSearch::add_result(const SearchResultPtr& result)
@@ -283,16 +283,22 @@ void WindowSearch::add_result(const SearchResultPtr& result)
     if(matches(result)) {
         int row = insert_row();
         set_text(0, row, result->getUser().user->getCID().toBase32() + "-" + result->getTTH().toBase32());
-        set_text(1, row, utils::to_string(result->getFreeSlots())
+		set_text(1, row, Util::listToString(ClientManager::getInstance()->getNicks(result->getUser())));
+        set_text(2, row, utils::to_string(result->getFreeSlots())
             + "/" + utils::to_string(result->getSlots()));
-        set_text(2, row, Util::formatBytes(result->getSize()));
-        set_text(3, row, escape_and_get_filename(result->getFileName()));
+        set_text(3, row, Util::formatBytes(result->getSize()));
+		set_text(4, row, Util::getDateTime(result->getDate()));
+        set_text(5, row, escape_and_get_filename(result->getFileName()));
     }
 }
 
 bool WindowSearch::matches(const SearchResultPtr& result)
 {
-    std::string filename = utils::tolower(result->getFileName());
+	if (!result->getUser().user->isNMDC()) {
+		return result->getToken() == token;
+	}
+
+    auto filename = utils::tolower(result->getFileName());
 
     if(!utils::find_in_string(filename, m_searchWords.begin(), m_searchWords.end())) {
         return false;
@@ -402,7 +408,9 @@ std::string WindowSearch::get_infobox_line(unsigned int n)
                 << " %21Slots:%21 " << result->getFreeSlots() << "/" << result->getSlots();
             break;
         case 3:
-            ss << "%21Hub:%21 " << result->getUser().hint << " " << Util::listToString(ClientManager::getInstance()->getHubNames(result->getUser()));
+			ss << "%21Hub:%21 " << std::left << std::setw(18) 
+				<< Util::listToString(ClientManager::getInstance()->getHubNames(result->getUser()))
+				<< " %21Date:%21 " << Util::getDateTime(result->getDate());
             break;
         case 4:
         {

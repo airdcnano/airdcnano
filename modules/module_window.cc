@@ -82,7 +82,7 @@ public:
 
     void window_callback() {
 		if (events::args() == 0) {
-			display::Manager::get()->cmdMessage("Usage: /window <close|move|prev|next|[0-9]>");
+			display::Manager::get()->cmdMessage("Usage: /window <list|close|move|prev|next|[0-X]>");
 			return;
 		}
 
@@ -96,13 +96,13 @@ public:
 			close();
         } else if (command == "move") {
 			if (parser.args() < 2) {
-				display::Manager::get()->cmdMessage("Usage: /window move <new pos>");
+				mger->cmdMessage("Usage: /window move <new pos>");
 				return;
 			}
 
 			auto newPos = Util::toInt(parser.arg(1));
 			if (newPos < 1 || newPos > static_cast<int>(mger->size())) {
-				display::Manager::get()->cmdMessage("Invalid position");
+				mger->cmdMessage("Invalid position");
 				return;
 			}
 
@@ -112,15 +112,18 @@ public:
 			} else if (current < p) {
 				std::rotate(current, current+1, p + 1);
 			}
-			display::Manager::get()->set_current(mger->begin() + newPos-1);
-		} else if (command == "next" || command == "prev") {
-			if (command == "next")
-				current = (current == mger->end() - 1 ? mger->begin() : current + 1);
-			else
-				current = (current == mger->begin() ? mger->end() - 1 : current - 1);
-
-			mger->set_current(current);
-		} else if (!command.empty() && (Util::toInt(command) >= 0 && Util::toInt(command) <= 9)) {
+			mger->set_current(mger->begin() + newPos - 1);
+		} else if (command == "next") {
+			mger->next();
+		} else if(command == "prev") {
+			mger->prev();
+		} else if (command == "list") {
+			mger->cmdMessage("Open windows:");
+			int pos = 1;
+			for (auto i = mger->begin(); i != mger->end(); ++i, ++pos) {
+				mger->cmdMessage(Util::toString(pos) + ": " + (*i)->get_name());
+			}
+		} else if (!command.empty() && (Util::toInt(command) >= 0 && Util::toInt(command) <= static_cast<int>(mger->size()))) {
 			auto pos = Util::toInt(command) - 1;
 			if (pos <= static_cast<int>(mger->size())) {
 				auto newCurrent = mger->begin() + pos;

@@ -36,56 +36,56 @@ using namespace dcpp;
 
 namespace modules {
 
-	class Away : private TimerManagerListener {
-	public:
-		HelpHandler::CommandList commands = {
-			{ "away", std::bind(&Away::handleAway, this) }
-		};
-
-		HelpHandler help;
-
-		Away() : help(&commands, "Away mode") {
-			events::add_listener("key pressed",
-				std::bind(&Away::key_pressed, this));
-			events::add_listener("client created", [this] { TimerManager::getInstance()->addListener(this); });
-			events::add_listener("command quit", [this] { TimerManager::getInstance()->removeListener(this); });
-		}
-
-		void handleAway() {
-			if (AirUtil::getAway()) {
-				AirUtil::setAway(AWAY_OFF);
-				display::Manager::get()->cmdMessage(STRING(AWAY_MODE_OFF));
-			} else {
-				AirUtil::setAway(AWAY_MANUAL);
-
-				ParamMap sm;
-				display::Manager::get()->cmdMessage(STRING(AWAY_MODE_ON) + " " + AirUtil::getAwayMessage(SETTING(DEFAULT_AWAY_MESSAGE), sm));
-			}
-		}
-
-		void key_pressed() {
-			lastTick = GET_TICK();
-		}
-
-		~Away() {
-
-		}
-
-		void on(TimerManagerListener::Second, uint64_t aTick) noexcept{
-			checkAwayIdle(aTick);
-		}
-
-		void checkAwayIdle(uint64_t aTick) {
-			if (SETTING(AWAY_IDLE_TIME) && (AirUtil::getAwayMode() <= AWAY_IDLE)) {
-				bool awayIdle = (AirUtil::getAwayMode() == AWAY_IDLE);
-				if ((static_cast<int>(aTick - lastTick) > SETTING(AWAY_IDLE_TIME) * 60 * 1000) ^ awayIdle) {
-					awayIdle ? AirUtil::setAway(AWAY_OFF) : AirUtil::setAway(AWAY_IDLE);
-				}
-			}
-		} 
-	private:
-		uint64_t lastTick = 0;
+class Away : private TimerManagerListener {
+public:
+	HelpHandler::CommandList commands = {
+		{ "away", std::bind(&Away::handleAway, this) }
 	};
+
+	HelpHandler help;
+
+	Away() : help(&commands, "Away mode") {
+		events::add_listener("key pressed",
+			std::bind(&Away::key_pressed, this));
+		events::add_listener("client created", [this] { TimerManager::getInstance()->addListener(this); });
+		events::add_listener("command quit", [this] { TimerManager::getInstance()->removeListener(this); });
+	}
+
+	void handleAway() {
+		if (AirUtil::getAway()) {
+			AirUtil::setAway(AWAY_OFF);
+			display::Manager::get()->cmdMessage(STRING(AWAY_MODE_OFF));
+		} else {
+			AirUtil::setAway(AWAY_MANUAL);
+
+			ParamMap sm;
+			display::Manager::get()->cmdMessage(STRING(AWAY_MODE_ON) + " " + AirUtil::getAwayMessage(SETTING(DEFAULT_AWAY_MESSAGE), sm));
+		}
+	}
+
+	void key_pressed() {
+		lastTick = GET_TICK();
+	}
+
+	~Away() {
+
+	}
+
+	void on(TimerManagerListener::Second, uint64_t aTick) noexcept{
+		checkAwayIdle(aTick);
+	}
+
+	void checkAwayIdle(uint64_t aTick) {
+		if (SETTING(AWAY_IDLE_TIME) && (AirUtil::getAwayMode() <= AWAY_IDLE)) {
+			bool awayIdle = (AirUtil::getAwayMode() == AWAY_IDLE);
+			if ((static_cast<int>(aTick - lastTick) > SETTING(AWAY_IDLE_TIME) * 60 * 1000) ^ awayIdle) {
+				awayIdle ? AirUtil::setAway(AWAY_OFF) : AirUtil::setAway(AWAY_IDLE);
+			}
+		}
+	} 
+private:
+	uint64_t lastTick = 0;
+};
 
 } // namespace modules
 

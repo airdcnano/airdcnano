@@ -28,6 +28,7 @@
 #include <display/manager.h>
 
 #include <client/HashManager.h>
+#include <client/QueueManager.h>
 #include <client/ShareManager.h>
 
 #include <input/help_handler.h>
@@ -47,18 +48,17 @@ namespace modules {
 
 		HelpHandler help;
 		Share() : help(&commands, "Share") {
-			
-			/*events::add_listener("command refresh",
-				std::bind(&Share::handleRefresh, this));
 
-			events::add_listener("command share",
-				std::bind(&Share::handleShare, this));
+			events::add_listener("command allow", std::bind(&Share::handleAllow, this));
+		}
 
-			events::add_listener("command shareprofile",
-				std::bind(&Share::handleProfile, this));
+		void handleAllow() {
+			if (events::args() == 0) {
+				log("Usage: /allow <bundle>");
+				return;
+			}
 
-			events::add_listener("command optimizedb", [] { HashManager::getInstance()->startMaintenance(false); });
-			events::add_listener("command verifydb", [] { HashManager::getInstance()->startMaintenance(true); });*/
+			QueueManager::getInstance()->shareBundle(events::arg<string>(0));
 		}
 
 		void handleProfile() {

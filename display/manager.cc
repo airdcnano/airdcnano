@@ -31,6 +31,7 @@
 #include <utils/utils.h>
 #include <core/log.h>
 #include <core/events.h>
+#include <utils/strings.h>
 
 #include <ui/window_hub.h>
 #include <ui/window_privatemessage.h>
@@ -119,16 +120,10 @@ void Manager::handle_key()
         events::stop();
     }
     else if(key == KEY_LEFT) {
-        if(m_current == m_windows->begin())
-            set_current(m_windows->end()-1);
-        else
-            set_current(--m_current);
+		prev();
     }
     else if(key == KEY_RIGHT) {
-        if(m_current == m_windows->end()-1)
-            set_current(m_windows->begin());
-        else
-            set_current(++m_current);
+		next();
     }
 }
 
@@ -166,13 +161,14 @@ void Manager::resize()
 }
 
 void Manager::cmdMessage(const std::string& aLine) {
+	auto msg = strings::escape(aLine);
 	auto it = get_current();
 	if ((*it)->get_type() == display::TYPE_HUBWINDOW) {
-		static_cast<ui::WindowHub*>(*it)->add_line(display::LineEntry(aLine));
+		static_cast<ui::WindowHub*>(*it)->add_line(display::LineEntry(msg));
 	} else if ((*it)->get_type() == display::TYPE_PRIVMSG) {
-		static_cast<ui::WindowPrivateMessage*>(*it)->add_line(display::LineEntry(aLine));
+		static_cast<ui::WindowPrivateMessage*>(*it)->add_line(display::LineEntry(msg));
 	} else {
-		core::Log::get()->log(aLine);
+		core::Log::get()->log(msg);
 	}
 }
 
@@ -194,9 +190,18 @@ void Manager::remove(display::Window *window)
         set_current(--m_current);
 }
 
+void Manager::next() {
+	auto newCur = m_current == m_windows->end() - 1 ? m_windows->begin() : m_current + 1;
+	set_current(newCur);
+}
+
+void Manager::prev() {
+	auto newCur = m_current == m_windows->begin() ? m_windows->end() - 1 : m_current - 1;
+	set_current(newCur);
+}
+
 Windows::iterator Manager::find(display::Type aType, const std::string& aID)
 {
-    using std::placeholders::_1;
     utils::Lock lock(m_mutex);
 	return std::find_if(m_windows->begin(), m_windows->end(), [&](const display::Window* aWindow) { return aWindow->getID() == aID && aWindow->get_type() == aType; });
 }

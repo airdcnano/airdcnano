@@ -111,6 +111,7 @@ private:
 
 	void handleGetList();
 	void handleMatchQueue();
+	std::string token;
 };
 
 } // namespace ui

@@ -32,7 +32,7 @@ namespace ui {
 WindowLog::WindowLog() : ScrolledWindow("log", display::TYPE_LOGWND)
 {
     set_title("Logger window");
-    set_name("nanodc");
+    set_name("airdcnano");
     set_state(display::STATE_IS_ACTIVE);
     std::function<void (const std::string &, core::MessageType)> listener;
     listener = std::bind(&WindowLog::on_log, this,

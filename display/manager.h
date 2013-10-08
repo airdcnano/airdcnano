@@ -52,6 +52,10 @@ public:
     Windows::iterator begin() { return m_windows->begin(); }
     Windows::iterator end() { return m_windows->end(); }
 
+	/** Next/Prev. */
+	void next();
+	void prev();
+
     /** Redraw the screen. */
     void redraw();
 

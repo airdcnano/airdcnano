@@ -36,6 +36,7 @@
 
 #include <client/FavoriteManager.h>
 #include <client/ShareManager.h>
+#include <client/StringTokenizer.h>
 
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/cxx11/copy_if.hpp>
@@ -170,13 +171,14 @@ void WindowHub::on(TimerManagerListener::Second, uint64_t)
 }
 
 void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
+	bool myPM = aMessage.from->getUser() == ClientManager::getInstance()->getMe();
+
 	utils::Lock l(m_mutex);
 
-	std::string temp(aMessage.text);
-	boost::replace_all(temp, "\n", " ");
-	temp = strings::escape(temp);
+	auto text(aMessage.text);
+	//boost::replace_all(temp, "\n", " ");
+	text = strings::escape(text);
 
-	//auto from = HintedUser(aMessage.from->getUser(), aMessage.from->getHubUrl());
 	auto nick = aMessage.from->getIdentity().getNick();
 
 	// don't show the message if the nick is ignored
@@ -185,17 +187,12 @@ void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
 	if (matches)
 		return;
 
-	display::LineEntry::Type flag = display::LineEntry::MESSAGE;
+	auto flag = display::LineEntry::MESSAGE;
 
-	/* XXX: this is a bug in core?
-	* m_client->getMyNick() returns the real nick
-	* user.getUser()->getFirstNick() returns SETTING(NICK) */
-	std::string realNick = m_client->getMyNick();
-	std::string nick2 = SETTING(NICK);
-	if (nick2 == nick || nick == realNick) {
+	if (myPM) {
 		/* bold my own nick */
-		nick = "%21" + realNick + "%21";
-	} else if (utils::find_in_string(temp, m_highlights.begin(), m_highlights.end())) {
+		nick = "%21" + nick + "%21";
+	} else if (utils::find_in_string(text, m_highlights.begin(), m_highlights.end())) {
 		nick = "%21%06" + nick + "%21%06";
 		flag = display::LineEntry::HIGHLIGHT;
 	}
@@ -204,13 +201,15 @@ void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
 	bool bot = aMessage.from->getIdentity().isBot();
 	char status = (op ? '@' : (bot ? '$' : ' '));
 
-	std::ostringstream line;
-	line << "%21%08<%21%08" << status << nick << "%21%08>%21%08 " << temp;
+	std::ostringstream displaySender;
+	displaySender << "%21%08<%21%08" << status << nick << "%21%08>%21%08";
 
 	int indent = 4 + g_utf8_strlen(nick.c_str(), -1);
-	//int indent = 4;
 
-	add_line(display::LineEntry(line.str(), indent, time(0), flag));
+	StringTokenizer<string> lines(text, '\n');
+	for (const auto& l : lines.getTokens()) {
+		add_line(display::LineEntry(displaySender.str() + " " + l, indent, time(0), flag));
+	}
 }
 
 void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
@@ -229,15 +228,7 @@ void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
 
 	const auto& user = myPM ? aMessage.to : aMessage.replyTo;
 
-	/* XXX: see the explanation in WindowHub(Message, ...) */
-	std::string realNick = m_client->getMyNick();
-	/*if (aMessage.replyTo->getUser() == ClientManager::getInstance()->getMe() ||
-		nick == SETTING(NICK)) {
-			me = true;
-			user = aMessage.to->getUser();
-	}*/
-
-	std::string name = "PM:" + nick;
+	auto name = "PM:" + nick;
 
 	auto it = dm->find(display::TYPE_PRIVMSG, user->getUser()->getCID().toBase32());
 	if (it == dm->end()) {
@@ -247,7 +238,7 @@ void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
 			return;
 		}
 
-		pm = new ui::WindowPrivateMessage(HintedUser(user->getUser(), user->getHubUrl()), realNick);
+		pm = new ui::WindowPrivateMessage(HintedUser(user->getUser(), user->getHubUrl()), m_client->getMyNick());
 		dm->push_back(pm);
 
 		if (AirUtil::getAway()) {
@@ -264,14 +255,17 @@ void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
 		pm = static_cast<ui::WindowPrivateMessage*>(*it);
 	}
 
-	boost::replace_all(text, "\n", "\\");
+	//boost::replace_all(text, "\n", "\\");
 
-	if (myPM) {
-		pm->add_line("%21%08<%21%08%21" + realNick + "%21%21%08>%21%08 " + text);
-	} else {
-		pm->add_line("%21%08<%21%08" + nick + "%21%08>%21%08 " + text);
-		if (pm->get_state() != display::STATE_IS_ACTIVE)
-			pm->set_state(display::STATE_HIGHLIGHT);
+	StringTokenizer<string> lines(text, '\n');
+	auto displaySender = myPM ? "%21%08<%21%08%21" + nick + "%21%21%08>%21%08" : "%21%08<%21%08" + nick + "%21%08>%21%08";
+
+	for (const auto& l : lines.getTokens()) {
+		pm->add_line(displaySender + " " + l);
+	}
+
+	if (!myPM && pm->get_state() != display::STATE_IS_ACTIVE) {
+		pm->set_state(display::STATE_HIGHLIGHT);
 	}
 }
 
@@ -306,7 +300,7 @@ void WindowHub::on(ClientListener::UserUpdated, const Client*, const OnlineUserP
 	utils::Lock l(m_mutex);
 
 	auto user = HintedUser(aUser->getUser(), aUser->getHubUrl());
-	std::string nick = aUser->getIdentity().getNick();
+	auto nick = aUser->getIdentity().getNick();
 	if (m_joined
 		&& m_users.find(nick) == m_users.end()
 		&& (m_showJoins || m_showJoinsOnThisHub ||
@@ -315,7 +309,7 @@ void WindowHub::on(ClientListener::UserUpdated, const Client*, const OnlineUserP
 		) {
 			// Lehmis [127.0.0.1] has joined the hub
 			std::ostringstream oss;
-			std::string ip = aUser->getIdentity().getIp();
+			auto ip = aUser->getIdentity().getIp();
 			oss << "%03%21" << nick << "%03%21 ";
 			if (!ip.empty()) {
 				if (m_resolveIps) {
@@ -415,10 +409,7 @@ void WindowHub::on(ClientListener::HubUpdated, const Client *client)
     noexcept
 {
     utils::Lock l(m_mutex);
-
-    std::string title = client->getHubName() + " - " + client->getHubDescription();
-
-    set_title(title);
+	updateTitle();
 }
 
 void WindowHub::on(ClientListener::Failed, const string& /*url*/, const string& msg)
@@ -426,7 +417,7 @@ void WindowHub::on(ClientListener::Failed, const string& /*url*/, const string& 
 {
     utils::Lock l(m_mutex);
 
-    set_title(m_client->getAddress() + " (offline)");
+	updateTitle();
     add_line(display::LineEntry(msg));
     m_joined = false;
     if(m_timer) {
@@ -531,9 +522,21 @@ void WindowHub::on(ClientListener::Connected, const Client*)
 {
     utils::Lock l(m_mutex);
     add_line(display::LineEntry("Connected"));
-    set_title(m_client->getHubName());
+	updateTitle();
     TimerManager::getInstance()->addListener(this);
     m_timer = true;
+}
+
+void WindowHub::updateTitle() {
+	std::string title;
+	if (m_client->isConnected()) {
+		title = m_client->getHubName() + " - " + m_client->getHubDescription() + " (" + m_client->getHubUrl() + ")";
+	} else {
+		title = m_client->getAddress() + " (offline)";
+	}
+
+	set_title(title);
+	set_name(m_client->getHubName());
 }
 
 bool WindowHub::filter_messages(const std::string &nick, const std::string &msg)

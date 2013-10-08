@@ -133,6 +133,7 @@ private:
 
 	void print_help();
 	void handleNames();
+	void updateTitle();
 };
 
 } // namespace ui

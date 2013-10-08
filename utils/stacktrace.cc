@@ -69,8 +69,8 @@ StackFrame StackTrace::parse_line(const std::string &line)
     std::string file;
     int linenum = 0;
 
-    unsigned int start = line.find("[0x");
-    unsigned int end = line.find("]", start);
+    auto start = line.find("[0x");
+    auto end = line.find("]", start);
     if(start != std::string::npos &&
        end   != std::string::npos)
     {

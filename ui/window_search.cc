@@ -365,7 +365,7 @@ void WindowSearch::download(const std::string &path)
 void WindowSearch::download_directory(const std::string &path)
 {
     auto result = get_result();
-    std::string target = target.empty() ? SETTING (DOWNLOAD_DIRECTORY) : target + "/";
+	auto target = path.empty() ? SETTING(DOWNLOAD_DIRECTORY) : path + "/";
     try {
         if(result->getType() == SearchResult::TYPE_FILE)
         {

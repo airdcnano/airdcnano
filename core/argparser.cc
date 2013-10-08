@@ -82,7 +82,7 @@ std::string ArgParser::get_text(unsigned int n)
 {
     unsigned int start = 0;
     while(n--) {
-        unsigned int pos = m_line.find(' ', start);
+        auto pos = m_line.find(' ', start);
         if(pos != std::string::npos)
             start = pos+1;
     }

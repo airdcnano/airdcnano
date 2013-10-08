@@ -159,19 +159,23 @@ int ShareScannerManager::run() {
 				scanners.emplace_back(dir, ScanInfo::TYPE_COLLECT_LOG, true);
 		}
 
-		parallel_for_each(scanners.begin(), scanners.end(), [&](ScanInfo& s) {
-			if (!s.rootPath.empty()) {
-				// TODO: FIX LINUX
-				FileFindIter i(s.rootPath.substr(0, s.rootPath.length() - 1), Util::emptyString, false);
-				if (!i->isHidden()) {
-					scanDir(s.rootPath, s);
-					if (SETTING(CHECK_DUPES) && isDirScan)
-						findDupes(s.rootPath, s);
+		try {
+			parallel_for_each(scanners.begin(), scanners.end(), [&](ScanInfo& s) {
+				if (!s.rootPath.empty()) {
+					// TODO: FIX LINUX
+					FileFindIter i(s.rootPath.substr(0, s.rootPath.length() - 1), Util::emptyString, false);
+					if (!i->isHidden()) {
+						scanDir(s.rootPath, s);
+						if (SETTING(CHECK_DUPES) && isDirScan)
+							findDupes(s.rootPath, s);
 
-					find(s.rootPath, Text::toLower(s.rootPath), s);
+						find(s.rootPath, Text::toLower(s.rootPath), s);
+					}
 				}
-			}
-		});
+			});
+		} catch (std::exception& e) {
+			LogManager::getInstance()->message("Scanning the share failed: " + string(e.what()), LogManager::LOG_INFO);
+		}
 
 		if(!stop) {
 			//merge the results
@@ -569,7 +573,7 @@ void ShareScannerManager::checkFileSFV(const string& aFileName, DirSFVReader& sf
 		int64_t size = File::getSize(sfv.getPath() + aFileName);
 		int64_t speed = 0;
 		if(checkEnd > checkStart) {
-			speed = size * _LL(1000) / (checkEnd - checkStart);
+			speed = size * 1000LL / (checkEnd - checkStart);
 		}
 
 		string message;

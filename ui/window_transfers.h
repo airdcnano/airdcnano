@@ -66,11 +66,11 @@ private:
     std::string m_path;
     std::string m_target;
 	std::string m_token;
-    int m_progress;
-    char m_status;
+    //int m_progress;
+    //char m_status;
     int64_t m_left;
     int64_t m_size;
-    int64_t m_speed;
+    //int64_t m_speed;
     int64_t m_started;
     int64_t m_bytes;
 };

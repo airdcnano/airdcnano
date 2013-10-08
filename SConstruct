@@ -50,8 +50,13 @@ if os.environ.has_key('CXXFLAGS'):
 	env['CXXFLAGS'] = os.environ['CXXFLAGS'].split()
 
 # Dependencies
-if not conf.CheckCXXVersion(env['CXX'], 4, 7):
-     print 'Compiler version check failed. g++ 4.7 or later is needed'
+if env['CXX'] == 'clang':
+	if not conf.CheckCXXVersion(env['CXX'], 3, 3):
+		 print 'Compiler version check failed. Supported compilers: clang 3.3 or later, g++ 4.7 or later'
+		 Exit(1)
+
+elif not conf.CheckCXXVersion(env['CXX'], 4, 7):
+     print 'Compiler version check failed. Supported compilers: clang 3.3 or later, g++ 4.7 or later'
      Exit(1)
 
 # Add support for compiler caches to speed-up compilation.
@@ -200,11 +205,11 @@ elif int(debug):
 env.Append(LIBPATH = env['build_path'])
 
 if int(release):
-    env.Append(CXXFLAGS = ['-O2',  '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder'])
+    env.Append(CXXFLAGS = ['-O2',  '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder', '-Wno-overloaded-virtual'])
 elif int(debug):
-    env.Append(CXXFLAGS = ['-g', '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder'])
+    env.Append(CXXFLAGS = ['-g', '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder', '-Wno-overloaded-virtual'])
 else:
-    env.Append(CXXFLAGS = ['-g', '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder'])
+    env.Append(CXXFLAGS = ['-g', '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder', '-Wno-overloaded-virtual'])
 	
 
 build = env.Program('airdcnano', [

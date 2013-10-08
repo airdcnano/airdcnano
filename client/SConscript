@@ -1,0 +1,121 @@
+client_files = [
+	'AdcCommand.cpp',
+	'AdcHub.cpp',
+	'AdcSearch.cpp',
+	'ADLSearch.cpp',
+	'AirUtil.cpp',
+	'AutoSearch.cpp',
+	'AutoSearchManager.cpp',
+	'BufferedSocket.cpp',
+	'Bundle.cpp',
+	'BundleQueue.cpp',
+	'BZUtils.cpp',
+	'ChatMessage.cpp',
+	'CID.cpp',
+	'Client.cpp',
+	'ClientManager.cpp',
+	'ColorSettings.cpp',
+	'ConnectionManager.cpp',
+	'ConnectivityManager.cpp',
+	'CryptoManager.cpp',
+	'DCPlusPlus.cpp',
+	'DebugManager.cpp',
+	'DirectoryListing.cpp',
+	'DirectoryListingManager.cpp',
+	'DirectoryMonitor.cpp',
+	'Download.cpp',
+	'DownloadManager.cpp',
+	'DualString.cpp',
+	'Encoder.cpp',
+	'FavoriteManager.cpp',
+	'File.cpp',
+	'FileQueue.cpp',
+	'FileReader.cpp',
+	'FinishedManager.cpp',
+	'GeoIP.cpp',
+	'GeoManager.cpp',
+	'HashBloom.cpp',
+	'HashManager.cpp',
+	'HighlightManager.cpp',
+	'HttpConnection.cpp',
+	'HttpDownload.cpp',
+	'HubEntry.cpp',
+	'HubSettings.cpp',
+	'IgnoreManager.cpp',
+	'LevelDB.cpp',
+	'Localization.cpp',
+	'LogManager.cpp',
+	'Magnet.cpp',
+	'Mapper.cpp',
+	'Mapper_MiniUPnPc.cpp',
+	'Mapper_NATPMP.cpp',
+	'Mapper_WinUPnP.cpp',
+	'MappingManager.cpp',
+	'nmdchub.cpp',
+	'QueueItemBase.cpp',
+	'QueueItem.cpp',
+	'QueueManager.cpp',
+	'ResourceManager.cpp',
+	'SearchManager.cpp',
+	'SearchQueue.cpp',
+	'SearchResult.cpp',
+	'SettingHolder.cpp',
+	'SettingItem.cpp',
+	'SettingsManager.cpp',
+	'SFVReader.cpp',
+	'SharedFileStream.cpp',
+	'ShareManager.cpp',
+	'ShareProfile.cpp',
+	'ShareScannerManager.cpp',
+	'SimpleXML.cpp',
+	'SimpleXMLReader.cpp',
+	'Socket.cpp',
+	'SSL.cpp',
+	'SSLSocket.cpp',
+	'stdinc.cpp',
+	'StringDefs.cpp',
+	'StringMatch.cpp',
+	'StringSearch.cpp',
+	'StringTokenizer.cpp',
+	'TargetUtil.cpp',
+	'Text.cpp',
+	'Thread.cpp',
+	'ThrottleManager.cpp',
+	'TigerHash.cpp',
+	'TimerManager.cpp',
+	'Transfer.cpp',
+	'UDPServer.cpp',
+	'UpdateManager.cpp',
+	'Updater.cpp',
+	'UploadBundle.cpp',
+	'Upload.cpp',
+	'UploadManager.cpp',
+	'UserCommand.cpp',
+	'UserConnection.cpp',
+	'User.cpp',
+	'UserQueue.cpp',
+	'Util.cpp',
+	'WebShortcuts.cpp',
+	'Wildcards.cpp',
+	'ZUtils.cpp']
+
+
+Import('env')
+clientObjs = env.Object(client_files)
+Return('clientObjs')
+
+
+
+# -*- coding: utf-8 -*-
+
+#Import('env')
+
+#dcpp_files = env.Glob('*.cpp')
+
+#env.Append(CPPDEFINES = 'BUILDING_DCPP')
+
+# Build the dcpp files and create the library
+#libdcpp  = env.StaticLibrary(target = 'client', source = dcpp_files)
+
+#Return('libdcpp')
+

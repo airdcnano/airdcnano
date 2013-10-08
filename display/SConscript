@@ -1,0 +1,16 @@
+display_files = [
+    'screen.cc',
+    'manager.cc',
+    'curses_window.cc',
+    'window.cc',
+    'status_bar.cc',
+    'status_item.cc',
+    'scrolled_window.cc',
+    'input_window.cc',
+    'directory_window.cc',
+    'listview.cc',
+]
+
+Import('env')
+displayObjects = env.Object(display_files)
+Return('displayObjects')

@@ -1,0 +1,9 @@
+utils = [
+    'stacktrace.cc',
+    'signal_handler.cc',
+    'utils.cc',
+]
+
+Import('env')
+utilsObjs = env.Object(utils)
+Return('utilsObjs')

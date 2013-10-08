@@ -1,0 +1,292 @@
+/* vim:set ts=4 sw=4 sts=4 et cindent: */
+/*
+* AirDC++ nano
+* Copyright © 2013 maksis@adrenaline-network.com
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation; either version 2 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program; if not, write to the Free Software
+* Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*
+* Contributor(s):
+*
+*/
+
+#include <core/log.h>
+#include <core/events.h>
+#include <core/argparser.h>
+#include <ui/window_hub.h>
+#include <display/manager.h>
+
+#include <client/HashManager.h>
+#include <client/ShareManager.h>
+
+#include <input/help_handler.h>
+
+namespace modules {
+
+	class Share {
+	public:
+		HelpHandler::CommandList commands = {
+			{ "cancelhash", [] { HashManager::getInstance()->stop(); } },
+			{ "optimizedb", [] { HashManager::getInstance()->startMaintenance(false); } },
+			{ "refresh", std::bind(&Share::handleRefresh, this) },
+			{ "share", std::bind(&Share::handleShare, this) },
+			{ "shareprofile", std::bind(&Share::handleProfile, this) },
+			{ "verifydb", [] { HashManager::getInstance()->startMaintenance(true); } }
+		};
+
+		HelpHandler help;
+		Share() : help(&commands, "Share") {
+			
+			/*events::add_listener("command refresh",
+				std::bind(&Share::handleRefresh, this));
+
+			events::add_listener("command share",
+				std::bind(&Share::handleShare, this));
+
+			events::add_listener("command shareprofile",
+				std::bind(&Share::handleProfile, this));
+
+			events::add_listener("command optimizedb", [] { HashManager::getInstance()->startMaintenance(false); });
+			events::add_listener("command verifydb", [] { HashManager::getInstance()->startMaintenance(true); });*/
+		}
+
+		void handleProfile() {
+			core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
+			parser.parse();
+			if (parser.args() < 1) {
+				log("Usage: /shareprofile <add|remove|list>");
+				return;
+			}
+
+			auto param = parser.arg(0);
+
+			if (param == "add") {
+				if (parser.args() < 2) {
+					log("Usage: /shareprofile add <profile>");
+					return;
+				}
+
+				auto profileName = parser.arg(1);
+				auto profileToken = ShareManager::getInstance()->getProfileByName(profileName);
+				if (profileToken) {
+					log("Profile exists");
+					return;
+				}
+
+				ShareProfileInfo::List profiles{ new ShareProfileInfo(profileName, *profileToken) };
+				ShareManager::getInstance()->addProfiles(profiles);
+				log("The profile " + profileName + " has been added");
+				SettingsManager::getInstance()->save();
+			} else if (param == "remove") {
+				if (parser.args() < 2) {
+					log("Usage: /shareprofile remove <profile>");
+					return;
+				}
+
+				auto profileName = parser.arg(1);
+				auto profileToken = ShareManager::getInstance()->getProfileByName(profileName);
+				if (!profileToken) {
+					log("Profile not found");
+					return;
+				}
+
+				if (*profileToken == SP_HIDDEN || *profileToken == SETTING(DEFAULT_SP)) {
+					log("This profile can't be removed");
+					return;
+				}
+
+				ShareProfileInfo::List profiles { new ShareProfileInfo(Util::emptyString, *profileToken) };
+				ShareManager::getInstance()->removeProfiles(profiles);
+
+				log("The profile " + profileName + " has been removed");
+				SettingsManager::getInstance()->save();
+			} else if (param == "list") {
+				auto& profiles = ShareManager::getInstance()->getProfiles();
+				for (const auto& p : profiles) {
+					log(p->getPlainName());
+				}
+			} else {
+				log("no param");
+			}
+		}
+
+		void handleRefresh() {
+			if (events::args() > 0) {
+				auto param = events::arg<std::string>(0);
+				if (Util::stricmp(param.c_str(), "incoming") == 0) {
+					ShareManager::getInstance()->refresh(true, ShareManager::TYPE_MANUAL);
+				} else if (ShareManager::REFRESH_PATH_NOT_FOUND == ShareManager::getInstance()->refresh(Text::fromT(param))) {
+					log("Directory not found");
+				}
+			} else {
+				ShareManager::getInstance()->refresh(false, ShareManager::TYPE_MANUAL);
+			}
+		}
+
+		void log(const string& aLine) {
+			display::Manager::get()->cmdMessage(aLine);
+		}
+
+		bool existsInProfile(const string aPath, const optional<ProfileToken> aToken) {
+			ShareDirInfo::Map shares;
+			ShareManager::getInstance()->getShares(shares);
+			auto& list = shares[*aToken];
+			auto p = find_if(list, ShareDirInfo::PathCompare(aPath));
+			return p != list.end();
+		}
+
+		void handleShare() {
+			core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
+			parser.parse();
+			if (parser.args() < 1) {
+				log("Usage: /share <add|remove|list>");
+				return;
+			}
+			
+			auto param = parser.arg(0);
+			if (param == "add") {
+				if (parser.args() < 3) {
+					log("Usage: /share add <virtual name> <path> [<profile>] [<incoming>] (example: /share add Incoming /home/ftp/ myshareprofile 1)");
+					return;
+				}
+
+				auto vname = parser.arg(1);
+				auto dir = parser.arg(2);
+
+				string profileName;
+				if (parser.args() >= 4)
+					profileName = parser.arg(3);
+
+				bool incoming = false;
+				if (parser.args() >= 5) {
+					auto val = parser.arg(4);
+					incoming = Util::stricmp(val, "true") == 0 || val == "1" || Util::stricmp(val, "enabled") == 0 || Util::stricmp(val, "yes") == 1;
+				}
+
+				if (dir.empty() || vname.empty()) {
+					log("Invalid input");
+					return;
+				}
+
+				if (dir.back() != PATH_SEPARATOR)
+					dir += PATH_SEPARATOR;
+
+				if (!Util::fileExists(dir)) {
+					log("Directory doesn't exist on disk!");
+					return;
+				}
+
+				auto profileToken = ShareManager::getInstance()->getProfileByName(profileName);
+				if (!profileToken) {
+					log("Profile not found");
+					return;
+				}
+
+				if (*profileToken == SP_HIDDEN) {
+					log("You can't add directories in the hidden profile!");
+					return;
+				}
+
+				ShareDirInfo::List dirs = { new ShareDirInfo(vname, *profileToken, dir, incoming) };
+
+				// in case we fell back to the default...
+				auto realProfileName = ShareManager::getInstance()->getProfile(*profileToken)->getPlainName();
+
+				if (existsInProfile(dir, profileToken)) {
+					ShareManager::getInstance()->changeDirectories(dirs);
+					log("The directory " + dir + " in profile " + realProfileName + " has been edited");
+				} else {
+					ShareManager::getInstance()->addDirectories(dirs);
+					log("The directory " + dir + " has been added in profile " + realProfileName);
+				}
+				SettingsManager::getInstance()->save();
+			} else if (param == "remove") {
+				if (parser.args() < 2) {
+					log("Usage: /share remove <path> [<profile>]");
+					return;
+				}
+
+				auto dir = parser.arg(1);
+				string profileName;
+				if (parser.args() >= 3)
+					profileName = parser.arg(2);
+
+				if (dir.empty()) {
+					log("Invalid input");
+					return;
+				}
+
+				if (dir.back() != PATH_SEPARATOR)
+					dir += PATH_SEPARATOR;
+
+				auto profileToken = ShareManager::getInstance()->getProfileByName(profileName);
+				if (!profileToken) {
+					log("Profile not found");
+					return;
+				}
+
+				// in case we fell back to the default...
+				auto realProfileName = ShareManager::getInstance()->getProfile(*profileToken)->getPlainName();
+
+				if (!existsInProfile(dir, profileToken)) {
+					log("The directory " + dir + " isn't shared in profile " + realProfileName);
+					return;
+				}
+
+				ShareDirInfo::List dirs = { new ShareDirInfo(Util::emptyString, *profileToken, dir, false) };
+				ShareManager::getInstance()->removeDirectories(dirs);
+				log("The directory " + dir + " has been removed from profile " + realProfileName);
+				SettingsManager::getInstance()->save();
+			} else if (param == "list") {
+				if (parser.args() < 2) {
+					log("Usage: /share list [<profile>]");
+					return;
+				}
+
+				auto profileName = parser.arg(1);
+				auto profileToken = ShareManager::getInstance()->getProfileByName(profileName);
+				if (!profileToken) {
+					log("Profile not found");
+					return;
+				}
+
+				ShareDirInfo::Map shares;
+				ShareManager::getInstance()->getShares(shares);
+
+				auto& dirs = shares[*profileToken];
+				for (const auto& sdi : dirs) {
+					auto fmt = sdi->vname + ": " + sdi->path + " (" + Util::formatBytes(sdi->size) + ", incoming: " + (sdi->incoming ? "yes" : "false") + ")";
+					log(fmt);
+				}
+			} else {
+				log("no param");
+			}
+		}
+#if 0
+
+		void print_help(const Parameter &param) {
+			if (param.get_command() == "connect")
+				core::Log::get()->log("Usage: /connect hub [nick] [password] [description]");
+			else if (param.get_command() == "disconnect")
+				core::Log::get()->log("Usage: /disconnect [hub]");
+			else if (param.get_command() == "reconnect")
+				core::Log::get()->log("Usage: /reconnect [hub]");
+		}
+#endif
+	};
+
+} // namespace modules
+
+static modules::Share initialize;
+

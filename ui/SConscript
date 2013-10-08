@@ -1,0 +1,22 @@
+gui_files = [
+            'manager.cc',
+            'window_transfers.cc',
+            'window_hub.cc',
+            'window_favorites.cc',
+            'window_log.cc',
+            'window_privatemessage.cc',
+            'window_search.cc',
+            'window_sharebrowser.cc',
+            'window_publichubs.cc',
+            'status_clock.cc',
+            'status_user.cc',
+            'status_windowinfo.cc',
+            'status_windowlist.cc',
+            'status_hash.cc',
+
+             ]
+
+Import('env')
+guiObjs = env.Object(gui_files)
+Return('guiObjs')
+

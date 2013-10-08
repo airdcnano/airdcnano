@@ -1,0 +1,13 @@
+core_files = [
+                'main.cc',
+                'nanodc.cc',
+                'manager.cc',
+                'properties.cc',
+                'settings.cc',
+                'log.cc',
+                'events.cc',
+                'argparser.cc',
+]
+Import('env')
+coreObjs = env.Object(core_files)
+Return('coreObjs')

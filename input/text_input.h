@@ -58,6 +58,7 @@ public:
     size_t length() const;
 	void clear_text();
 	void setText(const std::string& aText);
+	bool hasBinding(wint_t key) const;
 private:
 	bool customTextSet = false;
     bool m_utf8;

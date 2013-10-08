@@ -50,8 +50,8 @@ if os.environ.has_key('CXXFLAGS'):
 	env['CXXFLAGS'] = os.environ['CXXFLAGS'].split()
 
 # Dependencies
-if not conf.CheckCXXVersion(env['CXX'], 3, 3):
-     print 'Compiler version check failed. g++ 4.0 or later is needed'
+if not conf.CheckCXXVersion(env['CXX'], 4, 7):
+     print 'Compiler version check failed. g++ 4.7 or later is needed'
      Exit(1)
 
 # Add support for compiler caches to speed-up compilation.

@@ -33,6 +33,7 @@
 #include <client/SettingHolder.h>
 #include <client/SettingItem.h>
 #include <client/SettingsManager.h>
+#include <client/StringTokenizer.h>
 
 #include <display/manager.h>
 #include <core/events.h>
@@ -152,6 +153,18 @@ struct NamedSettingItem : public SettingItem {
 	}
 
 	void setCurValue(const std::string& aValue) const {
+		if ((type == TYPE_CONN_V4 && SETTING(AUTO_DETECT_CONNECTION)) ||
+			(type == TYPE_CONN_V6 && SETTING(AUTO_DETECT_CONNECTION6))) {
+				display::Manager::get()->cmdMessage("Note: Connection autodetection is enabled for the edited protocol. The changed setting won't take effect before auto detection has been disabled.");
+		}
+
+		if ((type == TYPE_LIMITS_DL && SETTING(DL_AUTODETECT)) ||
+			(type == TYPE_LIMITS_UL && SETTING(UL_AUTODETECT)) ||
+			(type == TYPE_LIMITS_MCN && SETTING(MCN_AUTODETECT))) {
+
+				display::Manager::get()->cmdMessage("Note: auto detection is enabled for the edited settings group. The changed setting won't take effect before auto detection has been disabled.");
+		}
+
 		if (key >= SettingsManager::STR_FIRST && key < SettingsManager::STR_LAST) {
 			SettingsManager::getInstance()->set(static_cast<SettingsManager::StrSetting>(key), aValue);
 		} else if (key >= SettingsManager::INT_FIRST && key < SettingsManager::INT_LAST) {
@@ -194,6 +207,9 @@ static NamedSettingItem settings [] = {
 	{ "email", SettingsManager::EMAIL, ResourceManager::EMAIL },
 	{ "ul_speed", SettingsManager::UPLOAD_SPEED, ResourceManager::SETCZDC_UPLOAD_SPEED },
 	{ "dl_speed", SettingsManager::DOWNLOAD_SPEED, ResourceManager::SETCZDC_DOWNLOAD_SPEED },
+	{ "away_message", SettingsManager::DEFAULT_AWAY_MESSAGE, ResourceManager::SETTINGS_DEFAULT_AWAY_MSG },
+	{ "away_idle_time", SettingsManager::AWAY_IDLE_TIME, ResourceManager::AWAY_IDLE_TIME_BEGIN },
+	//{ "auto_away", SettingsManager::AUTO_AWAY, ResourceManager::SETTINGS_AUTO_AWAY },
 
 	{ ResourceManager::SETTINGS_DOWNLOADS },
 	{ "dl_dir", SettingsManager::DOWNLOAD_DIRECTORY, ResourceManager::SETTINGS_DOWNLOAD_DIRECTORY },
@@ -307,6 +323,7 @@ class DcSet
 {
 public:
 	HelpHandler::CommandList commands = {
+		{ "connectioninfo", std::bind(&DcSet::connection, this) },
 		{ "dcset", std::bind(&DcSet::set, this) },
 		{ "nick", std::bind(&DcSet::set_nick, this) }
 	};
@@ -320,6 +337,15 @@ public:
         events::add_listener("command nick",
                 std::bind(&DcSet::set_nick, this));*/
     }
+
+	void connection() {
+		auto info = ConnectivityManager::getInstance()->getInformation();
+		StringTokenizer<string> lines(info, "\n");
+		for (const auto& l : lines.getTokens()) {
+			if (!l.empty())
+				display::Manager::get()->cmdMessage(l);
+		}
+	}
 
     /** "command nick" event handler. */
     void set_nick() {
@@ -370,7 +396,7 @@ public:
 			auto var = parser.arg(0);
 			auto p = find_setting(var);
 			if (p > 0) {
-				SettingHolder h([this](const std::string& e) { /*core::Log::get()->log("ConnectivityManager::setup failure: " + e);*/ });
+				SettingHolder h([this](const std::string& e) { display::Manager::get()->cmdMessage("Failed to set the port: " + e); });
 				auto old = settings[p].currentToString();
 				if (parser.args() == 1) {
 					settings[p].unset();

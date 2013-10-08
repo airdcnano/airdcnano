@@ -102,9 +102,13 @@ void TextInput::setText(const std::string& aText) {
 	customTextSet = true;
 }
 
+bool TextInput::hasBinding(wint_t key) const {
+	return m_bindings.find(key) != m_bindings.end(); 
+}
+
 void TextInput::pressed(int key) 
 {
-    if(m_bindings.find(key) != m_bindings.end()) {
+    if(hasBinding(key)) {
         m_bindings[key]();
         return;
     }

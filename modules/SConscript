@@ -1,5 +1,6 @@
 
 modules_files = [
+	'module_away.cc',
     'module_keypress.cc',
     'module_rot13.cc',
     'module_linehandler.cc',

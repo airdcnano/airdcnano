@@ -48,7 +48,9 @@ m_user(user), ScrolledWindow(user.user->getCID().toBase32(), display::TYPE_PRIVM
 void WindowPrivateMessage::handle_line(const std::string &line)
 {
 	string error;
-    ClientManager::getInstance()->privateMessage(m_user, line, error, false);
+	if (!ClientManager::getInstance()->privateMessage(m_user, line, error, false)) {
+
+	}
 }
 
 void WindowPrivateMessage::get_list()

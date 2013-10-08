@@ -246,8 +246,8 @@ void WindowFavorites::handle_line(const std::string &line)
 				m_editFav->get(HubSettings::Nick) = m_newFav->get(HubSettings::Nick);
 				m_editFav->get(HubSettings::Description) = m_newFav->get(HubSettings::Description);
 
-				m_newFav->setPassword(m_editFav->getPassword());
-				m_newFav->setConnect(m_editFav->getConnect());
+				m_editFav->setPassword(m_newFav->getPassword());
+				m_editFav->setConnect(m_newFav->getConnect());
 
 				try {
 					int row = find_row(2, m_editFav->getServerStr());

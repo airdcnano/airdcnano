@@ -65,7 +65,7 @@ namespace modules {
 			core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
 			parser.parse();
 			if (parser.args() < 1) {
-				log("Usage: /shareprofile <add|remove|list>");
+				log("Usage: /shareprofile <add|remove|rename|list>");
 				return;
 			}
 
@@ -116,6 +116,35 @@ namespace modules {
 				for (const auto& p : profiles) {
 					log(p->getPlainName());
 				}
+			} else if (param == "rename") {
+				if (parser.args() < 3) {
+					log("Usage: /shareprofile rename <profile> <name>");
+					return;
+				}
+
+				auto profileName = parser.arg(1);
+				auto profileToken = ShareManager::getInstance()->getProfileByName(profileName);
+				if (!profileToken) {
+					log("Profile not found");
+					return;
+				}
+
+				if (*profileToken == SP_HIDDEN) {
+					log("This profile can't be renamed");
+					return;
+				}
+
+				auto newName = parser.arg(1);
+				if (ShareManager::getInstance()->getProfileByName(profileName)) {
+					log("The profile " + newName + " exists already!");
+					return;
+				}
+
+				ShareProfileInfo::List profiles{ new ShareProfileInfo(newName, *profileToken) };
+				ShareManager::getInstance()->renameProfiles(profiles);
+
+				log("The profile " + profileName + " has been renamed to " + newName);
+				SettingsManager::getInstance()->save();
 			} else {
 				log("no param");
 			}
@@ -203,6 +232,7 @@ namespace modules {
 				// in case we fell back to the default...
 				auto realProfileName = ShareManager::getInstance()->getProfile(*profileToken)->getPlainName();
 
+				// are we modifying an existing dir?
 				if (existsInProfile(dir, profileToken)) {
 					ShareManager::getInstance()->changeDirectories(dirs);
 					log("The directory " + dir + " in profile " + realProfileName + " has been edited");

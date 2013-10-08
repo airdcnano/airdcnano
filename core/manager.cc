@@ -21,7 +21,7 @@
  *  
  */
 
-#include <boost/thread/thread.hpp>
+#include <thread>
 #include <functional>
 #include <pthread.h>
 #include <client/stdinc.h>
@@ -272,6 +272,7 @@ void Manager::start_client()
 
 	SettingsManager::getInstance()->setDefault(SettingsManager::USE_UPLOAD_BUNDLES, false);
 	SettingsManager::getInstance()->setDefault(SettingsManager::AUTO_REFRESH_TIME, 60);
+	SettingsManager::getInstance()->setDefault(SettingsManager::AWAY_IDLE_TIME, 15);
 
     events::emit("command motd", std::string());
 
@@ -304,7 +305,7 @@ int Manager::run()
 
     core::Log::create();
 
-    events::create("client created");
+    //events::create("client created");
 
     ui::Manager::create()->init();
 
@@ -322,17 +323,17 @@ int Manager::run()
 
 	events::add_listener("command help", [] { display::Manager::get()->cmdMessage("/quit /q"); });
 
-    boost::thread input_thread(
+    std::thread input_thread(
                 std::bind(&input::Manager::main_loop,
                     input::Manager::get()));
 
-    boost::thread client_starter(
+    std::thread client_starter(
                 std::bind(&Manager::start_client, this));
 
     //core::Log::get()->log("Event loop: " + utils::to_string(utils::gettid()));
     events::Manager::get()->main_loop();
 
-    input_thread.join();
+    input_thread.join(); 
     client_starter.join();
     return 0;
 }

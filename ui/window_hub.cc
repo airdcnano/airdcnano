@@ -246,8 +246,19 @@ void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
 			return;
 		}
 
-		pm = new ui::WindowPrivateMessage(HintedUser(aMessage.from->getUser(), aMessage.from->getHubUrl()), realNick);
+		pm = new ui::WindowPrivateMessage(HintedUser(user->getUser(), user->getHubUrl()), realNick);
 		dm->push_back(pm);
+
+		if (AirUtil::getAway()) {
+			if (!(SETTING(NO_AWAYMSG_TO_BOTS) && user->getUser()->isSet(User::BOT))) {
+				ParamMap params;
+				user->getIdentity().getParams(params, "user", false);
+
+				string error;
+				auto awayMsg = AirUtil::getAwayMessage(SETTING(DEFAULT_AWAY_MESSAGE), params);
+				pm->handle_line(awayMsg);
+			}
+		}
 	} else {
 		pm = static_cast<ui::WindowPrivateMessage*>(*it);
 	}

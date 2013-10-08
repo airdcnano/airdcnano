@@ -96,6 +96,8 @@ public:
 	void on(ClientListener::HubFull, const Client*) noexcept{ add_line(display::LineEntry("Hub full")); }
 	void on(ClientListener::NickTaken, const Client*) noexcept{ add_line(display::LineEntry("Nick taken")); }
 	void on(ClientListener::SearchFlood, const Client*, const string &msg) noexcept{ add_line(display::LineEntry(msg)); }
+
+	std::vector<std::string> complete(const std::string& aStr);
 private:
 	void handleFav() noexcept;
 	void handleCreated() noexcept;

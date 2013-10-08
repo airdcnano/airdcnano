@@ -24,6 +24,7 @@
 #include <utils/utils.h>
 #include <core/events.h>
 #include <core/log.h>
+#include <core/argparser.h>
 #include <display/manager.h>
 #include <input/help_handler.h>
 
@@ -54,12 +55,13 @@ public:
 	}
 
 	HelpHandler::CommandList commands = {
+		{ "clear", std::bind(&Window::handleClear, this) },
+		{ "window", std::bind(&Window::window_callback, this) },
+		{ "wc", std::bind(&Window::close, this) },
 		{ "favorites", [this] { handleOpenTab<ui::WindowFavorites>(display::TYPE_FAVORITES); } },
 		{ "syslog", [this] { handleOpenTab<ui::WindowLog>(display::TYPE_LOGWND); } },
 		{ "hubs", [this] { handleOpenTab<ui::WindowHubs>(display::TYPE_HUBLIST); } },
-		{ "transfers", [this] { handleOpenTab<ui::WindowTransfers>(display::TYPE_TRANSFERS); } },
-		{ "window", std::bind(&Window::window_callback, this) },
-		{ "wc", std::bind(&Window::close, this) }
+		{ "transfers", [this] { handleOpenTab<ui::WindowTransfers>(display::TYPE_TRANSFERS); } }
 	};
 
 	HelpHandler help;
@@ -72,21 +74,45 @@ public:
 			std::bind(&Window::close, this));*/
     }
 
+	void handleClear() {
+		auto cur = *display::Manager::get()->get_current();
+		if (cur->get_type() == display::TYPE_LOGWND || cur->get_type() == display::TYPE_HUBWINDOW || cur->get_type() == display::TYPE_PRIVMSG)
+			static_cast<display::ScrolledWindow*>(cur)->clear();
+	}
+
     void window_callback() {
 		if (events::args() == 0) {
-			display::Manager::get()->cmdMessage("Usage: /window <close|prev|next|[0-9]>");
+			display::Manager::get()->cmdMessage("Usage: /window <close|move|prev|next|[0-9]>");
 			return;
 		}
 
-        auto command = events::arg<std::string>(0);
+		core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
+		parser.parse();
+		auto command = parser.arg(0);
         auto mger = display::Manager::get();
-        //core::Log::get()->log(command);
         auto current = mger->get_current();
 
         if(command == "close") {
 			close();
         } else if (command == "move") {
-			core::Log::get()->log("Not implemented");
+			if (parser.args() < 2) {
+				display::Manager::get()->cmdMessage("Usage: /window move <new pos>");
+				return;
+			}
+
+			auto newPos = Util::toInt(parser.arg(1));
+			if (newPos < 1 || newPos > mger->size()) {
+				display::Manager::get()->cmdMessage("Invalid position");
+				return;
+			}
+
+			auto p = mger->begin() + newPos - 1;
+			if (p < current) {
+				std::rotate(p, current, current+1);
+			} else if (current < p) {
+				std::rotate(current, current+1, p + 1);
+			}
+			display::Manager::get()->set_current(mger->begin() + newPos-1);
 		} else if (command == "next" || command == "prev") {
 			if (command == "next")
 				current = (current == mger->end() - 1 ? mger->begin() : current + 1);
@@ -97,12 +123,10 @@ public:
 		} else if (!command.empty() && (Util::toInt(command) >= 0 && Util::toInt(command) <= 9)) {
 			auto pos = Util::toInt(command) - 1;
 			if (pos <= mger->size()) {
-				auto current = mger->begin() + pos;
-				mger->set_current(current);
+				auto newCurrent = mger->begin() + pos;
+				mger->set_current(newCurrent);
 			}
-		} /*else {
-			display::Manager::get()->cmdMessage("Usage: /window <close|prev|next|[0-9]>");
-		}*/
+		}
     }
 
 	void close() {

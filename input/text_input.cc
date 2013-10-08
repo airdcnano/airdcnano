@@ -96,10 +96,10 @@ void TextInput::key_insert(wint_t key)
     text_insert(std::string(str));
 }
 
-void TextInput::setText(const std::string& aText) {
+void TextInput::setText(const std::string& aText, bool aNoClear /*true*/) {
 	assign(aText);
 	set_pos(aText.length());
-	customTextSet = true;
+	noClear = aNoClear;
 }
 
 bool TextInput::hasBinding(wint_t key) const {
@@ -174,10 +174,10 @@ void TextInput::pressed(int key)
             m_pos = length();
             break;
         case 0x0A:
-			if (!customTextSet)
+			if (!noClear)
 				enter();
 			else
-				customTextSet = false;
+				noClear = false;
             break;
         default:
             return;

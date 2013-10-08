@@ -39,6 +39,8 @@ Completion& Completion::create_cache()
 {
     m_cachedItems.clear();
     // since there is not std::copy_if
+	//std::copy_if(m_items.begin(), m_items.end(), );
+
     std::remove_copy_if(m_items.begin(), m_items.end(),
             std::back_inserter(m_cachedItems),
             std::not1(std::bind2nd(

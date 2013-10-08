@@ -38,6 +38,7 @@
 #include <client/ShareManager.h>
 
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/cxx11/copy_if.hpp>
 
 namespace ui {
 
@@ -580,6 +581,17 @@ const OnlineUser *WindowHub::get_user(const std::string &nick)
     if(it == m_users.end())
         throw std::out_of_range("user not found");
     return it->second;
+}
+
+std::vector<std::string> WindowHub::complete(const std::string& aStr) {
+	StringList ret;
+
+	utils::Lock l(m_mutex);
+	boost::algorithm::copy_if(m_users | map_keys, back_inserter(ret), [&aStr](const string& aNick) { return Util::findSubString(aNick, aStr) != string::npos; });
+	return ret;
+	//for (const auto& u : m_users | map_keys) {
+
+	//}
 }
 
 WindowHub::~WindowHub()

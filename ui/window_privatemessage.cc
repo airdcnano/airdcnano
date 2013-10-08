@@ -49,7 +49,7 @@ void WindowPrivateMessage::handle_line(const std::string &line)
 {
 	string error;
 	if (!ClientManager::getInstance()->privateMessage(m_user, line, error, false)) {
-
+		add_line(display::LineEntry("Failed to send the message: " + error));
 	}
 }
 
@@ -58,7 +58,7 @@ void WindowPrivateMessage::get_list()
     try {
         QueueManager::getInstance()->addList(m_user, QueueItem::FLAG_CLIENT_VIEW);
     } catch(Exception &e) {
-		core::Log::get()->log("Couldn't get file list from " + Util::listToString(ClientManager::getInstance()->getNicks(m_user)) + " " + e.getError());
+		add_line(display::LineEntry("Couldn't get file list from: " + Util::listToString(ClientManager::getInstance()->getNicks(m_user)) + " " + e.getError()));
     }
 }
 

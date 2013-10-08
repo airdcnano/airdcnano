@@ -74,7 +74,7 @@ void CursesWindow::print(const std::string &text, int x, int y, bool colors)
     }
 }
 
-void CursesWindow::resize(int x, int y, int w, int h) {
+void CursesWindow::resize(int x, int y, int w, int h) { 
     if (h < 0 || w < 0)
         throw std::logic_error("CursesWindow::resize(): bad h or w position");
 

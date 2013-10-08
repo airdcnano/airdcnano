@@ -19,7 +19,7 @@
 #define APPNAME "AirDC++n"
 #define VERSIONSTRING "2.60"
 #define DCVERSIONSTRING "0.830"
-#define SVNVERSION "1736"
+#define SVNVERSION "1737"
 
 #define BETAVER
 

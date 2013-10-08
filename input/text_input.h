@@ -57,10 +57,10 @@ public:
     std::string str() const { return *this; }
     size_t length() const;
 	void clear_text();
-	void setText(const std::string& aText);
+	void setText(const std::string& aText, bool noClear = true);
 	bool hasBinding(wint_t key) const;
 private:
-	bool customTextSet = false;
+	bool noClear = false;
     bool m_utf8;
     unsigned int m_pos;
     typedef std::deque<String> List;

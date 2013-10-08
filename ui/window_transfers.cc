@@ -78,7 +78,7 @@ HintedUser WindowTransfers::get_user()
     if(row == -1)
         return HintedUser();
 
-    std::string text = get_text(0, get_selected_row());
+    auto text = get_text(0, get_selected_row());
     return m_transfers[text]->m_user;
 }
 
@@ -98,7 +98,7 @@ TransferItem* WindowTransfers::create_transfer(const HintedUser& user, bool down
 		return m_transfers[aToken];
     }
 
-	TransferItem *item = new TransferItem(user, download, aToken);
+	auto item = new TransferItem(user, download, aToken);
 	m_transfers[aToken] = item;
     return item;
 }
@@ -120,8 +120,8 @@ void WindowTransfers::remove_download()
     if(row == -1)
         return;
 
-    std::string id = get_text(0, row);
-    TransferItem *item = get_transfer(id);
+    auto id = get_text(0, row);
+    auto item = get_transfer(id);
 	if (item->is_download())
 		QueueManager::getInstance()->removeFile(item->m_target);
 }
@@ -134,14 +134,14 @@ void WindowTransfers::add_favorite()
     if(row == -1)
         return;
 
-    UserPtr user = get_user();
-    FavoriteManager::getInstance()->addFavoriteUser(HintedUser(user, Util::emptyString));
+    auto user = get_user();
+    FavoriteManager::getInstance()->addFavoriteUser(user);
 }
 
 void WindowTransfers::remove_source()
 {
-    UserPtr user = get_user();
-    QueueManager::getInstance()->removeSource(user, QueueItem::Source::FLAG_REMOVED);
+    auto user = get_user();
+    QueueManager::getInstance()->removeSource(user.user, QueueItem::Source::FLAG_REMOVED);
 }
 
 void WindowTransfers::msg()
@@ -177,8 +177,8 @@ void WindowTransfers::force()
     if(row == -1)
         return;
 
-	std::string id = get_text(0, row);
-	TransferItem *item = get_transfer(id);
+	auto id = get_text(0, row);
+	auto item = get_transfer(id);
 	if (item->is_download()) {
 		ConnectionManager::getInstance()->force(id);
 		set_text(5, get_selected_row(), "Connecting (forced)");
@@ -188,13 +188,12 @@ void WindowTransfers::force()
 void WindowTransfers::transfer_completed(const Transfer *transfer)
 {
     bool isDownload = transfer->getUserConnection().isSet(UserConnection::FLAG_DOWNLOAD);
-    UserPtr user = transfer->getUserConnection().getUser();
 
     int row = get_row(transfer->getToken());
     set_text(4, row, "100");
 	set_text(5, row, isDownload ? "Download finished, idle..." : "Upload finished, idle...");
 
-    TransferItem *item = get_transfer(transfer->getToken());
+    auto item = get_transfer(transfer->getToken());
     item->m_left = -1;
 }
 
@@ -249,14 +248,14 @@ void WindowTransfers::on(DownloadManagerListener::Starting, const Download *dl) 
     utils::Lock l(m_mutex);
 
     int row = get_row(dl->getToken());
-    std::string target = Text::acpToUtf8(dl->getPath());
+    auto target = Text::acpToUtf8(dl->getPath());
 
     if(dl->getType() == Download::TYPE_FULL_LIST)
         set_text(5, row, "Starting: Filelist");
     else
         set_text(5, row, "Starting: " + Util::getFileName(target));
 
-    TransferItem *item = get_transfer(dl->getToken());
+    auto item = get_transfer(dl->getToken());
     item->m_path = Util::getFilePath(target);
     item->m_size = dl->getSize();
     item->m_started = GET_TICK();
@@ -276,16 +275,14 @@ void WindowTransfers::on(DownloadManagerListener::Tick, const DownloadList &list
 		if (dl->getUserConnection().isSet(UserConnection::FLAG_MCN1))
 			flags += "M";
 
-        UserPtr user = dl->getUserConnection().getUser();
         int row = get_row(dl->getToken());
-
         set_text(1, row, flags);
 		set_text(2, row, Util::listToString(ClientManager::getInstance()->getNicks(dl->getUserConnection().getHintedUser())));
         set_text(3, row, Util::formatBytes(dl->getAverageSpeed()) + "/s");
         set_text(4, row, utils::to_string(static_cast<int>((dl->getPos() * 100.0) / dl->getSize())));
         set_text(5, row, Util::getFileName(Text::acpToUtf8(dl->getPath())));
 
-        TransferItem *item = get_transfer(dl->getToken());
+        auto item = get_transfer(dl->getToken());
         item->m_left = dl->getSecondsLeft();
         item->m_size = dl->getSize();
         item->m_bytes = dl->getPos();
@@ -297,12 +294,11 @@ void WindowTransfers::on(DownloadManagerListener::Failed, const Download *dl, co
 {
     utils::Lock l(m_mutex);
 
-    UserPtr user = dl->getUserConnection().getUser();
     int row = get_row(dl->getToken());
     set_text(5, row, reason);
 
-    TransferItem *item = get_transfer(dl->getToken());
-    std::string target = Text::acpToUtf8(dl->getPath());
+    auto item = get_transfer(dl->getToken());
+    auto target = Text::acpToUtf8(dl->getPath());
 
 	if (dl->getType() == Download::TYPE_FULL_LIST)
         item->m_file = "Filelist";
@@ -317,8 +313,8 @@ void WindowTransfers::on(UploadManagerListener::Starting, const Upload *ul) noex
 {
     utils::Lock l(m_mutex);
 
-    TransferItem *item = get_transfer(ul->getToken());
-    std::string target = Text::acpToUtf8(ul->getPath());
+    auto item = get_transfer(ul->getToken());
+    auto target = Text::acpToUtf8(ul->getPath());
 
     if (ul->getType() == Upload::TYPE_FULL_LIST)
         item->m_file = "Filelist";
@@ -347,7 +343,6 @@ void WindowTransfers::on(UploadManagerListener::Tick, const UploadList &list) no
 		if (ul->getUserConnection().isSet(UserConnection::FLAG_MCN1))
 			flags += "M";
 
-        UserPtr user = ul->getUserConnection().getUser();
         int row = get_row(ul->getToken());
         set_text(1, row, flags);
 		set_text(2, row, Util::listToString(ClientManager::getInstance()->getNicks(ul->getUserConnection().getHintedUser())));
@@ -355,7 +350,7 @@ void WindowTransfers::on(UploadManagerListener::Tick, const UploadList &list) no
         set_text(4, row, utils::to_string(static_cast<int>((ul->getPos() * 100.0) / ul->getSize())));
         set_text(5, row, ul->getPath());
 
-        TransferItem *item = get_transfer(ul->getToken());
+        auto item = get_transfer(ul->getToken());
         item->m_left = ul->getSecondsLeft();
         item->m_bytes = ul->getPos();
         item->m_size = ul->getSize();
@@ -374,8 +369,8 @@ std::string WindowTransfers::get_infobox_line(unsigned int n)
 {
 	return std::string(); // @todo ListView needs locking before this function can be run without crashes.
 
-    std::string text = get_text(0, get_selected_row());
-    TransferItem *item = get_transfer(text);
+    auto text = get_text(0, get_selected_row());
+    auto item = get_transfer(text);
 
     std::ostringstream oss;
     switch(n) {

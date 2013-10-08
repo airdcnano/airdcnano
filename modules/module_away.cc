@@ -49,7 +49,6 @@ namespace modules {
 				std::bind(&Away::key_pressed, this));
 			events::add_listener("client created", [this] { TimerManager::getInstance()->addListener(this); });
 			events::add_listener("command quit", [this] { TimerManager::getInstance()->removeListener(this); });
-			//TimerManager::getInstance()->addListener(this);
 		}
 
 		void handleAway() {
@@ -69,7 +68,7 @@ namespace modules {
 		}
 
 		~Away() {
-			//TimerManager::getInstance()->removeListener(this);
+
 		}
 
 		void on(TimerManagerListener::Second, uint64_t aTick) noexcept{

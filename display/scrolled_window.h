@@ -84,6 +84,7 @@ public:
 
     /** Scroll the window. */
     void scroll_window(int lines);
+	void clear();
 private:
     void set_activity(display::LineEntry::Type type);
     display::LineEntry koskenkorva_viina(const display::LineEntry &line);

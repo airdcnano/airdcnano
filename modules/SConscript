@@ -10,6 +10,7 @@ modules_files = [
     'module_msg.cc',
     'module_search.cc',
 	'module_share.cc',
+	'module_suggest.cc',
 ]
 
 Import('env')

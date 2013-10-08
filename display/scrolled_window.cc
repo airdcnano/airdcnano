@@ -27,6 +27,7 @@
 #include <utils/utils.h>
 #include <utils/strings.h>
 #include <utils/lock.h>
+#include <display/manager.h>
 
 namespace display {
 
@@ -42,6 +43,14 @@ ScrolledWindow::ScrolledWindow(const std::string& aID, display::Type aType) :
     update_config();
     m_lines.reserve(m_lastlogSize);
     m_state = STATE_NO_ACTIVITY;
+
+}
+
+void ScrolledWindow::clear() {
+	m_lineLock.lock();
+	m_lines.clear();
+	m_scrollPosition = 0;
+	m_lineLock.unlock();
 }
 
 void ScrolledWindow::update_config()
@@ -104,7 +113,7 @@ void ScrolledWindow::add_line(const display::LineEntry &line_,
 
 LineEntry ScrolledWindow::koskenkorva_viina(const display::LineEntry &line_)
 {
-    display::LineEntry line = line_;
+    auto line = line_;
     std::string text;
  
     text = utils::time_to_string(m_timestamp, line.m_time);

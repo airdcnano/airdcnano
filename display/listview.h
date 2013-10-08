@@ -157,9 +157,10 @@ public:
 
 	void setInsertMode(bool enable);
 protected:
+	virtual utils::Mutex* getLock() { return nullptr; }
     int m_rowCount;
     Columns m_columns;
-    utils::Mutex m_itemLock;
+    //utils::Mutex m_itemLock;
     int m_currentItem;
     unsigned int m_infoboxHeight;
 };

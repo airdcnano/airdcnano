@@ -52,6 +52,8 @@ public:
     HintedUser get_user() { return m_user; }
 
     ~WindowPrivateMessage();
+
+	void fillLogParams(ParamMap& params) const;
 private:
     HintedUser m_user;
     std::string m_nick;

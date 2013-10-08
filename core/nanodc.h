@@ -66,6 +66,9 @@ private:
     int m_argc; //!< The number of command line arguments
     char **m_argv; //!< Command line arguments
     bool m_crash; //!< Set to true when the signal handler is called.
+
+	void printHelp();
+	void printVersion();
 };
 
 } // namespace core

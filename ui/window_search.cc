@@ -153,10 +153,9 @@ void WindowSearch::search(const std::string &str)
     if(!str.empty()) {
         m_searchWords.clear();
         m_search = Text::toLower(str);
-        strings::split(m_search, " ", std::back_inserter(m_searchWords));
+		m_searchWords = AdcSearch::parseSearchString(m_search);
 
         utils::Lock lock(m_resultLock);
-        //std::for_each(m_results.begin(), m_results.end(), std::mem_fun(&SearchResult::decRef));
         m_results.clear();
     }
 
@@ -272,12 +271,6 @@ void WindowSearch::on(SearchManagerListener::SR, const SearchResultPtr& result)
     }
 }
 
-std::string escape_and_get_filename(const std::string &str)
-{
-    auto temp = strings::escape(Util::getFileName(str));
-	return Util::toAdcFile(temp);
-}
-
 void WindowSearch::add_result(const SearchResultPtr& result)
 {
     if(matches(result)) {
@@ -288,7 +281,7 @@ void WindowSearch::add_result(const SearchResultPtr& result)
             + "/" + utils::to_string(result->getSlots()));
         set_text(3, row, Util::formatBytes(result->getSize()));
 		set_text(4, row, Util::getDateTime(result->getDate()));
-        set_text(5, row, escape_and_get_filename(result->getFileName()));
+		set_text(5, row, strings::escape(result->getFileName()));
     }
 }
 
@@ -316,7 +309,7 @@ bool WindowSearch::matches(const SearchResultPtr& result)
 
     int matches = 0;
     for(unsigned int i=0; i<m_extensions.size(); ++i) {
-        std::string extension = m_extensions.at(i);
+        auto extension = m_extensions.at(i);
         if(filename.find_last_of(extension) == filename.length()-1) {
             matches++;
         }
@@ -335,13 +328,17 @@ void WindowSearch::free_results()
     m_results.clear();
 }
 
+string getTarget(const string& aTarget) {
+	auto target = aTarget.empty() ? SETTING(DOWNLOAD_DIRECTORY) : aTarget;
+	if (!target.empty() && target[target.length() - 1] != '/')
+		target += "/";
+	return target;
+}
+
 void WindowSearch::download(const std::string &path)
 {
     auto result = get_result();
-    std::string target = path.empty() ? SETTING(DOWNLOAD_DIRECTORY) : path;
-    target = Text::utf8ToAcp(target);
-    if(!target.empty() && target[target.length()-1] != '/')
-        target += "/";
+	auto target = getTarget(path);
 
     try {
         if(result->getType() == SearchResult::TYPE_FILE) {
@@ -371,7 +368,7 @@ void WindowSearch::download(const std::string &path)
 void WindowSearch::download_directory(const std::string &path)
 {
     auto result = get_result();
-	auto target = path.empty() ? SETTING(DOWNLOAD_DIRECTORY) : path + "/";
+	auto target = getTarget(path);
     try {
         if(result->getType() == SearchResult::TYPE_FILE)
         {
@@ -414,9 +411,7 @@ std::string WindowSearch::get_infobox_line(unsigned int n)
             break;
         case 4:
         {
-            std::string filename = result->getFileName();
-            strings::escape(filename);
-            ss << filename;
+			ss << strings::escape(Util::toAdcFile(result->getPath()));
             break;
         }
     }

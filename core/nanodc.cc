@@ -37,6 +37,7 @@
 
 #include <client/stdinc.h>
 #include <client/Util.h>
+#include <client/version.h>
 
 using namespace dcpp;
 namespace core {
@@ -58,10 +59,25 @@ int Nanodc::run()
 
     check_root() || raise(SIGKILL);
 
+	while (m_argc > 0) {
+		Util::addParam(Text::fromT(*m_argv));
+		m_argc--;
+		m_argv++;
+	}
+
+	if (Util::hasParam("-h")) {
+		printHelp();
+		return 0;
+	}
+
+	if (Util::hasParam("-v")) {
+		printVersion();
+		return 0;
+	}
+
     try {
         core::Manager::create()->run();
-    }
-    catch(std::exception& e) {
+    } catch(std::exception& e) {
         std::cerr << "Caught exception: " << e.what() << std::endl;
         core::Manager::destroy();
         erase(); refresh(); doupdate();
@@ -72,6 +88,14 @@ int Nanodc::run()
     core::Manager::destroy();
     endwin();
     return 0;
+}
+
+void Nanodc::printHelp() {
+	std::cout << "Usage: airdcnano [-c=<configdir>] | [-no-autoconnect] | [-h] | [-v]" << std::endl;
+}
+
+void Nanodc::printVersion() {
+	std::cout << fullVersionString << std::endl;
 }
 
 void Nanodc::add_signal_handlers()

@@ -187,6 +187,7 @@ void WindowTransfers::force()
 
 void WindowTransfers::transfer_completed(const Transfer *transfer)
 {
+	utils::Lock l(m_mutex);
     bool isDownload = transfer->getUserConnection().isSet(UserConnection::FLAG_DOWNLOAD);
 
     int row = get_row(transfer->getToken());
@@ -367,7 +368,7 @@ WindowTransfers::~WindowTransfers()
 
 std::string WindowTransfers::get_infobox_line(unsigned int n)
 {
-	return std::string(); // @todo ListView needs locking before this function can be run without crashes.
+	//return std::string(); // @todo ListView needs locking before this function can be run without crashes.
 
     auto text = get_text(0, get_selected_row());
     auto item = get_transfer(text);

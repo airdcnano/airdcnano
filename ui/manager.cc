@@ -102,7 +102,8 @@ void Manager::create_windows()
 		core::Log::get()->log("ConnectivityManager::setup failure: " + e.getError());
 	}
 
-	FavoriteManager::getInstance()->autoConnect();
+	if (!Util::hasParam("-no-autoconnect"))
+		FavoriteManager::getInstance()->autoConnect();
 }
 
 void Manager::init_statusbar()

@@ -1,0 +1,10 @@
+*.vcxproj
+*.filters
+*.sdf
+*.sln
+*.suo
+build
+*.dblite
+.sconf_temp
+*.log
+*.opensdf

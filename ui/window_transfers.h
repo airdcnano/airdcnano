@@ -115,6 +115,9 @@ public:
     void on(UploadManagerListener::Starting, const Upload *ul) noexcept;
 	void on(UploadManagerListener::Tick, const UploadList &list) noexcept;
     void on(UploadManagerListener::Complete, const Upload *ul) noexcept { transfer_completed(ul); }
+protected:
+	utils::Mutex* getLock() { return &m_mutex; }
+
 private:
     int get_row(const std::string& aToken);
     TransferItem *get_transfer(const std::string& aToken);

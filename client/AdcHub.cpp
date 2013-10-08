@@ -680,7 +680,6 @@ void AdcHub::handle(AdcCommand::UBD, AdcCommand& c) noexcept {
 	UploadManager::getInstance()->onUBD(c);
 }
 
-#define KURRPURR "%zu"
 void AdcHub::handle(AdcCommand::GET, AdcCommand& c) noexcept {
 	if(c.getParameters().size() < 5) {
 		if(c.getParameters().size() > 0) {
@@ -1462,7 +1461,7 @@ void AdcHub::infoImpl() {
 	addParam(lastInfoMap, c, "HR", Util::toString(counts[COUNT_REGISTERED]));
 	addParam(lastInfoMap, c, "HO", Util::toString(counts[COUNT_OP]));	
 
-	addParam(lastInfoMap, c, "VE", APPNAME " " SHORTVERSIONSTRING);
+	addParam(lastInfoMap, c, "VE", APPNAME " " + shortVersionString);
 	addParam(lastInfoMap, c, "AW", AirUtil::getAway() ? "1" : Util::emptyString);
 	addParam(lastInfoMap, c, "LC", Localization::getCurrentLocale());
 

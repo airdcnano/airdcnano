@@ -34,6 +34,7 @@
 #include <client/HubEntry.h>
 #include <core/events.h>
 
+#include <client/LogManager.h>
 #include <client/FavoriteManager.h>
 #include <client/ShareManager.h>
 #include <client/StringTokenizer.h>
@@ -187,6 +188,15 @@ void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
 	if (matches)
 		return;
 
+	if (m_client->get(HubSettings::LogMainChat)) {
+		ParamMap params;
+		params["message"] = aMessage.format();
+		m_client->getHubIdentity().getParams(params, "hub", false);
+		params["hubURL"] = Util::cleanPathChars(m_client->getHubUrl());
+		m_client->getMyIdentity().getParams(params, "my", true);
+		LOG(LogManager::CHAT, params);
+	}
+
 	auto flag = display::LineEntry::MESSAGE;
 
 	if (myPM) {
@@ -220,9 +230,6 @@ void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
 	auto nick = aMessage.from->getIdentity().getNick();
 	auto text = aMessage.text;
 
-	//core::Log::get()->log("privmsg: From:" + nick +
-	//	", To: " + aMessage.to->getIdentity().getNick() + " reply: " + aMessage.replyTo->getIdentity().getNick() + " Message:" + text);
-
 	auto dm = display::Manager::get();
 	ui::WindowPrivateMessage *pm;
 
@@ -255,6 +262,13 @@ void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
 		pm = static_cast<ui::WindowPrivateMessage*>(*it);
 	}
 
+	if (SETTING(LOG_PRIVATE_CHAT)) {
+		ParamMap params;
+		params["message"] = aMessage.format();
+		pm->fillLogParams(params);
+		LogManager::getInstance()->log(user->getUser(), params);
+	}
+
 	//boost::replace_all(text, "\n", "\\");
 
 	StringTokenizer<string> lines(text, '\n');
@@ -281,10 +295,20 @@ void WindowHub::on(ClientListener::StatusMessage, const Client*, const string& l
     noexcept
 {
     std::string tmp = strings::escape(line);
-    if(!tmp.empty())
-        add_line(display::LineEntry(tmp));
-    else
-        core::Log::get()->log("WindowHub::on(StatusMessage...): received empty line from " + m_client->getAddress());
+	if (!tmp.empty()) {
+		if (SETTING(LOG_STATUS_MESSAGES)) {
+			ParamMap params;
+			m_client->getHubIdentity().getParams(params, "hub", false);
+			params["hubURL"] = m_client->getHubUrl();
+			m_client->getMyIdentity().getParams(params, "my", true);
+			params["message"] = line;
+			LOG(LogManager::STATUS, params);
+		}
+
+		add_line(display::LineEntry(tmp));
+	} else {
+		core::Log::get()->log("WindowHub::on(StatusMessage...): received empty line from " + m_client->getAddress());
+	}
 }
 
 void WindowHub::on(ClientListener::UserConnected, const Client* c, const OnlineUserPtr& aUser) noexcept{

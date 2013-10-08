@@ -97,6 +97,7 @@ client_files = [
 	'UserQueue.cpp',
 	'Util.cpp',
 	'WebShortcuts.cpp',
+	'version.cpp',
 	'Wildcards.cpp',
 	'ZUtils.cpp']
 

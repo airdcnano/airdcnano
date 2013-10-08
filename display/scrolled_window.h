@@ -58,7 +58,7 @@ public:
 
     LineEntry() { }
 
-    const std::string& str() { return m_text; }
+    const std::string& str() const { return m_text; }
 private:
     std::string m_text;
     unsigned int m_indent;
@@ -92,7 +92,7 @@ private:
     utils::Mutex m_messageLock;
     utils::Mutex m_lineLock;
     std::vector<display::LineEntry> m_lines;
-    unsigned int m_scrollPosition; //!< Number of the first line to show on the screen
+    int m_scrollPosition; //!< Number of the first line to show on the screen
     unsigned int m_lastlogSize;
     std::string m_timestamp;
 };

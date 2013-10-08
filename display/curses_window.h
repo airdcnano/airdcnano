@@ -24,7 +24,15 @@
 #ifndef _CURSESWINDOW_H_
 #define _CURSESWINDOW_H_
 
+//#define _XOPEN_SOURCE_EXTENDED
+#ifdef HAVE_NCURSESW_NCURSES_H
 #include <ncursesw/ncurses.h>
+#elif HAVE_NCURSES_NCURSES_H
+#include <ncurses/ncurses.h>
+#else
+#include <ncurses.h>
+#endif
+
 #include <string>
 #include <utils/lock.h>
 

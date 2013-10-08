@@ -28,11 +28,16 @@
 #include <utils/strings.h>
 #include <utils/lock.h>
 #include <display/manager.h>
+#include <client/stdinc.h>
+#include <core/log.h>
+#include <client/Util.h>
+
+using namespace dcpp;
 
 namespace display {
 
 ScrolledWindow::ScrolledWindow(const std::string& aID, display::Type aType) :
-    m_scrollPosition(0),
+    m_scrollPosition(-1),
     m_lastlogSize(200),
     m_timestamp("[%H:%M:%S] "),
 	Window(aID, aType)
@@ -49,7 +54,7 @@ ScrolledWindow::ScrolledWindow(const std::string& aID, display::Type aType) :
 void ScrolledWindow::clear() {
 	m_lineLock.lock();
 	m_lines.clear();
-	m_scrollPosition = 0;
+	m_scrollPosition = -1;
 	m_lineLock.unlock();
 }
 
@@ -83,13 +88,8 @@ void ScrolledWindow::add_line(const display::LineEntry &line_,
         m_lines.erase(m_lines.begin());
 
     display::LineEntry line = koskenkorva_viina(line_);
+	m_lines.push_back(line);
 
-    /* scroll the window if we are at the bottom */
-    if(m_scrollPosition == m_lines.size()) {
-        m_scrollPosition++;
-    }
-
-    m_lines.push_back(line);
     m_lineLock.unlock();
 
     if(redraw_screen && m_state == STATE_IS_ACTIVE) {
@@ -130,15 +130,60 @@ LineEntry ScrolledWindow::koskenkorva_viina(const display::LineEntry &line_)
     return line;
 }
 
-void ScrolledWindow::scroll_window(int lines)
+void ScrolledWindow::scroll_window(int aLines)
 {
-    if(static_cast<int>(m_scrollPosition)+lines < 0)
-        m_scrollPosition = 0;
-    else
-        m_scrollPosition += lines;
+	auto window_width = static_cast<int>(get_width());
+	auto window_height = static_cast<int>(get_height());
 
-    if(m_scrollPosition > m_lines.size())
-        m_scrollPosition = m_lines.size();
+	/* Don't scroll if everything fits on the screen */
+	int countedHeight = 0;
+	int lastFirst = m_lines.size();
+	for (const auto& line : m_lines | reversed) {
+		auto h = Window::calculate_height(line.str(), window_width, line.m_indent);
+		countedHeight += h;
+		if (countedHeight > window_height) {
+			break;
+		}
+
+		lastFirst--;
+	}
+
+	if (countedHeight <= window_height) {
+		return;
+	}
+
+	countedHeight = 0;
+	int oldFirst = m_scrollPosition >= 0 ? m_scrollPosition : lastFirst;
+	// scale the lines based on the text height
+	if (aLines > 0) {
+		if (oldFirst < lastFirst) {
+			auto lastIter = m_lines.begin() + lastFirst;
+			for (auto p = m_lines.begin() + oldFirst; p < lastIter && countedHeight < aLines; ++p) {
+				auto h = Window::calculate_height((*p).str(), window_width, (*p).m_indent);
+				m_scrollPosition++;
+				countedHeight += h;
+			}
+		}
+	} else {
+		if (m_scrollPosition == -1)
+			m_scrollPosition = lastFirst;
+
+		for (auto p = m_lines.begin() + oldFirst; p >= m_lines.begin() && countedHeight < abs(aLines); --p) {
+			auto h = Window::calculate_height((*p).str(), window_width, (*p).m_indent);
+			m_scrollPosition--;
+			countedHeight += h;
+		}
+
+		if (m_scrollPosition < 0) {
+			m_scrollPosition = 0;
+		}
+	}
+
+	//core::Log::get()->log("scroll done, countedHeight:" + Util::toString(countedHeight) + " oldFirst: " + Util::toString(oldFirst) + " lastFirst: " + Util::toString(lastFirst));
+
+	if (m_scrollPosition >= lastFirst) {
+		m_scrollPosition = -1;
+	}
 
     events::emit("window updated", this);
 }
@@ -146,54 +191,63 @@ void ScrolledWindow::scroll_window(int lines)
 void ScrolledWindow::redraw()
 {
     resize();
-    unsigned int window_height = get_height();
-    unsigned int window_width = get_width();
+    auto window_height = static_cast<int>(get_height());
+	auto window_width = static_cast<int>(get_width());
 
     /* Find out the first message to print */
-    int first = m_scrollPosition;
-    int line = std::min<size_t>(get_height(), m_lines.size());
+	int countedHeight = 0;
+	int first = m_lines.size();
+	for (const auto& line : m_lines | reversed) {
+		if (countedHeight == window_height) {
+			first--;
+			break;
+		}
 
-    while(first > 0 && line > 0) {
-        LineEntry lineEntry;
-        try {
-            lineEntry = m_lines.at(first-1);
-        } catch(std::exception &e) {
-            set_title("bUG in ScrolledWindow::redraw" +
-                    std::string(e.what() + utils::to_string(first)));
-        }
-        line -= Window::calculate_height(lineEntry.str(), window_width,
-                    lineEntry.m_indent);
-        first--;
-    }
+		auto h = Window::calculate_height(line.str(), window_width, line.m_indent);
+		countedHeight += h;
+		first--;
+		if (countedHeight >= window_height) {
+			break;
+		}
+	}
+
+	//set_title("height" + Util::toString(countedHeight) + " first " + Util::toString(first) + " lines " + Util::toString(m_lines.size()) + " window " + Util::toString(window_height));
+	if (m_scrollPosition == -1 || first == 0 || m_scrollPosition >= first) {
+		m_scrollPosition = -1; // we have resized the window? all text can fit the screen or at least everything after the scroll pos
+		countedHeight = window_height - countedHeight;
+	} else {
+		countedHeight = 0; // don't cut the first line
+		first = m_scrollPosition;
+	}
 
     /* Iterator to the first message to print */
-    auto it = m_lines.end() - (m_lines.size()-first);
+    auto it = m_lines.begin()+first;
 
     Window::erase();
 
-    for(size_t height=0; it != m_lines.end() && height < window_height; ++it) {
-        std::string message = it->str();
+	std::string indentation;
+    for(int height=0; it != m_lines.end() && height < window_height; ++it) {
+        const auto& message = it->str();
 
         std::string::size_type i = 0;
         while(i < message.length()) {
-            std::string indentation;
-            std::string::size_type tmp = i;
+            auto prevEnd = i;
             if(i == 0) {
                 i = Window::find_line_end(message, i, window_width);
-            }
-            else {
+				indentation = "";
+            } else {
                 i = Window::find_line_end(message, i, window_width-it->m_indent);
                 indentation = std::string(it->m_indent, ' ');
             }
 
-            /* line is < 0 if the first message doesn't
+            /* countedHeight is < 0 if the first message doesn't
              * fit completely on the screen */
-            if(++line > 0) {
-                print(indentation + message.substr(tmp, i-tmp+1), 0, height++);
-                i++;
-            }
+			if (++countedHeight > 0) {
+				print(indentation + message.substr(prevEnd, i - prevEnd + 1), 0, height++);
+			}
 
-            for(; i < message.length() && isspace(message[i]); i++);
+			i++;
+			for (; i < message.length() && isspace(message[i]); i++);
         }
 
         Window::clear_flags();

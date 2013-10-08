@@ -17,6 +17,7 @@ client_files = [
 	'ColorSettings.cpp',
 	'ConnectionManager.cpp',
 	'ConnectivityManager.cpp',
+	'CriticalSection.cpp',
 	'CryptoManager.cpp',
 	'DCPlusPlus.cpp',
 	'DebugManager.cpp',

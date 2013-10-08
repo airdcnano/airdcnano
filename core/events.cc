@@ -38,9 +38,7 @@ void Manager::main_loop()
 {
 	std::unique_ptr<Callback> callback;
     do {
-       // m_queueMutex.lock();
         /* wait until there's events to process */
-        //pthread_cond_wait(&m_queueCond, m_queueMutex.get_mutex());
 		s.wait();
 		if (tasks.pop(callback)) {
 			m_args = &callback->args;
@@ -49,7 +47,6 @@ void Manager::main_loop()
 			* by throwing StopEvent exception */
 			try {
 				(*callback->sig)();
-				//callback->sig();
 			} catch (StopEvent &e) {
 				/* do nothing.. */
 			}
@@ -102,15 +99,7 @@ void Manager::emit(const std::string &event, boost::any a1,
     if(!a7.empty())
         args.push_back(a7);
 
-    //m_queueMutex.lock();
-    //m_queue.emplace_back(m_events[event], args);
 	tasks.push(new Callback({ m_events[event], move(args) }));
-
-    //system(std::string("echo " + event + " >>emit").c_str());
-    //m_queueMutex.unlock();
-
-    /* signal other thread there's data available */
-    //pthread_cond_signal(&m_queueCond);
 	s.signal();
 }
 

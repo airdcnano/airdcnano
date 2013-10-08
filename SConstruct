@@ -32,6 +32,7 @@ def CheckCXXVersion(context, name, major, minor):
     return retval
 
 env = Environment(ENV = os.environ)
+#env.Append(LIBPATH = '/opt/local/lib/')
 
 conf = Configure(env,
     custom_tests = {
@@ -48,7 +49,19 @@ else:
 
 if os.environ.has_key('CXXFLAGS'):
 	env['CXXFLAGS'] = os.environ['CXXFLAGS'].split()
+	
+release = ARGUMENTS.get('release', 0)
+debug = ARGUMENTS.get('debug', 0)
 
+if int(release):
+    env.Append(CXXFLAGS = ['-O2',  '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder', '-Wno-overloaded-virtual'])
+elif int(debug):
+    env.Append(CXXFLAGS = ['-g', '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder', '-Wno-overloaded-virtual'])
+else:
+    env.Append(CXXFLAGS = ['-g', '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder', '-Wno-overloaded-virtual'])
+
+	
+	
 # Dependencies
 if env['CXX'] == 'clang':
 	if not conf.CheckCXXVersion(env['CXX'], 3, 3):
@@ -72,11 +85,16 @@ if not conf.CheckPKGConfig():
      print 'pkg-config not found.' 
      Exit(1) 
 
-if not conf.CheckLibWithHeader('ncursesw', 'ncursesw/ncurses.h', 'c++'):
+if conf.CheckLibWithHeader('ncursesw', 'ncursesw/ncurses.h', 'c'):
+	env.Prepend(CXXFLAGS = ['-DHAVE_NCURSESW_NCURSES_H'])
+elif conf.CheckLibWithHeader('ncurses', 'ncurses/ncurses.h', 'c'): 
+	env.Prepend(CXXFLAGS = ['-DHAVE_NCURSES_NCURSES_H'])
+elif not conf.CheckLibWithHeader('ncurses', 'ncurses.h', 'c'): 
     print 'Did not find the ncursesw library'
     print 'Can\'t live without it, exiting'
     print 'Note: You might have the lib but not the headers (install dev-package)'
     Exit(1)
+
 
 if not conf.CheckLibWithHeader('pthread', 'pthread.h', 'c++'):
     print 'Did not find the pthread library, exiting!'
@@ -111,25 +129,25 @@ if not conf.CheckPKG('glib-2.0'):
 #    print 'Note: You might have the lib but not the headers'
 #    Exit(1)
 
-if not conf.CheckLib('boost_signals'):
-    print 'Did not find the boost_signals library, exiting!'
-    print 'Note: You might have the lib but not the headers'
-    Exit(1)
+if not conf.CheckLib('boost_signals') and not conf.CheckLib('boost_signals-mt'):
+	print 'Did not find the boost_signals library, exiting!'
+	print 'Note: You might have the lib but not the headers'
+	Exit(1)
 
-if not conf.CheckLib('boost_thread'):
-    print 'Did not find the boost_thread library, exiting!'
-    print 'Note: You might have the lib but not the headers'
-    Exit(1)
+if not conf.CheckLib('boost_thread') and not conf.CheckLib('boost_thread-mt'):
+	print 'Did not find the boost_thread library, exiting!'
+	print 'Note: You might have the lib but not the headers'
+	Exit(1)
 
-if not conf.CheckLib('boost_regex'):
-        print '\tboost_regex not found.'
-        print '\tNote: You might have the lib but not the headers'
-        Exit(1)
+if not conf.CheckLib('boost_regex') and not conf.CheckLib('boost_regex-mt'):
+	print 'Did not find the boost_regex library, exiting!'
+	print 'Note: You might have the lib but not the headers'
+	Exit(1)
 
-if not conf.CheckLib('boost_system'):
-        print '\tboost_system not found.'
-        print '\tNote: You might have the lib but not the headers'
-        Exit(1)
+if not conf.CheckLib('boost_system') and not conf.CheckLib('boost_system-mt'):
+	print 'Did not find the boost_system library, exiting!'
+	print 'Note: You might have the lib but not the headers'
+	Exit(1)
 
 if not conf.CheckCXXHeader('boost/version.hpp', '<>'):
 	print '\tboost not found.'
@@ -187,14 +205,11 @@ if conf.CheckHeader(['sys/types.h', 'sys/socket.h', 'ifaddrs.h', 'net/if.h']):
 	conf.env.Append(CPPDEFINES = 'HAVE_IFADDRS_H')
 
 env = conf.Finish()
-env.Append(CXXFLAGS = ['-I.', '-ansi', '-Wall'])
+env.Prepend(CXXFLAGS = ['-I.', '-ansi', '-Wall'])
 #env.Append(CXXFLAGS = commands.getoutput('pkg-config sigc++-2.0 --cflags').split())
-env.Append(CXXFLAGS = commands.getoutput('pkg-config glib-2.0 --cflags').split())
+env.Prepend(CXXFLAGS = commands.getoutput('pkg-config glib-2.0 --cflags').split())
 #env.Append(_LIBFLAGS = ' ' + commands.getoutput('pkg-config sigc++-2.0 --libs'))
 env.Append(_LIBFLAGS = ' ' + commands.getoutput('pkg-config glib-2.0 --libs'))
-
-release = ARGUMENTS.get('release', 0)
-debug = ARGUMENTS.get('debug', 0)
 
 env['build_path'] = 'build/'
 if int(release):
@@ -203,13 +218,6 @@ elif int(debug):
 	env['build_path'] = 'build/debug/'
 
 env.Append(LIBPATH = env['build_path'])
-
-if int(release):
-    env.Append(CXXFLAGS = ['-O2',  '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder', '-Wno-overloaded-virtual'])
-elif int(debug):
-    env.Append(CXXFLAGS = ['-g', '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder', '-Wno-overloaded-virtual'])
-else:
-    env.Append(CXXFLAGS = ['-g', '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder', '-Wno-overloaded-virtual'])
 	
 
 build = env.Program('airdcnano', [

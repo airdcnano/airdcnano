@@ -32,6 +32,7 @@
 #include <cctype>
 #include <glib.h>
 #include <sys/time.h>
+#include <sys/syscall.h>
 #include <time.h>
 
 namespace utils {

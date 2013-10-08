@@ -105,7 +105,7 @@ private:
 	void onPrivateMessage(const ChatMessage&) noexcept;
 
     Client *m_client;
-    int64_t m_lastJoin;
+    uint64_t m_lastJoin = 0;
     bool m_joined;
     bool m_timer;
     typedef std::map<std::string, const OnlineUser*> Users;

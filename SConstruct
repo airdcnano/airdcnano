@@ -200,11 +200,11 @@ elif int(debug):
 env.Append(LIBPATH = env['build_path'])
 
 if int(release):
-    env.Append(CXXFLAGS = ['-O2',  '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder', '-Wno-format'])
+    env.Append(CXXFLAGS = ['-O2',  '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder'])
 elif int(debug):
     env.Append(CXXFLAGS = ['-g', '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder'])
 else:
-    env.Append(CXXFLAGS = ['-g', '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder', '-Wno-format'])
+    env.Append(CXXFLAGS = ['-g', '-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder'])
 	
 
 build = env.Program('airdcnano', [

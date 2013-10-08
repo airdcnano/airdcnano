@@ -40,10 +40,10 @@ public:
     static void initialize() throw(std::runtime_error);
 
     /** Returns the width of the screen. */
-    static unsigned int get_width() { int x, y; getmaxyx(stdscr, y, x); return x; }
+	static unsigned int get_width() { return get_xymax().first; }
 
     /** Returns the height of the screen. */
-    static unsigned int get_height() { int x, y; getmaxyx(stdscr, y, x); return y; }
+	static unsigned int get_height() { return get_xymax().second; }
 
     /** Check if screen has been resized since last call.
      * @return True if screen has been resized, false otherwise. */
@@ -58,6 +58,8 @@ public:
     /** Unlocks the screen mutex. */
     static void unlock() { m_mutex.unlock(); }
 private:
+	static std::pair<unsigned int, unsigned int> get_xymax() { int x, y; getmaxyx(stdscr, y, x); return{ x, y }; }
+
     Screen(); //!< Forbidden
     Screen(const Screen &); //!< Forbidden
     Screen& operator=(const Screen &); //!< Forbidden

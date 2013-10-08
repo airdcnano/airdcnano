@@ -680,6 +680,7 @@ void AdcHub::handle(AdcCommand::UBD, AdcCommand& c) noexcept {
 	UploadManager::getInstance()->onUBD(c);
 }
 
+#define KURRPURR "%zu"
 void AdcHub::handle(AdcCommand::GET, AdcCommand& c) noexcept {
 	if(c.getParameters().size() < 5) {
 		if(c.getParameters().size() > 0) {
@@ -735,7 +736,7 @@ void AdcHub::handle(AdcCommand::GET, AdcCommand& c) noexcept {
 		}
 		
 		if (m > 0) {
-			dcdebug("Creating bloom filter, k=%u, m=%u, h=%u\n", k, m, h);
+			dcdebug("Creating bloom filter, k=" SIZET_FMT ", m=" SIZET_FMT ", h=" SIZET_FMT "\n", k, m, h);
 
 			HashBloom bloom;
 			bloom.reset(k, m, h);

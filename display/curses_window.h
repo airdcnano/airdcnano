@@ -55,17 +55,21 @@ public:
     /** Clear the window. */
     void clear() { wclear(m_window); }
 
+	std::pair<unsigned int, unsigned int> get_xymax() const { int x, y; getmaxyx(m_window, y, x); return{ x, y }; }
+
     /** Get the width of the window. */
-    unsigned int get_width() const { int x, y; getmaxyx(m_window, y, x); return x; }
+	unsigned int get_width() const { return get_xymax().first; }
 
     /** Get the height of the window. */
-    unsigned int get_height() const { int x, y; getmaxyx(m_window, y, x); return y; }
+	unsigned int get_height() const { return get_xymax().second; }
 
+	
+	std::pair<unsigned int, unsigned int> get_xy() const { int x, y; getyx(m_window, y, x); return{ x, y }; }
     /** Get the x-position of the window. */
-    int get_x() const { int x, y; getyx(m_window, y, x); return x; }
+	int get_x() const { return get_xy().first; }
 
     /** Get the y-position of the window. */
-    int get_y() const { int x, y; getyx(m_window, y, x); return y; }
+	int get_y() const { return get_xy().second; }
 
     /**
         \brief Print text to the window.

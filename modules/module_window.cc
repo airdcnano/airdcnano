@@ -101,7 +101,7 @@ public:
 			}
 
 			auto newPos = Util::toInt(parser.arg(1));
-			if (newPos < 1 || newPos > mger->size()) {
+			if (newPos < 1 || newPos > static_cast<int>(mger->size())) {
 				display::Manager::get()->cmdMessage("Invalid position");
 				return;
 			}
@@ -122,7 +122,7 @@ public:
 			mger->set_current(current);
 		} else if (!command.empty() && (Util::toInt(command) >= 0 && Util::toInt(command) <= 9)) {
 			auto pos = Util::toInt(command) - 1;
-			if (pos <= mger->size()) {
+			if (pos <= static_cast<int>(mger->size())) {
 				auto newCurrent = mger->begin() + pos;
 				mger->set_current(newCurrent);
 			}

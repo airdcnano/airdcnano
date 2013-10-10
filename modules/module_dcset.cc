@@ -352,13 +352,24 @@ public:
 
 	HelpHandler help;
 
-    DcSet() : help(&commands, "Config") {
+	DcSet() : help(&commands, "Config", std::bind(&DcSet::handleSuggest, this, placeholders::_1, placeholders::_2)) {
         /*events::add_listener("command dcset",
                 std::bind(&DcSet::set, this));
 
         events::add_listener("command nick",
                 std::bind(&DcSet::set_nick, this));*/
     }
+
+	void handleSuggest(const StringList& aArgs, StringList& suggest_) {
+		if (aArgs.size() <= 2) {
+			if (aArgs[0] == "dcset") {
+				for (const auto& s : settings) {
+					if (!s.name.empty())
+						suggest_.push_back(s.name);
+				}
+			}
+		}
+	}
 
 	void connection() {
 		auto info = ConnectivityManager::getInstance()->getInformation();

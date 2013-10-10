@@ -108,11 +108,13 @@ public:
 	void on(ConnectionManagerListener::Removed, const ConnectionQueueItem *item) noexcept;
     void on(ConnectionManagerListener::Failed, const ConnectionQueueItem *item, const string &reason) noexcept;
 	void on(ConnectionManagerListener::StatusChanged, const ConnectionQueueItem *item) noexcept;
+	void on(ConnectionManagerListener::UserUpdated, const ConnectionQueueItem* aCqi) noexcept;
 
     void on(DownloadManagerListener::Starting, const Download *dl) noexcept;
     void on(DownloadManagerListener::Tick, const DownloadList &list) noexcept;
     void on(DownloadManagerListener::Complete, const Download *dl, bool) noexcept { transfer_completed(dl, true); }
     void on(DownloadManagerListener::Failed, const Download *dl, const string &reason) noexcept;
+	void on(DownloadManagerListener::Requesting, const Download* aDownload, bool hubChanged) noexcept;
 
     void on(UploadManagerListener::Starting, const Upload *ul) noexcept;
 	void on(UploadManagerListener::Tick, const UploadList &list) noexcept;
@@ -200,6 +202,11 @@ private:
 	void starting(UpdateInfo* ui, const Transfer* t);
 
     std::map<std::string, TransferItem*> m_transfers;
+	void updateTitle(int64_t down, int64_t up);
+
+	int64_t lastUp = 0;
+	int64_t lastDown = 0;
+	uint64_t lastUpdate = 0;
 };
 } // namespace ui
 

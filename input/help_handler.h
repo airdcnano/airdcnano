@@ -27,22 +27,32 @@
 #include <functional>
 
 #include <core/events.h>
+#include <display/window.h>
 
 using namespace std;
 
 class HelpHandler {
 public:
+	typedef function < void(const vector<string>& /*arguments*/, vector<string>& /*complete*/)> CommandCompletionF;
+	static vector<HelpHandler*> list;
+
 	struct Command {
 		string command;
 		events::EventFunc eF;
 	};
 
 	typedef vector<Command> CommandList;
-	HelpHandler(const CommandList* aHandlers, const string& aTitle);
+	HelpHandler(const CommandList* aHandlers, const string& aTitle, CommandCompletionF aCompletionF = nullptr, display::Window* aWindow = nullptr);
+	~HelpHandler();
+
+	CommandCompletionF completionF;
+	const CommandList* handlers;
+	display::Window* window;
 private:
 	void handleHelp();
-	const CommandList* handlers;
 	string title;
+	vector <boost::signals2::connection> conns;
+	void handleCommand(events::EventFunc& aEvent);
 };
 
 #endif

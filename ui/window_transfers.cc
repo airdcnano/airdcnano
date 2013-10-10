@@ -23,17 +23,35 @@
 #include <ui/window_hub.h>
 #include <display/manager.h>
 #include <display/screen.h>
-#include <client/Util.h>
-#include <client/QueueManager.h>
-#include <client/FavoriteManager.h>
+
 #include <client/ConnectionManager.h>
+#include <client/FavoriteManager.h>
 #include <client/GeoManager.h>
+#include <client/QueueManager.h>
+#include <client/Socket.h>
+#include <client/Util.h>
+
 #include <core/events.h>
 #include <utils/utils.h>
 #include <utils/lock.h>
 #include <core/log.h>
 
 namespace ui {
+
+static string getFile(const Transfer::Type& type, const string& fileName) {
+	string file;
+
+	if (type == Transfer::TYPE_TREE) {
+		file = "TTH: " + fileName;
+	} else if (type == Transfer::TYPE_FULL_LIST) {
+		file = STRING(FILE_LIST);
+	} else if (type == Transfer::TYPE_PARTIAL_LIST) {
+		file = STRING(FILE_LIST_PARTIAL);
+	} else {
+		file = fileName;
+	}
+	return file;
+}
 
 
 WindowTransfers::WindowTransfers() : ListView(display::TYPE_TRANSFERS, "transfers")
@@ -42,15 +60,15 @@ WindowTransfers::WindowTransfers() : ListView(display::TYPE_TRANSFERS, "transfer
     ConnectionManager::getInstance()->addListener(this);
     UploadManager::getInstance()->addListener(this);
     TimerManager::getInstance()->addListener(this);
-    set_title("Transfer window");
+	updateTitle(0, 0);
     set_name("transfers");
 
     insert_column(new display::Column("ID"));
-    insert_column(new display::Column("Flags", 3, 6, 6));
-    insert_column(new display::Column("Nick", 8, 10, 20));
+    insert_column(new display::Column("Flags", 3, 6, 8));
+    insert_column(new display::Column("Nick", 10, 15, 20));
     insert_column(new display::Column("Speed", 13, 13, 13));
     insert_column(new display::Column("%%", 6, 6, 6));
-    insert_column(new display::Column("Filename/Status", 50, 100, 200));
+    insert_column(new display::Column("Filename/Status", 40, 60, 200));
     resize();
 
     m_bindings['m'] = std::bind(&WindowTransfers::msg, this);
@@ -195,8 +213,35 @@ void WindowTransfers::transfer_completed(const Transfer *transfer, bool isDownlo
     item->m_left = -1;*/
 }
 
-void WindowTransfers::on(TimerManagerListener::Second, uint64_t) noexcept {
+void WindowTransfers::updateTitle(int64_t down, int64_t up) {
+	string title = "Transfer window";
+	if (down > 0 || up > 0) {
+		title += " (total down: ";
+		title += Util::formatBytes(down) + "/s, total up: ";
+		title += Util::formatBytes(up) + "/s)";
+	}
+
+	set_title(title);
+}
+
+void WindowTransfers::on(TimerManagerListener::Second, uint64_t aTick) noexcept {
     events::emit("window updated", static_cast<display::Window*>(this));
+
+	if (aTick == lastUpdate)	// FIXME: temp fix for new TimerManager
+		return;
+
+	int64_t totalDown = Socket::getTotalDown();
+	int64_t totalUp = Socket::getTotalUp();
+
+	int64_t diff = (int64_t) ((lastUpdate == 0) ? aTick - 1000 : aTick - lastUpdate);
+	int64_t updiff = totalUp - lastUp;
+	int64_t downdiff = totalDown - lastDown;
+
+	callAsync([=] { updateTitle(downdiff * 1000LL / diff, updiff * 1000LL / diff);  });
+
+	lastUpdate = aTick;
+	lastUp = totalUp;
+	lastDown = totalDown;
 }
 
 // ConnectionManager
@@ -241,6 +286,28 @@ void WindowTransfers::on(ConnectionManagerListener::StatusChanged, const Connect
 void WindowTransfers::on(ConnectionManagerListener::Removed, const ConnectionQueueItem *cqi) noexcept {
 	auto token = cqi->getToken();
 	callAsync([=] { delete_row(0, token); });
+}
+
+void WindowTransfers::on(ConnectionManagerListener::UserUpdated, const ConnectionQueueItem* aCqi) noexcept{
+	auto ui = new UpdateInfo(aCqi->getToken(), aCqi->getDownload());
+	ui->setUser(aCqi->getHintedUser());
+	speak(ui);
+}
+
+void WindowTransfers::on(DownloadManagerListener::Requesting, const Download* d, bool hubChanged) noexcept{
+	auto ui = new UpdateInfo(d->getToken(), true);
+	if (hubChanged)
+		ui->setUser(d->getHintedUser());
+
+	starting(ui, d);
+
+	ui->setActual(d->getActual());
+	ui->setSize(d->getSize());
+	//ui->setStatus(ItemInfo::STATUS_RUNNING);	
+	//ui->updateMask &= ~UpdateInfo::MASK_STATUS; // hack to avoid changing item status
+	ui->setStatusString(STRING(REQUESTING) + " " + getFile(d->getType(), Util::getFileName(d->getPath())) + "...");
+	//ui->setBundle(d->getBundle() ? d->getBundle()->getToken() : Util::emptyString);
+	speak(ui);
 }
 
 void WindowTransfers::on(ConnectionManagerListener::Failed, const ConnectionQueueItem* aCqi, const std::string& aReason) noexcept{
@@ -430,21 +497,6 @@ std::string WindowTransfers::get_infobox_line(unsigned int n)
 // Updating functions
 void WindowTransfers::speak(UpdateInfo* ui, bool added) {
 	callAsync([=] { handleUpdateInfo(ui, added); });
-}
-
-static string getFile(const Transfer::Type& type, const string& fileName) {
-	string file;
-
-	if (type == Transfer::TYPE_TREE) {
-		file = "TTH: " + fileName;
-	} else if (type == Transfer::TYPE_FULL_LIST) {
-		file = STRING(FILE_LIST);
-	} else if (type == Transfer::TYPE_PARTIAL_LIST) {
-		file = STRING(FILE_LIST_PARTIAL);
-	} else {
-		file = fileName;
-	}
-	return file;
 }
 
 void WindowTransfers::handleUpdateInfo(UpdateInfo* ui, bool added) {

@@ -52,14 +52,15 @@ WindowHub::WindowHub(const std::string &address):
     m_timer(false),
     m_currentUser(m_users.end()),
 	ScrolledWindow(address, display::TYPE_HUBWINDOW),
-	reconnectConn(events::add_listener("command reconnect", boost::bind(&WindowHub::reconnect, this))),
 	createdConn(events::add_listener_last("hub created", boost::bind(&WindowHub::handleCreated, this))),
-	favConn(events::add_listener_last("command fav", boost::bind(&WindowHub::handleFav, this))),
-	favoriteConn(events::add_listener_last("command favorite", boost::bind(&WindowHub::handleFav, this))),
-	namesConn(events::add_listener_last("command names", boost::bind(&WindowHub::handleNames, this))),
-	helpConn(events::add_listener_last("command help", boost::bind(&WindowHub::print_help, this))),
-	joinsConn(events::add_listener_last("command showjoins", boost::bind(&WindowHub::handleShowJoins, this)))
+	commands({
+		{ "reconnect", boost::bind(&WindowHub::reconnect, this) },
+		{ "fav", boost::bind(&WindowHub::handleFav, this) },
+		{ "names", boost::bind(&WindowHub::handleNames, this) },
+		{ "showjoins", boost::bind(&WindowHub::handleShowJoins, this) }
+	})
 {
+	help.reset(new HelpHandler(&commands, "Hub-specific", nullptr, this));
     set_title(address);
     set_name(address);
     update_config();
@@ -73,9 +74,6 @@ void WindowHub::print_help() {
 }
 
 void WindowHub::handleFav() noexcept{
-	if (*display::Manager::get()->get_current() != this)
-		return;
-
 	auto existingHub = FavoriteManager::getInstance()->getFavoriteHubEntry(m_client->getHubUrl());
 	if (!existingHub) {
 		FavoriteHubEntryPtr e = new FavoriteHubEntry();
@@ -96,9 +94,6 @@ void WindowHub::handleFav() noexcept{
 }
 
 void WindowHub::handleNames() {
-	if (*display::Manager::get()->get_current() != this)
-		return;
-
 	utils::Lock l(m_mutex);
 	print_names();
 }
@@ -464,9 +459,6 @@ void WindowHub::on(ClientListener::AddLine, const Client*, const string& aMsg) n
 }
 
 void WindowHub::reconnect() {
-	if (*display::Manager::get()->get_current() != this)
-		return;
-
 	if (m_client)
 		m_client->reconnect();
 }
@@ -628,13 +620,7 @@ WindowHub::~WindowHub()
     }
     m_users.clear();
 
-	favoriteConn.disconnect();
-	favConn.disconnect();
-	reconnectConn.disconnect();
 	createdConn.disconnect();
-	namesConn.disconnect();
-	joinsConn.disconnect();
-	helpConn.disconnect();
 
 	//events::remove_listener("command reconnect", std::bind(&WindowHub::reconnect, this));
 	//events::remove_listener("hub created", std::bind(&WindowHub::handleConnect, this));

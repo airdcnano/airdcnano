@@ -39,6 +39,8 @@
 #include <map>
 #include <string>
 
+#include <input/help_handler.h>
+
 using namespace dcpp;
 
 namespace ui {
@@ -48,6 +50,10 @@ class WindowHub:
     public ClientListener,
     public TimerManagerListener
 {
+private:
+	unique_ptr<HelpHandler> help;
+	HelpHandler::CommandList commands;
+
 public:
     WindowHub(const std::string &address);
 
@@ -124,13 +130,13 @@ private:
 
     mutable utils::Mutex m_mutex;
 
-	boost::signals2::connection reconnectConn;
+	//boost::signals2::connection reconnectConn;
 	boost::signals2::connection createdConn;
-	boost::signals2::connection favConn;
+	/*boost::signals2::connection favConn;
 	boost::signals2::connection favoriteConn;
 	boost::signals2::connection namesConn;
 	boost::signals2::connection helpConn;
-	boost::signals2::connection joinsConn;
+	boost::signals2::connection joinsConn;*/
 
 	void print_help();
 	void handleNames();

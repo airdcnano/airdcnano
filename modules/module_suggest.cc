@@ -30,6 +30,8 @@
 //#include <input/completion.h>
 #include <display/manager.h>
 #include <ui/window_hub.h>
+#include <input/help_handler.h>
+#include <client/StringTokenizer.h>
 
 #include <boost/algorithm/cxx11/copy_if.hpp>
 #include <boost/move/algorithm.hpp>
@@ -71,9 +73,10 @@ namespace modules {
 	class Completion {
 	public:
 		template<class T>
-		Completion(T&& c, StringList&& items, string aAppend = "") : append(aAppend) {
+		Completion(T&& c, StringList&& items, string aAppend = "") : append(move(aAppend)) {
 			//m_items.erase(remove_if(m_items.begin(), m_items.end(), comp), m_items.end());
-			copy_if(items.begin(), items.end(), back_inserter(m_items), c);
+			auto uniqueEnd = unique(items.begin(), items.end());
+			copy_if(items.begin(), uniqueEnd, back_inserter(m_items), c);
 			sort(items.begin(), items.end());
 		}
 
@@ -115,12 +118,45 @@ namespace modules {
 			auto p = line.rfind(" ");
 
 			if (!c) {
+				bool isCommand = !line.empty() && line.front() == '/';
+
 				// get the last word from the line
 				auto word = p != string::npos ? line.substr(p + 1, line.length() - p - 1) : line;
 
 				auto mger = display::Manager::get();
-				auto cur = *mger->get_current();
-				if (cur->get_type() == display::TYPE_HUBWINDOW) {
+				auto cur = mger->get_current_window();
+
+				if (isCommand) {
+					StringList suggest;
+					auto args = StringTokenizer<string>(line.substr(1, line.length()-1), " ").getTokens();
+					if (args.size() <= 1 && line.back() != ' ') {
+						// list all commands
+						for (auto& h : HelpHandler::list) {
+							if (h->window && cur != h->window)
+								continue;
+
+							for (auto& c : *h->handlers) {
+								suggest.push_back(c.command);
+							}
+						}
+
+						word.erase(0, 1);
+
+						// add the common commands
+						suggest.push_back("quit");
+						suggest.push_back("help");
+					} else {
+						// list suggestions based on the command
+						for (auto& h : HelpHandler::list) {
+							if (h->completionF && boost::find_if(*h->handlers, [&](const HelpHandler::Command& c) { return c.command == args[0]; }) != h->handlers->end()) {
+								h->completionF(args, suggest);
+								break;
+							}
+						}
+					}
+
+					c.reset(new Completion(Comparator(word), move(suggest)));
+				} else if (cur->get_type() == display::TYPE_HUBWINDOW) {
 					auto hub = static_cast<ui::WindowHub*>(cur);
 					c.reset(new Completion(PrefixComparator(word), hub->complete(word), ": "));
 				}

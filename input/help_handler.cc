@@ -32,17 +32,44 @@
 #include <input/help_handler.h>
 #include <ui/window_hub.h>
 
-HelpHandler::HelpHandler(const CommandList* aHandlers, const string& aTitle) : handlers(aHandlers), title(aTitle) {
+vector<HelpHandler*> HelpHandler::list;
+
+HelpHandler::HelpHandler(const CommandList* aHandlers, const string& aTitle, CommandCompletionF aCompletionF, display::Window* aWindow) : 
+		handlers(aHandlers), title(aTitle), completionF(aCompletionF), window(aWindow) {
+
+
 	for (const auto& c : *handlers) {
-		events::add_listener("command " + c.command, c.eF);
+		conns.push_back(events::add_listener("command " + c.command, std::bind(&HelpHandler::handleCommand, this, c.eF)));
 	}
 
 	 
 	events::add_listener("command help",
 		std::bind(&HelpHandler::handleHelp, this));
+
+	list.push_back(this);
+}
+
+void HelpHandler::handleCommand(events::EventFunc& aEvent) {
+	if (window && display::Manager::get()->get_current_window() != window) {
+		return;
+	}
+
+	aEvent();
+}
+
+HelpHandler::~HelpHandler() {
+	if (window) {
+		for (auto& c : conns) {
+			c.disconnect();
+		}
+	}
 }
  
 void HelpHandler::handleHelp() {
+	if (window && display::Manager::get()->get_current_window() != window) {
+		return;
+	}
+
 	string help = "---[ " + title + ":";
 	for (const auto& c : *handlers) {
 		help += " /" + c.command;

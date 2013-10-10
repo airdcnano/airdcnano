@@ -74,6 +74,7 @@ private:
     int64_t m_started;
     int64_t m_bytes;
 	std::string m_ip;
+	bool transferFailed = false;
 };
 
 class WindowTransfers:

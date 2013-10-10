@@ -30,6 +30,7 @@
 #include <display/curses_window.h>
 #include <display/input_window.h>
 #include <client/GetSet.h>
+#include <core/events.h>
 
 static const char *default_prompt = "[airdcnano]";
 
@@ -159,6 +160,8 @@ private:
             unsigned int indent);
 
 	bool m_insertMode;
+
+	boost::signals2::connection asyncConn;
 };
 
 } // namespace display

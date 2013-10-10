@@ -57,7 +57,8 @@ WindowHub::WindowHub(const std::string &address):
 	favConn(events::add_listener_last("command fav", boost::bind(&WindowHub::handleFav, this))),
 	favoriteConn(events::add_listener_last("command favorite", boost::bind(&WindowHub::handleFav, this))),
 	namesConn(events::add_listener_last("command names", boost::bind(&WindowHub::handleNames, this))),
-	helpConn(events::add_listener_last("command help", boost::bind(&WindowHub::print_help, this)))
+	helpConn(events::add_listener_last("command help", boost::bind(&WindowHub::print_help, this))),
+	joinsConn(events::add_listener_last("command showjoins", boost::bind(&WindowHub::handleShowJoins, this)))
 {
     set_title(address);
     set_name(address);
@@ -68,7 +69,7 @@ void WindowHub::print_help() {
 	if (*display::Manager::get()->get_current() != this)
 		return;
 
-	add_line(display::LineEntry("Hub context: /fav /names /reconnect"));
+	add_line(display::LineEntry("Hub context: /fav /names /reconnect /showjoins"));
 }
 
 void WindowHub::handleFav() noexcept{
@@ -106,9 +107,6 @@ void WindowHub::handleCreated() noexcept{
 	auto url = events::arg<std::string>(0);
 	if (url == get_title()) {
 		utils::Lock l(m_mutex);
-		auto vec = core::Settings::get()->find_vector("show_joins_hubs");
-		m_showJoinsOnThisHub = utils::find_in_string(m_client->getAddress(), vec.begin(), vec.end());
-
 		m_client = ClientManager::getInstance()->getClient(url);
 		dcassert(m_client);
 		m_client->addListener(this);
@@ -127,12 +125,6 @@ void WindowHub::update_config()
     m_ignoreNicks = settings->find_vector("ignore_nicks");
     m_highlights = settings->find_vector("hilight_words");
 
-    if(m_client) {
-        auto vec = settings->find_vector("show_joins_hubs");
-        m_showJoinsOnThisHub = utils::find_in_string(m_client->getAddress(), vec.begin(), vec.end());
-    }
-
-    m_showJoins = settings->find_bool("show_joins", false);
     m_showNickList = settings->find_bool("show_nicklist", false);
     m_resolveIps = settings->find_bool("resolve_ips", false);
     m_utf8 = settings->find_bool("utf8_input", false);
@@ -217,6 +209,17 @@ void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
 	for (const auto& l : lines.getTokens()) {
 		add_line(display::LineEntry(displaySender.str() + " " + l, indent, time(0), flag));
 	}
+}
+
+void WindowHub::handleShowJoins() {
+	string status;
+	if (m_client->changeBoolHubSetting(HubSettings::ShowJoins)) {
+		status = STRING(JOIN_SHOWING_ON);
+	} else {
+		status = STRING(JOIN_SHOWING_OFF);
+	}
+
+	add_line(display::LineEntry(status));
 }
 
 void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
@@ -320,7 +323,7 @@ void WindowHub::on(ClientListener::UserUpdated, const Client*, const OnlineUserP
 	auto nick = aUser->getIdentity().getNick();
 	if (m_joined
 		&& m_users.find(nick) == m_users.end()
-		&& (m_showJoins || m_showJoinsOnThisHub ||
+		&& (m_client->get(HubSettings::ShowJoins) ||
 		utils::find_in_string(nick, m_showNicks.begin(), m_showNicks.end())
 		)
 		) {
@@ -359,7 +362,7 @@ void WindowHub::on(ClientListener::UserRemoved, const Client*, const OnlineUserP
 
     m_users.erase(p);
 
-    bool showJoin = m_showJoins || m_showJoinsOnThisHub ||
+	bool showJoin = m_client->get(HubSettings::ShowJoins) ||
                     utils::find_in_string(nick, m_showNicks.begin(),
                             m_showNicks.end());
 
@@ -630,6 +633,8 @@ WindowHub::~WindowHub()
 	reconnectConn.disconnect();
 	createdConn.disconnect();
 	namesConn.disconnect();
+	joinsConn.disconnect();
+	helpConn.disconnect();
 
 	//events::remove_listener("command reconnect", std::bind(&WindowHub::reconnect, this));
 	//events::remove_listener("hub created", std::bind(&WindowHub::handleConnect, this));

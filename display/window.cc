@@ -32,7 +32,6 @@
 #include <utils/strings.h>
 #include <core/log.h>
 #include <client/Text.h>
-#include <core/events.h>
 
 namespace display {
 
@@ -47,7 +46,8 @@ Window::Window(const std::string& aID, Type aType) :
     m_state(STATE_NO_ACTIVITY),
     m_bindings(),
     m_insertMode(true),
-    m_drawTitle(true)
+    m_drawTitle(true),
+	asyncConn(events::add_listener("async" + id, std::bind(&Window::handleAsync, this)))
 {
     // ^X
     m_bindings['X' - '@'] = std::bind(&display::Manager::remove,
@@ -55,9 +55,6 @@ Window::Window(const std::string& aID, Type aType) :
                                     this);
     set_prompt();
     resize();
-
-	events::add_listener("async" + id,
-		std::bind(&Window::handleAsync , this));
 }
 
 void Window::resize()
@@ -211,6 +208,7 @@ void Window::handleAsync() {
 
 Window::~Window()
 {
+	asyncConn.disconnect();
 }
 
 } // namespace display

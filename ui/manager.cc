@@ -48,6 +48,7 @@
 #include <client/ConnectivityManager.h>
 #include <client/DirectoryListingManager.h>
 #include <client/FavoriteManager.h>
+#include <client/UpdateManager.h>
 
 namespace ui {
 
@@ -102,6 +103,7 @@ void Manager::create_windows()
 		core::Log::get()->log("ConnectivityManager::setup failure: " + e.getError());
 	}
 
+	UpdateManager::getInstance()->checkVersion(false);
 	if (!Util::hasParam("-no-autoconnect"))
 		FavoriteManager::getInstance()->autoConnect();
 }

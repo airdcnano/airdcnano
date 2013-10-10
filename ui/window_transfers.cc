@@ -182,7 +182,8 @@ void WindowTransfers::force()
 
 void WindowTransfers::transfer_completed(const Transfer *transfer, bool isDownload) {
 	auto ui = new UpdateInfo(transfer->getToken(), isDownload);
-	ui->setPos(transfer->getPos());
+	ui->setPos(-1);
+	ui->setSpeed(-1);
 	ui->setStatusString(isDownload ? STRING(DOWNLOAD_FINISHED_IDLE) : STRING(UPLOAD_FINISHED_IDLE));
 	ui->setTimeLeft(-1);
 	speak(ui);
@@ -250,6 +251,8 @@ void WindowTransfers::on(ConnectionManagerListener::Failed, const ConnectionQueu
 		ui->setStatusString(aReason);
 	}
 
+	ui->setSpeed(-1);
+	ui->setPos(-1);
 	ui->setTimeLeft(-1);
 	speak(ui);
 	//ui->setBundle(aCqi->getLastBundle());
@@ -299,7 +302,7 @@ void WindowTransfers::on(DownloadManagerListener::Failed, const Download* aDownl
 {
 	auto ui = new UpdateInfo(aDownload->getToken(), true, true);
 	//ui->setStatus(ItemInfo::STATUS_WAITING);
-	ui->setPos(0);
+	ui->setPos(-1);
 	ui->setSize(aDownload->getSize());
 	ui->setTarget(aDownload->getPath());
 	ui->setType(aDownload->getType());
@@ -381,6 +384,9 @@ std::string WindowTransfers::get_infobox_line(unsigned int n)
 {
     auto text = get_text(0, get_selected_row());
     auto item = get_transfer(text);
+	if (!item) {
+		return "";
+	}
 
     std::ostringstream oss;
     switch(n) {
@@ -455,11 +461,13 @@ void WindowTransfers::handleUpdateInfo(UpdateInfo* ui, bool added) {
 	}
 
 	if (updateMask & UpdateInfo::MASK_POS) {
-		set_text(4, row, item->m_size > 0 ? utils::to_string(static_cast<int>((ui->pos * 100.0) / item->m_size)) : "");
+		set_text(4, row, item->m_size > 0 && ui->pos >= 0 ? utils::to_string(static_cast<int>((ui->pos * 100.0) / item->m_size)) : "");
 		item->m_bytes = ui->pos;
 	}
 	if (updateMask & UpdateInfo::MASK_STATUS_STRING) {
-		set_text(5, row, ui->statusString);
+		if (!item->transferFailed)
+			set_text(5, row, ui->statusString);
+		item->transferFailed = ui->transferFailed;
 	}
 	//if (updateMask & UpdateInfo::MASK_POS || updateMask & UpdateInfo::MASK_ACTUAL) {
 	//ctrlTransfers.updateItem(ii, COLUMN_RATIO);

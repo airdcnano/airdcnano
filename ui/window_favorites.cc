@@ -93,9 +93,11 @@ void WindowFavorites::add_new()
 
 FavoriteHubEntryPtr WindowFavorites::find_entry(int row) {
     auto favhubs = FavoriteManager::getInstance()->getFavoriteHubs();
-	return *std::find_if(favhubs.begin(), favhubs.end(), [=](const FavoriteHubEntryPtr& aFav) {
+	auto p = std::find_if(favhubs.begin(), favhubs.end(), [=](const FavoriteHubEntryPtr& aFav) {
 		return aFav->getServerStr() == get_text(2, row);
 	});
+
+	return p != favhubs.end() ? *p : nullptr;
 }
 
 void WindowFavorites::edit()
@@ -238,6 +240,7 @@ void WindowFavorites::handle_line(const std::string &line)
 			}
 
 			if (m_editFav) {
+				auto oldAddress = m_editFav->getServerStr();
 				m_editFav->setServerStr(m_newFav->getServerStr());
 				m_editFav->setName(m_newFav->getName());
 				m_editFav->setDescription(m_newFav->getDescription());
@@ -250,7 +253,7 @@ void WindowFavorites::handle_line(const std::string &line)
 				m_editFav->setConnect(m_newFav->getConnect());
 
 				try {
-					int row = find_row(2, m_editFav->getServerStr());
+					int row = find_row(2, oldAddress);
 					set_text(0, row, m_newFav->getConnect());
 					set_text(1, row, m_newFav->get(HubSettings::Nick));
 					set_text(2, row, m_newFav->getServerStr());
@@ -326,6 +329,8 @@ WindowFavorites::~WindowFavorites()
 std::string WindowFavorites::get_infobox_line(unsigned int n)
 {
     auto entry = find_entry(get_selected_row());
+	if (!entry)
+		return "";
 
     std::stringstream ss;
     switch(n) {

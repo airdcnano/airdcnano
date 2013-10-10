@@ -104,6 +104,8 @@ private:
 	void onChatMessage(const ChatMessage&) noexcept;
 	void onPrivateMessage(const ChatMessage&) noexcept;
 
+	void handleShowJoins();
+
     Client *m_client;
     uint64_t m_lastJoin = 0;
     bool m_joined;
@@ -115,8 +117,6 @@ private:
     core::StringVector m_showNicks;
     core::StringVector m_ignoreNicks;
     core::StringVector m_highlights;
-    bool m_showJoins;
-    bool m_showJoinsOnThisHub;
     bool m_showNickList;
     bool m_resolveIps;
     bool m_utf8;
@@ -130,6 +130,7 @@ private:
 	boost::signals2::connection favoriteConn;
 	boost::signals2::connection namesConn;
 	boost::signals2::connection helpConn;
+	boost::signals2::connection joinsConn;
 
 	void print_help();
 	void handleNames();

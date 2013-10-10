@@ -132,6 +132,9 @@ public:
 
     static input::TextInput m_input;
 	const std::string& getID() const { return id; }
+
+	void callAsync(std::function<void()> aF);
+	void handleAsync();
 protected:
 	const std::string id;
     std::string m_prompt;

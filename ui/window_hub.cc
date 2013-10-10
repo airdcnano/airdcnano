@@ -176,10 +176,7 @@ void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
 
 	utils::Lock l(m_mutex);
 
-	auto text(aMessage.text);
-	//boost::replace_all(temp, "\n", " ");
-	text = strings::escape(text);
-
+	auto text(strings::escape(aMessage.text));
 	auto nick = aMessage.from->getIdentity().getNick();
 
 	// don't show the message if the nick is ignored
@@ -228,7 +225,7 @@ void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
 	utils::Lock l(m_mutex);
 
 	auto nick = aMessage.from->getIdentity().getNick();
-	auto text = aMessage.text;
+	auto text = strings::escape(aMessage.text);
 
 	auto dm = display::Manager::get();
 	ui::WindowPrivateMessage *pm;
@@ -294,21 +291,17 @@ void WindowHub::on(ClientListener::Message, const Client *, const ChatMessage& a
 void WindowHub::on(ClientListener::StatusMessage, const Client*, const string& line, int)
     noexcept
 {
-    std::string tmp = strings::escape(line);
-	if (!tmp.empty()) {
-		if (SETTING(LOG_STATUS_MESSAGES)) {
-			ParamMap params;
-			m_client->getHubIdentity().getParams(params, "hub", false);
-			params["hubURL"] = m_client->getHubUrl();
-			m_client->getMyIdentity().getParams(params, "my", true);
-			params["message"] = line;
-			LOG(LogManager::STATUS, params);
-		}
-
-		add_line(display::LineEntry(tmp));
-	} else {
-		core::Log::get()->log("WindowHub::on(StatusMessage...): received empty line from " + m_client->getAddress());
+	if (SETTING(LOG_STATUS_MESSAGES)) {
+		ParamMap params;
+		m_client->getHubIdentity().getParams(params, "hub", false);
+		params["hubURL"] = m_client->getHubUrl();
+		m_client->getMyIdentity().getParams(params, "my", true);
+		params["message"] = line;
+		LOG(LogManager::STATUS, params);
 	}
+
+	std::string tmp = strings::escape(line);
+	add_line(display::LineEntry(tmp));
 }
 
 void WindowHub::on(ClientListener::UserConnected, const Client* c, const OnlineUserPtr& aUser) noexcept{

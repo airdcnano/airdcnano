@@ -16,7 +16,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#define APPNAME "AirDC++ n"
+#define APPNAME "AirDC++n"
 #define VERSIONSTRING "2.60"
 #define DCVERSIONSTRING "0.830"
 

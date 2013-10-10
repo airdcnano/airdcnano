@@ -52,7 +52,7 @@ class TransferItem
 {
 public:
     friend class WindowTransfers;
-    TransferItem(const HintedUser& user, bool isDownload, const std::string aToken):
+    TransferItem(const HintedUser& user, bool isDownload, const std::string& aToken):
 		m_user(user), m_isDownload(isDownload), m_token(aToken),
         m_left(-1), m_size(-1), m_bytes(-1)
     { }
@@ -70,9 +70,10 @@ private:
     //char m_status;
     int64_t m_left;
     int64_t m_size;
-    //int64_t m_speed;
+    int64_t m_speed;
     int64_t m_started;
     int64_t m_bytes;
+	std::string m_ip;
 };
 
 class WindowTransfers:
@@ -88,7 +89,7 @@ public:
 
 
     /** Called when a transfer is completed. */
-    void transfer_completed(const Transfer *transfer);
+    void transfer_completed(const Transfer *transfer, bool isDownload);
 
     std::string get_infobox_line(unsigned int n);
 
@@ -109,25 +110,95 @@ public:
 
     void on(DownloadManagerListener::Starting, const Download *dl) noexcept;
     void on(DownloadManagerListener::Tick, const DownloadList &list) noexcept;
-    void on(DownloadManagerListener::Complete, const Download *dl, bool) noexcept { transfer_completed(dl); }
+    void on(DownloadManagerListener::Complete, const Download *dl, bool) noexcept { transfer_completed(dl, true); }
     void on(DownloadManagerListener::Failed, const Download *dl, const string &reason) noexcept;
 
     void on(UploadManagerListener::Starting, const Upload *ul) noexcept;
 	void on(UploadManagerListener::Tick, const UploadList &list) noexcept;
-    void on(UploadManagerListener::Complete, const Upload *ul) noexcept { transfer_completed(ul); }
-protected:
-	utils::Mutex* getLock() { return &m_mutex; }
-
+    void on(UploadManagerListener::Complete, const Upload *ul) noexcept { transfer_completed(ul, false); }
 private:
+	struct UpdateInfo {
+		enum {
+			MASK_POS = 0x01,
+			MASK_SIZE = 0x02,
+			MASK_ACTUAL = 0x04,
+			MASK_SPEED = 0x08,
+			MASK_FILE = 0x10,
+			MASK_STATUS = 0x20,
+			MASK_TIMELEFT = 0x40,
+			MASK_IP = 0x80,
+			MASK_STATUS_STRING = 0x100,
+			MASK_SEGMENT = 0x200,
+			MASK_FLAGS = 0x400,
+			MASK_TOTALSPEED = 0x800,
+			MASK_BUNDLE = 0x1000,
+			MASK_START = 0x2000,
+			MASK_USER = 0x4000,
+			MASK_PRIORITY = 0x8000
+		};
+
+		UpdateInfo(string aToken, bool isDownload, bool isTransferFailed = false) :
+			updateMask(0), user(HintedUser()), download(isDownload), token(std::move(aToken)), transferFailed(isTransferFailed), type(Transfer::TYPE_LAST) {
+		}
+
+		uint32_t updateMask;
+
+		string token;
+
+		bool download;
+		bool transferFailed;
+		void setRunning(int16_t aRunning) { running = aRunning; updateMask |= MASK_SEGMENT; }
+		int16_t running;
+		//void setStatus(ItemInfo::Status aStatus) { status = aStatus; updateMask |= MASK_STATUS; }
+		//ItemInfo::Status status;
+		void setPos(int64_t aPos) { pos = aPos; updateMask |= MASK_POS; }
+		int64_t pos;
+		void setSize(int64_t aSize) { size = aSize; updateMask |= MASK_SIZE; }
+		int64_t size;
+		void setActual(int64_t aActual) { actual = aActual; updateMask |= MASK_ACTUAL; }
+		int64_t actual;
+		void setSpeed(int64_t aSpeed) { speed = aSpeed; updateMask |= MASK_SPEED; }
+		int64_t speed;
+		void setStart(uint64_t aStart) { start = aStart; updateMask |= MASK_START; }
+		uint64_t start;
+		void setTimeLeft(int64_t aTimeLeft) { timeLeft = aTimeLeft; updateMask |= MASK_TIMELEFT; }
+		int64_t timeLeft;
+		void setTotalSpeed(int64_t aTotalSpeed) { totalSpeed = aTotalSpeed; updateMask |= MASK_TOTALSPEED; }
+		int64_t totalSpeed;
+		void setStatusString(const string& aStatusString) { statusString = aStatusString; updateMask |= MASK_STATUS_STRING; }
+		string statusString;
+		void setTarget(const string& aTarget) { target = aTarget; updateMask |= MASK_FILE; }
+		string target;
+		void setFlags(const string& aFlags) { flags = aFlags; updateMask |= MASK_FLAGS; }
+		string flags;
+		void setIP(const string& aIP) { IP = aIP; updateMask |= MASK_IP; }
+		string IP;
+		//void setCipher(const string& aCipher) { cipher = aCipher; updateMask |= MASK_CIPHER; }
+		//string cipher;
+		void setType(const Transfer::Type& aType) { type = aType; }
+		Transfer::Type type;
+		//void setBundle(const string& aBundle) { bundle = aBundle; updateMask |= MASK_BUNDLE; }
+		//string bundle;
+		//void setUsers(const int16_t aUsers) { users = aUsers; updateMask |= MASK_USERS; }
+		//int16_t users;
+		void setUser(const HintedUser& aUser) { user = aUser; updateMask |= MASK_USER; }
+		QueueItemBase::Priority prio;
+		void setPriority(QueueItemBase::Priority aPrio) { prio = aPrio; updateMask |= MASK_PRIORITY; }
+		HintedUser user;
+	};
+
+	void speak(UpdateInfo* ui, bool added = false);
+	void handleUpdateInfo(UpdateInfo* ui, bool added);
+
     int get_row(const std::string& aToken);
     TransferItem *get_transfer(const std::string& aToken);
 	TransferItem* create_transfer(const HintedUser& user, bool download, const std::string& aToken);
 
 	HintedUser get_user();
 
+	void starting(UpdateInfo* ui, const Transfer* t);
 
     std::map<std::string, TransferItem*> m_transfers;
-    utils::Mutex m_mutex;
 };
 } // namespace ui
 

@@ -27,6 +27,7 @@
 #include <client/QueueManager.h>
 #include <client/FavoriteManager.h>
 #include <client/ConnectionManager.h>
+#include <client/GeoManager.h>
 #include <core/events.h>
 #include <utils/utils.h>
 #include <utils/lock.h>
@@ -114,8 +115,6 @@ TransferItem* WindowTransfers::get_transfer(const std::string& aToken) {
 
 void WindowTransfers::remove_download()
 {
-    utils::Lock l(m_mutex);
-
     int row = get_selected_row();
     if(row == -1)
         return;
@@ -128,8 +127,6 @@ void WindowTransfers::remove_download()
 
 void WindowTransfers::add_favorite()
 {
-    utils::Lock l(m_mutex);
-
     int row = get_selected_row();
     if(row == -1)
         return;
@@ -146,21 +143,21 @@ void WindowTransfers::remove_source()
 
 void WindowTransfers::msg()
 {
-	auto user = get_user();
+	/*auto user = get_user();
 	auto dm = display::Manager::get();
+	auto h = dm->find(display::TYPE_PRIVMSG, user.user->getCID().toBase32());
+
 	auto p = dm->find(display::TYPE_PRIVMSG, user.user->getCID().toBase32());
-	if (p != dm->end()) {
-		dm->set_active_window(distance(dm->begin(), p));
-	} else {
-		std::string my_nick = static_cast<ui::WindowHub*>(*p)->get_nick();
-		dm->push_back(new ui::WindowPrivateMessage(get_user(), my_nick));
+	if (p == dm->end()) {
+		dm->push_back(new ui::WindowPrivateMessage(user));
+		p = dm->end() - 1;
 	}
+
+	dm->set_active_window(distance(dm->begin(), p));*/
 }
 
 void WindowTransfers::disconnect()
 {
-    utils::Lock l(m_mutex);
-
     int row = get_selected_row();
     if(row == -1)
         return;
@@ -171,8 +168,6 @@ void WindowTransfers::disconnect()
 
 void WindowTransfers::force()
 {
-    utils::Lock l(m_mutex);
-
     int row = get_selected_row();
     if(row == -1)
         return;
@@ -185,17 +180,18 @@ void WindowTransfers::force()
 	}
 }
 
-void WindowTransfers::transfer_completed(const Transfer *transfer)
-{
-	utils::Lock l(m_mutex);
-    bool isDownload = transfer->getUserConnection().isSet(UserConnection::FLAG_DOWNLOAD);
+void WindowTransfers::transfer_completed(const Transfer *transfer, bool isDownload) {
+	auto ui = new UpdateInfo(transfer->getToken(), isDownload);
+	ui->setPos(transfer->getPos());
+	ui->setStatusString(isDownload ? STRING(DOWNLOAD_FINISHED_IDLE) : STRING(UPLOAD_FINISHED_IDLE));
+	ui->setTimeLeft(-1);
+	speak(ui);
 
-    int row = get_row(transfer->getToken());
-    set_text(4, row, "100");
+    /*set_text(4, row, "100");
 	set_text(5, row, isDownload ? "Download finished, idle..." : "Upload finished, idle...");
 
     auto item = get_transfer(transfer->getToken());
-    item->m_left = -1;
+    item->m_left = -1;*/
 }
 
 void WindowTransfers::on(TimerManagerListener::Second, uint64_t) noexcept {
@@ -203,71 +199,86 @@ void WindowTransfers::on(TimerManagerListener::Second, uint64_t) noexcept {
 }
 
 // ConnectionManager
-void WindowTransfers::on(ConnectionManagerListener::Added, const ConnectionQueueItem *cqi)
+void WindowTransfers::on(ConnectionManagerListener::Added, const ConnectionQueueItem* aCqi)
     noexcept
 {
-    utils::Lock l(m_mutex);
+	auto ui = new UpdateInfo(aCqi->getToken(), aCqi->getDownload());
+	if (ui->download) {
+		string aTarget, bundleToken; int64_t aSize; int aFlags;
+		if (QueueManager::getInstance()->getQueueInfo(aCqi->getHintedUser(), aTarget, aSize, aFlags, bundleToken)) {
+			auto type = Transfer::TYPE_FILE;
+			if (aFlags & QueueItem::FLAG_USER_LIST)
+				type = Transfer::TYPE_FULL_LIST;
+			else if (aFlags & QueueItem::FLAG_PARTIAL_LIST)
+				type = Transfer::TYPE_PARTIAL_LIST;
 
-    int row = get_row(cqi->getToken());
+			ui->setType(type);
+			ui->setTarget(aTarget);
+			ui->setSize(aSize);
+			//ui->setBundle(bundleToken);
+		}
+	}
 
-	set_text(2, row, Util::listToString(ClientManager::getInstance()->getNicks(cqi->getHintedUser())));
-    set_text(4, row, "0");
-    set_text(5, row, "Connecting...");
-
-    TransferItem *item = create_transfer(cqi->getHintedUser(), cqi->getDownload(), cqi->getToken());
-    item->m_started = GET_TICK();
+	ui->setUser(aCqi->getHintedUser());
+	//ui->setStatus(ItemInfo::STATUS_WAITING);
+	ui->setStatusString(STRING(CONNECTING));
+	ui->setTimeLeft(-1);
+	speak(ui, true);
 }
 
 void WindowTransfers::on(ConnectionManagerListener::StatusChanged, const ConnectionQueueItem *cqi) noexcept
 {
-    utils::Lock l(m_mutex);
+	auto ui = new UpdateInfo(cqi->getToken(), cqi->getDownload());
+	if (cqi->getState() == ConnectionQueueItem::CONNECTING)
+		ui->setStatusString("Connecting...");
+	else
+		ui->setStatusString("Waiting to retry");
 
-    int row = get_row(cqi->getToken());
-
-    if(cqi->getState() == ConnectionQueueItem::CONNECTING)
-        set_text(5, row, "Connecting...");
-    else
-        set_text(5, row, "Waiting to retry");
+	speak(ui);
 }
 
 void WindowTransfers::on(ConnectionManagerListener::Removed, const ConnectionQueueItem *cqi) noexcept {
-    utils::Lock l(m_mutex);
-    delete_row(0, cqi->getToken());
+	auto token = cqi->getToken();
+	callAsync([=] { delete_row(0, token); });
 }
 
-void WindowTransfers::on(ConnectionManagerListener::Failed, const ConnectionQueueItem *cqi, const std::string &reason) noexcept {
-    utils::Lock l(m_mutex);
+void WindowTransfers::on(ConnectionManagerListener::Failed, const ConnectionQueueItem* aCqi, const std::string& aReason) noexcept{
+	auto ui = new UpdateInfo(aCqi->getToken(), aCqi->getDownload(), true);
+	if (aCqi->getUser()->isSet(User::OLD_CLIENT)) {
+		ui->setStatusString(STRING(SOURCE_TOO_OLD));
+	} else {
+		ui->setStatusString(aReason);
+	}
 
-    int row = get_row(cqi->getToken());
-    set_text(3, row, "");
-    set_text(5, row, reason);
+	ui->setTimeLeft(-1);
+	speak(ui);
+	//ui->setBundle(aCqi->getLastBundle());
+	//ui->setStatus(ItemInfo::STATUS_WAITING);
 }
 
 // DownloadManager
-void WindowTransfers::on(DownloadManagerListener::Starting, const Download *dl) noexcept
+void WindowTransfers::on(DownloadManagerListener::Starting, const Download *aDownload) noexcept
 {
-    utils::Lock l(m_mutex);
+	auto ui = new UpdateInfo(aDownload->getToken(), true);
+	starting(ui, aDownload);
 
-    int row = get_row(dl->getToken());
-    auto target = Text::acpToUtf8(dl->getPath());
+	ui->setStatusString(STRING(DOWNLOAD_STARTING));
 
-    if(dl->getType() == Download::TYPE_FULL_LIST)
-        set_text(5, row, "Starting: Filelist");
-    else
-        set_text(5, row, "Starting: " + Util::getFileName(target));
+	speak(ui);
 
-    auto item = get_transfer(dl->getToken());
-    item->m_path = Util::getFilePath(target);
-    item->m_size = dl->getSize();
-    item->m_started = GET_TICK();
-    item->m_target = target;
+	//ui->setStatus(ItemInfo::STATUS_RUNNING);
+	/*ui->setStatusString(STRING(DOWNLOAD_STARTING));
+	ui->setTarget(aDownload->getPath());
+	ui->setType(aDownload->getType());*/
+
+	//ui->setBundle(aDownload->getBundle() ? aDownload->getBundle()->getToken() : Util::emptyString);
 }
 
 void WindowTransfers::on(DownloadManagerListener::Tick, const DownloadList &list) noexcept
 {
-    utils::Lock l(m_mutex);
-
     for(const auto& dl: list) {
+		auto ui = new UpdateInfo(dl->getToken(), true);
+
         std::string flags = "D";
         if(dl->getUserConnection().isSecure())
             flags += "S";
@@ -276,65 +287,70 @@ void WindowTransfers::on(DownloadManagerListener::Tick, const DownloadList &list
 		if (dl->getUserConnection().isSet(UserConnection::FLAG_MCN1))
 			flags += "M";
 
-        int row = get_row(dl->getToken());
-        set_text(1, row, flags);
-		set_text(2, row, Util::listToString(ClientManager::getInstance()->getNicks(dl->getUserConnection().getHintedUser())));
-        set_text(3, row, Util::formatBytes(dl->getAverageSpeed()) + "/s");
-        set_text(4, row, utils::to_string(static_cast<int>((dl->getPos() * 100.0) / dl->getSize())));
-        set_text(5, row, Util::getFileName(Text::acpToUtf8(dl->getPath())));
-
-        auto item = get_transfer(dl->getToken());
-        item->m_left = dl->getSecondsLeft();
-        item->m_size = dl->getSize();
-        item->m_bytes = dl->getPos();
-		item->m_target = dl->getPath();
+		ui->setFlags(flags);
+		ui->setSpeed(dl->getAverageSpeed());
+		ui->setPos(dl->getPos());
+		ui->setTimeLeft(dl->getSecondsLeft());
+		speak(ui);
     }
 }
 
-void WindowTransfers::on(DownloadManagerListener::Failed, const Download *dl, const std::string &reason) noexcept
+void WindowTransfers::on(DownloadManagerListener::Failed, const Download* aDownload, const std::string &aReason) noexcept
 {
-    utils::Lock l(m_mutex);
+	auto ui = new UpdateInfo(aDownload->getToken(), true, true);
+	//ui->setStatus(ItemInfo::STATUS_WAITING);
+	ui->setPos(0);
+	ui->setSize(aDownload->getSize());
+	ui->setTarget(aDownload->getPath());
+	ui->setType(aDownload->getType());
+	//ui->setBundle(aDownload->getBundle() ? aDownload->getBundle()->getToken() : Util::emptyString);
 
-    int row = get_row(dl->getToken());
-    set_text(5, row, reason);
+	string tmpReason = aReason;
+	if (aDownload->isSet(Download::FLAG_SLOWUSER)) {
+		tmpReason += ": " + STRING(SLOW_USER);
+	} else if (aDownload->getOverlapped() && !aDownload->isSet(Download::FLAG_OVERLAP)) {
+		tmpReason += ": " + STRING(OVERLAPPED_SLOW_SEGMENT);
+	}
 
-    auto item = get_transfer(dl->getToken());
-    auto target = Text::acpToUtf8(dl->getPath());
-
-	if (dl->getType() == Download::TYPE_FULL_LIST)
-        item->m_file = "Filelist";
-    else
-        item->m_file = Util::getFileName(target);
-
-    item->m_path = Util::getFilePath(target);
+	ui->setStatusString(tmpReason);
+	speak(ui);
 }
 
 // UploadManager
-void WindowTransfers::on(UploadManagerListener::Starting, const Upload *ul) noexcept
+void WindowTransfers::on(UploadManagerListener::Starting, const Upload *aUpload) noexcept
 {
-    utils::Lock l(m_mutex);
+	UpdateInfo* ui = new UpdateInfo(aUpload->getToken(), false);
+	starting(ui, aUpload);
 
-    auto item = get_transfer(ul->getToken());
-    auto target = Text::acpToUtf8(ul->getPath());
+	ui->setActual(aUpload->getStartPos() + aUpload->getActual());
+	ui->setSize(aUpload->getType() == Transfer::TYPE_TREE ? aUpload->getSize() : aUpload->getFileSize());
+	ui->setRunning(1);
+	speak(ui);
+}
 
-    if (ul->getType() == Upload::TYPE_FULL_LIST)
-        item->m_file = "Filelist";
-	else if (ul->getType() == Upload::TYPE_PARTIAL_LIST)
-		item->m_file = "Partial list";
-    else
-        item->m_file = Util::getFileName(target);
+void WindowTransfers::starting(UpdateInfo* ui, const Transfer* t) {
+	ui->setPos(t->getPos());
+	ui->setTarget(t->getPath());
+	ui->setType(t->getType());
+	ui->setStart(GET_TICK());
+	ui->setSize(t->getSize());
+	const auto& uc = t->getUserConnection();
 
-    item->m_path = Util::getFilePath(target);
-    item->m_size = ul->getSize();
-    item->m_started = GET_TICK();
+	const auto& ip = uc.getRemoteIp();
+	const auto& country = GeoManager::getInstance()->getCountry(uc.getRemoteIp());
+	if (country.empty()) {
+		ui->setIP(ip);
+	} else {
+		ui->setIP(country + " (" + ip + ")");
+	}
 }
 
 void WindowTransfers::on(UploadManagerListener::Tick, const UploadList &list) noexcept
 {
-    utils::Lock l(m_mutex);
-
     for(const auto& ul: list) {
-        std::ostringstream stream;
+		if (ul->getPos() == 0) continue;
+
+		UpdateInfo* ui = new UpdateInfo(ul->getToken(), false);
 
         std::string flags = "U";
         if(ul->getUserConnection().isSecure())
@@ -344,17 +360,12 @@ void WindowTransfers::on(UploadManagerListener::Tick, const UploadList &list) no
 		if (ul->getUserConnection().isSet(UserConnection::FLAG_MCN1))
 			flags += "M";
 
-        int row = get_row(ul->getToken());
-        set_text(1, row, flags);
-		set_text(2, row, Util::listToString(ClientManager::getInstance()->getNicks(ul->getUserConnection().getHintedUser())));
-        set_text(3, row, Util::formatBytes(ul->getAverageSpeed()) + "/s");
-        set_text(4, row, utils::to_string(static_cast<int>((ul->getPos() * 100.0) / ul->getSize())));
-        set_text(5, row, ul->getPath());
-
-        auto item = get_transfer(ul->getToken());
-        item->m_left = ul->getSecondsLeft();
-        item->m_bytes = ul->getPos();
-        item->m_size = ul->getSize();
+		ui->setFlags(flags);
+		ui->setSpeed(ul->getAverageSpeed());
+		ui->setPos(ul->getPos());
+		ui->setTimeLeft(ul->getSecondsLeft());
+		ui->setActual(ul->getActual());
+		speak(ui);
     }
 }
 
@@ -368,8 +379,6 @@ WindowTransfers::~WindowTransfers()
 
 std::string WindowTransfers::get_infobox_line(unsigned int n)
 {
-	//return std::string(); // @todo ListView needs locking before this function can be run without crashes.
-
     auto text = get_text(0, get_selected_row());
     auto item = get_transfer(text);
 
@@ -393,6 +402,9 @@ std::string WindowTransfers::get_infobox_line(unsigned int n)
         {
             auto hubs = ClientManager::getInstance()->getHubNames(get_user());
             oss << "%21Hubs:%21 " + (hubs.empty() ? std::string("(Offline)") : Util::listToString(hubs));
+			if (!item->m_ip.empty())
+				oss << " %21IP:%21 " + item->m_ip;
+
             break;
         }
         case 4:
@@ -407,6 +419,76 @@ std::string WindowTransfers::get_infobox_line(unsigned int n)
         }
     }
     return oss.str();
+}
+
+// Updating functions
+void WindowTransfers::speak(UpdateInfo* ui, bool added) {
+	callAsync([=] { handleUpdateInfo(ui, added); });
+}
+
+static string getFile(const Transfer::Type& type, const string& fileName) {
+	string file;
+
+	if (type == Transfer::TYPE_TREE) {
+		file = "TTH: " + fileName;
+	} else if (type == Transfer::TYPE_FULL_LIST) {
+		file = STRING(FILE_LIST);
+	} else if (type == Transfer::TYPE_PARTIAL_LIST) {
+		file = STRING(FILE_LIST_PARTIAL);
+	} else {
+		file = fileName;
+	}
+	return file;
+}
+
+void WindowTransfers::handleUpdateInfo(UpdateInfo* ui, bool added) {
+	int row = get_row(ui->token);
+	auto item = added ? create_transfer(ui->user, ui->download, ui->token) : get_transfer(ui->token);
+	if (!item) {
+		dcassert(0);
+		return;
+	}
+
+	auto updateMask = ui->updateMask;
+	if (updateMask & UpdateInfo::MASK_SIZE) {
+		item->m_size = ui->size;
+	}
+
+	if (updateMask & UpdateInfo::MASK_POS) {
+		set_text(4, row, item->m_size > 0 ? utils::to_string(static_cast<int>((ui->pos * 100.0) / item->m_size)) : "");
+		item->m_bytes = ui->pos;
+	}
+	if (updateMask & UpdateInfo::MASK_STATUS_STRING) {
+		set_text(5, row, ui->statusString);
+	}
+	//if (updateMask & UpdateInfo::MASK_POS || updateMask & UpdateInfo::MASK_ACTUAL) {
+	//ctrlTransfers.updateItem(ii, COLUMN_RATIO);
+	//}
+	if (updateMask & UpdateInfo::MASK_SPEED) {
+		set_text(3, row, ui->speed > 0 ? Util::formatBytes(ui->speed) + "/s" : "");
+		item->m_speed = ui->speed;
+	}
+	if (updateMask & UpdateInfo::MASK_FILE) {
+		item->m_target = ui->target;
+		set_text(5, row, getFile(ui->type, Util::getFileName(ui->target)));
+	}
+	if (updateMask & UpdateInfo::MASK_TIMELEFT) {
+		item->m_left = ui->timeLeft;
+	}
+	if (updateMask & UpdateInfo::MASK_IP) {
+		item->m_ip = ui->IP;
+	}
+	if (updateMask & UpdateInfo::MASK_FLAGS) {
+		set_text(1, row, ui->flags);
+	}
+	if (updateMask & UpdateInfo::MASK_START) {
+		item->m_started = ui->start;
+	}
+	if (updateMask & UpdateInfo::MASK_USER) {
+		set_text(2, row, Util::listToString(ClientManager::getInstance()->getNicks(ui->user)));
+	}
+
+	delete ui;
 }
 
 }

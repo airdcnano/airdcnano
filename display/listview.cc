@@ -236,20 +236,9 @@ void ListView::redraw()
         range.first++;
     }
 
-	auto l = getLock();
-	if (l) {
-		l->lock();
-	}
-
     for(unsigned int i=m_infoboxHeight; i>0; i--) {
         print(get_infobox_line(i), 0, get_height()-i);    
     }
-
-	if (l) {
-		l->unlock();
-	}
-
-
 
     refresh();
 }

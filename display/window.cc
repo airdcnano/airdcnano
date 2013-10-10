@@ -32,6 +32,7 @@
 #include <utils/strings.h>
 #include <core/log.h>
 #include <client/Text.h>
+#include <core/events.h>
 
 namespace display {
 
@@ -54,6 +55,9 @@ Window::Window(const std::string& aID, Type aType) :
                                     this);
     set_prompt();
     resize();
+
+	events::add_listener("async" + id,
+		std::bind(&Window::handleAsync , this));
 }
 
 void Window::resize()
@@ -195,6 +199,14 @@ const gchar *Window::find_line_end(const gchar *line_start,
 
 void Window::setInsertMode(bool enable) {
 	m_insertMode = false;
+}
+
+void Window::callAsync(std::function<void()> aF) {
+	events::emit("async" + id, aF);
+}
+
+void Window::handleAsync() {
+	events::arg<std::function<void()>>(0)();
 }
 
 Window::~Window()

@@ -151,17 +151,6 @@ public:
         }
         return ret;
     }
-#if 0
-
-    void print_help(const Parameter &param) {
-        if(param.get_command() == "connect")
-            core::Log::get()->log("Usage: /connect hub [nick] [password] [description]");
-        else if(param.get_command() == "disconnect")
-            core::Log::get()->log("Usage: /disconnect [hub]");
-        else if(param.get_command() == "reconnect")
-            core::Log::get()->log("Usage: /reconnect [hub]");
-    }
-#endif
 };
 
 } // namespace modules

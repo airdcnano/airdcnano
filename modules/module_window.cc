@@ -160,28 +160,6 @@ public:
 		auto it = display::Manager::get()->get_current();
 		display::Manager::get()->remove(*it);
 	}
-
-   /* void print_help(const Parameter &param) {
-        if(param.get_command() == "window") {
-            core::Log::get()->log("Usage: /window n|move|close");
-        }
-    }
-
-    std::vector<std::string> complete(int n, const Parameter &param)
-    {
-        if(param.get_command() == "window") {
-            if(n == 0) {
-                return utils::make_vector(4, "move", "close", "next", "prev");
-            }
-            else if(n == 1) {
-                if(param.get_param(0) == "move") {
-                    return utils::make_vector(4, "next", "prev", "first", "last");
-                }
-            }
-        }
-        return std::vector<std::string>();
-    }*/
-//#endif
 };
 } // namespace modules
 

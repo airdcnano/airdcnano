@@ -360,14 +360,6 @@ namespace modules {
 			suggest_ = File::findFiles(path, pattern, File::TYPE_DIRECTORY | (SETTING(SHARE_HIDDEN) ? File::FLAG_HIDDEN : 0));
 		}
 
-		void getSharePathSuggestions(const string& aPath, StringList& suggest_) {
-			StringList paths;
-			ShareManager::getInstance()->getParentPaths(paths);
-			for (const auto& p : paths) {
-				suggest_.push_back(p);
-			}
-		}
-
 		void getProfileSuggestions(StringList& suggest_, bool listDefault = true) {
 			auto& profiles = ShareManager::getInstance()->getProfiles();
 			for (const auto& p : profiles) {
@@ -409,7 +401,7 @@ namespace modules {
 		void handleShareRemoveSuggest(const StringList& aArgs, int pos, StringList& suggest_) {
 			if (pos == 1) {
 				// path
-				getSharePathSuggestions(aArgs[1], suggest_);
+				ShareManager::getInstance()->getParentPaths(suggest_);
 			} else if (pos == 2) {
 				// profile
 				auto& profiles = ShareManager::getInstance()->getProfiles();
@@ -423,7 +415,11 @@ namespace modules {
 
 		void handleSuggestRefresh(const StringList& aArgs, int pos, StringList& suggest_) {
 			if (pos == 0) {
-				getSharePathSuggestions(aArgs[0], suggest_);
+				auto list = ShareManager::getInstance()->getGroupedDirectories();
+				for (const auto& p : list) {
+					suggest_.push_back(p.first);
+					boost::copy(p.second, back_inserter(suggest_));
+				}
 			}
 		}
 	};

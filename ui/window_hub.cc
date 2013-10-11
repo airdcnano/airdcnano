@@ -42,7 +42,6 @@
 #include <client/ShareManager.h>
 #include <client/StringTokenizer.h>
 
-#include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/cxx11/copy_if.hpp>
 
 namespace ui {
@@ -629,7 +628,7 @@ const OnlineUser *WindowHub::get_user(const std::string &nick)
     return it->second;
 }
 
-void WindowHub::complete(const std::vector<std::string>& aArgs, std::vector<std::string>& suggest_) {
+void WindowHub::complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_) {
 	if (aArgs.empty())
 		return;
 

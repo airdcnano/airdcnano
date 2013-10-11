@@ -38,22 +38,13 @@ class Connect
 {
 public: 
 	HelpHandler::CommandList commands = {
-		{ "connect", std::bind(&Connect::connect_callback, this), nullptr }
+		{ "connect", std::bind(&Connect::connect_callback, this), COMPLETION(Connect::handleSuggest) }
 	};
 
 	HelpHandler help; 
 
     Connect() : help(&commands, "Connect") {
-		//init(commands, "Connect");
-        /*events::add_listener("command connect",
-                std::bind(&Connect::connect_callback, this));
 
-        events::add_listener("command disconnect",
-                std::bind(&Connect::disconnect, this,
-                    std::bind(&events::arg<std::string>, 0)));*/
-
-        //events::add_listener("command reconnect",
-       //         std::bind(&Connect::reconnect_callback, this));
     }
 
     void connect_callback()
@@ -73,20 +64,6 @@ public:
             true); // activate
     }
 
-    void reconnect_callback()
-    {
-        auto address = events::arg<std::string>(0);
-
-		auto mger = display::Manager::get();
-		auto it = mger->find(display::TYPE_HUBWINDOW, address);
-		if (it != mger->end()) {
-			static_cast<ui::WindowHub*>(*it)->reconnect();
-		}
-
-        //disconnect(address);
-        //connect(address, "", "", "", false);
-    }
-
     /** Connect to a hub */
 	void connect(const std::string &address, const std::string &shareProfile, bool activate)
     {
@@ -103,54 +80,21 @@ public:
 		} else {
 			mger->cmdMessage("Profile not found");
 		}
-
-		/*auto it = mger->find(display::TYPE_HUBWINDOW, address);
-
-        if(it != mger->end()) {
-            auto hub = static_cast<ui::WindowHub*>(*it);
-            if(!hub->get_client()->isConnected())
-                hub->connect();
-            mger->set_current(it);
-        } else {
-            ui::WindowHub *hub = new ui::WindowHub(address);
-			hub->connect(address, nick, password, description, *getProfileToken(shareProfile));
-            mger->push_back(hub);
-            if(activate)
-                mger->set_current(it);
-        }*/
     }
 
-    /** Disconnects a hub.
-     * @param hub Hub url to disconnect */
-    void disconnect(const std::string &hub) {
-        display::Manager *mger = display::Manager::get();
-        auto it = mger->get_current();
-
-        if(!hub.empty()) {
-			it = mger->find(display::TYPE_HUBWINDOW, hub);
-        }
-
-        if(it != mger->end() && (*it)->get_type() == display::TYPE_HUBWINDOW) {
-            auto hub = static_cast<ui::WindowHub*>(*it);
-            if(hub->get_client()->isConnected())
-                hub->get_client()->disconnect(false);
-        }
-    }
-
-    std::vector<std::string> complete()
-    {
-        //int nth = events::arg<int>(0);
-        std::string command = events::arg<std::string>(1);
-
-        StringList ret;
-        if(command == "connect") {
-            auto list = FavoriteManager::getInstance()->getFavoriteHubs();
-            for(const auto& f: list) {
-                ret.push_back(f->getServers()[0].first);
-            }
-        }
-        return ret;
-    }
+	void handleSuggest(const StringList& aArgs, int pos, StringList& suggest_) {
+		if (pos == 0) {
+			auto hubs = FavoriteManager::getInstance()->getRecentHubs();
+			for (const auto& h : hubs) {
+				suggest_.push_back(h->getServer());
+			}
+		} else if (pos == 1 && AirUtil::isAdcHub(aArgs[0])) {
+			auto& profiles = ShareManager::getInstance()->getProfiles();
+			for (const auto& p : profiles) {
+				suggest_.push_back(p->getPlainName());
+			}
+		}
+	}
 };
 
 } // namespace modules

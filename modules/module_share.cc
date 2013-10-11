@@ -33,6 +33,8 @@
 
 #include <input/help_handler.h>
 
+#include <boost/range/algorithm/copy.hpp>
+
 namespace modules {
 
 	class Share {
@@ -40,15 +42,27 @@ namespace modules {
 		HelpHandler::CommandList commands = {
 			{ "cancelhash", [] { HashManager::getInstance()->stop(); } },
 			{ "optimizedb", [] { HashManager::getInstance()->startMaintenance(false); } },
-			{ "refresh", std::bind(&Share::handleRefresh, this) },
-			{ "share", std::bind(&Share::handleShare, this) },
-			{ "shareprofile", std::bind(&Share::handleProfile, this) },
+			{ "refresh", std::bind(&Share::handleRefresh, this), COMPLETION(Share::handleSuggestRefresh) },
+			{ "share", std::bind(&Share::handleShare, this), COMPLETION(Share::handleSuggestShare) },
+			{ "shareprofile", std::bind(&Share::handleProfile, this), COMPLETION(Share::handleSuggestShareProfile) },
 			{ "verifydb", [] { HashManager::getInstance()->startMaintenance(true); } }
+		};
+
+		HelpHandler::CommandList shareCommands = {
+			{ "add", std::bind(&Share::handleRefresh, this), COMPLETION(Share::handleShareAddSuggest) },
+			{ "remove", std::bind(&Share::handleShare, this), COMPLETION(Share::handleShareRemoveSuggest) },
+			{ "list", std::bind(&Share::handleProfile, this), COMPLETION(Share::getProfileSuggestionsDefault) }
+		};
+
+		HelpHandler::CommandList shareProfileCommands = {
+			{ "add", std::bind(&Share::handleRefresh, this), nullptr },
+			{ "remove", std::bind(&Share::handleShare, this), COMPLETION(Share::getProfileSuggestionsRemove) },
+			{ "list", std::bind(&Share::handleProfile, this), nullptr},
+			{ "rename", std::bind(&Share::handleProfile, this), COMPLETION(Share::getProfileSuggestionsDefault) },
 		};
 
 		HelpHandler help;
 		Share() : help(&commands, "Share") {
-
 			events::add_listener("command allow", std::bind(&Share::handleAllow, this));
 		}
 
@@ -186,12 +200,12 @@ namespace modules {
 			auto param = parser.arg(0);
 			if (param == "add") {
 				if (parser.args() < 3) {
-					log("Usage: /share add <virtual name> <path> [<profile>] [<incoming>] (example: /share add Incoming /home/ftp/ myshareprofile 1)");
+					log("Usage: /share add <path> <virtual name> [<profile>] [<incoming>] (example: /share add Incoming /home/ftp/ myshareprofile 1)");
 					return;
 				}
 
-				auto vname = parser.arg(1);
-				auto dir = parser.arg(2);
+				auto dir = parser.arg(1);
+				auto vname = parser.arg(2);
 
 				string profileName;
 				if (parser.args() >= 4)
@@ -301,6 +315,115 @@ namespace modules {
 				}
 			} else {
 				log("no param");
+			}
+		}
+
+
+		/* SUGGESTIONS */
+
+		void handleSuggestList(const HelpHandler::CommandList& list, const StringList& aArgs, int pos, StringList& suggest_) {
+			auto command = aArgs[0];
+			auto s = boost::find_if(list, HelpHandler::CommandCompare(command));
+			if (s != list.end()) {
+				if ((*s).completionF)
+					(*s).completionF(aArgs, pos, suggest_);
+			} else {
+				for (const auto& c : list) {
+					suggest_.push_back(c.command);
+				}
+			}
+		}
+
+		void handleSuggestShare(const StringList& aArgs, int pos, StringList& suggest_) {
+			handleSuggestList(shareCommands, aArgs, pos, suggest_);
+		}
+
+		void handleSuggestShareProfile(const StringList& aArgs, int pos, StringList& suggest_) {
+			handleSuggestList(shareProfileCommands, aArgs, pos, suggest_);
+		}
+
+		void getDiskPathSuggestions(const string& aPath, StringList& suggest_) {
+			string pattern;
+			string path;
+			if (aPath.empty()) {
+				path = PATH_SEPARATOR;
+			} else {
+				if (aPath.back() != PATH_SEPARATOR) {
+					auto p = aPath.rfind(PATH_SEPARATOR);
+					path = aPath.substr(0, p + 1);
+					pattern = aPath.substr(p + 1) + "*";
+				} else {
+					path = aPath;
+				}
+			}
+
+			suggest_ = File::findFiles(path, pattern, File::TYPE_DIRECTORY | (SETTING(SHARE_HIDDEN) ? File::FLAG_HIDDEN : 0));
+		}
+
+		void getSharePathSuggestions(const string& aPath, StringList& suggest_) {
+			StringList paths;
+			ShareManager::getInstance()->getParentPaths(paths);
+			for (const auto& p : paths) {
+				suggest_.push_back(p);
+			}
+		}
+
+		void getProfileSuggestions(StringList& suggest_, bool listDefault = true) {
+			auto& profiles = ShareManager::getInstance()->getProfiles();
+			for (const auto& p : profiles) {
+				if (p->getToken() != SP_HIDDEN && (listDefault || p->getToken() != SETTING(DEFAULT_SP)))
+					suggest_.push_back(p->getPlainName());
+			}
+		}
+
+		void getProfileSuggestionsDefault(const StringList& /*aArgs*/, int pos, StringList& suggest_) {
+			if (pos == 1) {
+				getProfileSuggestions(suggest_, true);
+			}
+		}
+
+		void getProfileSuggestionsRemove(const StringList& /*aArgs*/, int pos, StringList& suggest_) {
+			if (pos == 1) {
+				getProfileSuggestions(suggest_, false);
+			}
+		}
+
+		void handleShareAddSuggest(const StringList& aArgs, int pos, StringList& suggest_) {
+			if (pos == 1) {
+				// path
+				getDiskPathSuggestions(aArgs[1], suggest_);
+			} else if (pos == 2) {
+				// vname
+				auto l = ShareManager::getInstance()->getGroupedDirectories();
+				boost::copy(l | map_keys, back_inserter(suggest_));
+			} else if (pos == 3) {
+				// profile
+				getProfileSuggestions(suggest_);
+			} else if (pos == 4) {
+				// incoming
+				suggest_.push_back("0");
+				suggest_.push_back("1");
+			}
+		}
+
+		void handleShareRemoveSuggest(const StringList& aArgs, int pos, StringList& suggest_) {
+			if (pos == 1) {
+				// path
+				getSharePathSuggestions(aArgs[1], suggest_);
+			} else if (pos == 2) {
+				// profile
+				auto& profiles = ShareManager::getInstance()->getProfiles();
+				for (const auto& p : profiles) {
+					if (existsInProfile(aArgs[1], p->getToken())) {
+						suggest_.push_back(p->getPlainName());
+					}
+				}
+			}
+		}
+
+		void handleSuggestRefresh(const StringList& aArgs, int pos, StringList& suggest_) {
+			if (pos == 0) {
+				getSharePathSuggestions(aArgs[0], suggest_);
 			}
 		}
 #if 0

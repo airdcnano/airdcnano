@@ -32,6 +32,10 @@
 #include <input/help_handler.h>
 #include <ui/window_hub.h>
 
+#include <client/stdinc.h>
+
+using namespace dcpp;
+
 vector<HelpHandler*> HelpHandler::list;
 
 HelpHandler::HelpHandler(const CommandList* aHandlers, const string& aTitle, display::Window* aWindow) : 
@@ -77,4 +81,35 @@ void HelpHandler::handleHelp() {
 	help += " ]---";
 
 	display::Manager::get()->cmdMessage(help);
+}
+
+void HelpHandler::getCommandSuggestions(vector<string>& suggest_) {
+	for (auto& h : HelpHandler::list) {
+		if (h->window && display::Manager::get()->get_current_window() != h->window) {
+			continue;
+		}
+
+		for (auto& c : *h->handlers) {
+			suggest_.push_back("/" + c.command);
+		}
+	}
+
+	// add the common commands
+	suggest_.push_back("/quit");
+	suggest_.push_back("/help");
+}
+
+const HelpHandler::Command* HelpHandler::getCommand(const string& aName) {
+	for (auto& h : list) {
+		if (h->window && display::Manager::get()->get_current_window() != h->window) {
+			continue;
+		}
+
+		auto p = boost::find_if(*h->handlers, HelpHandler::CommandCompare(aName));
+		if (p != h->handlers->end()) {
+			return &(*p);
+		}
+	}
+
+	return nullptr;
 }

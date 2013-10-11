@@ -34,12 +34,11 @@
 using namespace std;
 using namespace dcpp;
 
-#define COMPLETION(func) (std::bind(&func, this, placeholders::_1, placeholders::_2))
+#define COMPLETION(func) (std::bind(&func, this, placeholders::_1, placeholders::_2, placeholders::_3))
 
 class HelpHandler {
 public:
-	typedef function < void(const vector<string>& /*arguments*/, vector<string>& /*complete*/)> CommandCompletionF;
-	static vector<HelpHandler*> list;
+	typedef function < void(const vector<string>& /*arguments*/, int /* current pos */, vector<string>& /*complete*/)> CommandCompletionF;
 
 	struct Command {
 		Command(string aCommand, events::EventFunc aF, CommandCompletionF c = nullptr, bool aDefaultComp = true) : command(move(aCommand)), eF(aF), completionF(c), defaultComp(aDefaultComp) {}
@@ -49,17 +48,35 @@ public:
 		bool defaultComp;
 	};
 
+	class CommandCompare {
+	public:
+		CommandCompare(const string& compareTo) : a(compareTo) {}
+		bool operator()(const Command& c) {
+			return compare(a, c.command) == 0;
+		}
+	protected:
+		CommandCompare& operator=(const CommandCompare&);
+		const string& a;
+	};
+
 	typedef vector<Command> CommandList;
 	HelpHandler(const CommandList* aHandlers, const string& aTitle, display::Window* aWindow = nullptr);
 	~HelpHandler();
 
 	const CommandList* handlers;
 	display::Window* window;
+
+
+	// Global
+	static void getCommandSuggestions(vector<string>& suggest_);
+	static const Command* getCommand(const string& aName);
 private:
 	void handleHelp();
 	string title;
 	vector <boost::signals2::connection> conns;
 	void handleCommand(events::EventFunc& aEvent);
+
+	static vector<HelpHandler*> list;
 };
 
 #endif

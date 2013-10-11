@@ -360,8 +360,8 @@ public:
                 std::bind(&DcSet::set_nick, this));*/
     }
 
-	void handleSuggest(const StringList& aArgs, StringList& suggest_) {
-		if (aArgs.size() == 1) {
+	void handleSuggest(const StringList& /*aArgs*/, int pos, StringList& suggest_) {
+		if (pos == 0) {
 			for (const auto& s : settings) {
 				if (!s.isTitle)
 					suggest_.push_back(s.name);

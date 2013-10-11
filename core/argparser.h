@@ -38,16 +38,16 @@ class ArgParser
 {
 public:
     /** Constructs new parser with the given command line. */
-    ArgParser(const std::string &line);
+	ArgParser(const std::string &line, size_t cursorPos = 0);
 
     /** Parse the given command line. */
-    void parse();
+    void parse(bool unescapeWhitespaces = true);
 
     /** Get nth argument (starting from 0). */
     std::string arg(unsigned int n) { return m_args.at(n); }
 
     /** Get the number of arguments. */
-    unsigned int args() { return m_args.size(); }
+    size_t args() { return m_args.size(); }
 
     /** Returns everything after nth space character. Eg. if the line is
      * "aa bb cc" get_text(1) returns "bb cc". */
@@ -55,9 +55,20 @@ public:
 
     /** Destructor. */
     ~ArgParser();
+
+	const std::vector<std::string>& getList() const { return m_args; }
+	int getWordListPos() const { return wordListPos; }
+	int getWordStartPos() const { return wordStartPos; }
 private:
     std::string m_line; //!< The original command line
     std::vector<std::string> m_args;
+	size_t cursorPos;
+
+	// position of the word under the cursor in the arg list
+	int wordListPos = -1;
+
+	// start position of the word under the cursor in the original string
+	int wordStartPos = 0;
 };
 
 } // namespace core

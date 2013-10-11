@@ -58,8 +58,7 @@ void TextInput::clear_text() {
 	m_pos = 0;
 }
 
-size_t TextInput::get_pos() const
-{
+size_t TextInput::get_pos() const {
     return g_utf8_pointer_to_offset(c_str(), c_str()+m_pos);
 }
 

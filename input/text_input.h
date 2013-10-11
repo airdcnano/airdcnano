@@ -62,7 +62,7 @@ public:
 private:
 	bool noClear = false;
     bool m_utf8;
-    unsigned int m_pos;
+	size_t m_pos;
     typedef std::deque<String> List;
     static List m_history;
     static List::const_iterator m_historyPos;

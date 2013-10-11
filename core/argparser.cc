@@ -25,34 +25,41 @@
 #include <core/log.h>
 #include <utils/utils.h>
 
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/trim.hpp>
+
 namespace core {
 
-ArgParser::ArgParser(const std::string &line):
-    m_line(line)
-{
-}
+ArgParser::ArgParser(const std::string &line, size_t aCurPos) : m_line(line), cursorPos(aCurPos) { }
 
-void ArgParser::parse()
+void ArgParser::parse(bool unescapeWhitespaces /*true*/)
 {
     bool quote = false;
-    unsigned int end = 0;
-    unsigned int start = 0;
+	size_t end = 0;
+	size_t start = 0;
 
     do {
         char ch = m_line[end];
+		if (end == cursorPos) {
+			wordListPos = static_cast<int>(m_args.size());
+			wordStartPos = start;
+		}
 
         /* end of a word if we aren't inside quotes */
-        if(ch == ' ' && !quote) {
-            std::string arg = m_line.substr(start, end-start);
+		if (ch == ' ' && !quote && (end == 0 || m_line[end - 1] != '\\')) {
+            auto arg = m_line.substr(start, end-start);
 
             /* skip whitespace */
             while(m_line[end+1] == ' ' && end++);
 
             if(!arg.empty()) {
                // core::Log::get()->log("'" + arg + "'");
+				if (unescapeWhitespaces)
+					boost::replace_all(arg, "\\ ", " ");
                 m_args.push_back(arg);
             }
             start = end+1;
+			continue;
         }
         /* start of quoted string */
         else if(ch == '"' && !quote) {
@@ -62,17 +69,19 @@ void ArgParser::parse()
         }
         /* end of quoted string */
         else if(ch == '"' && quote) {
-            std::string arg = m_line.substr(start, end-start);
+            //std::string arg = m_line.substr(start, end-start);
             //core::Log::get()->log("'" + arg + "'");
             quote = false;
             start = end+1;
         }
     } while(end++ < m_line.length());
 
-    std::string arg = m_line.substr(start, end-start);
-    //core::Log::get()->log("'" + arg + "'");
+	if (wordListPos == -1) {
+		wordStartPos = start;
+	}
 
     /* save rest of the string if there's any */
+	auto arg = m_line.substr(start, end - start);
     if(!arg.empty()) {
         m_args.push_back(arg);
     }

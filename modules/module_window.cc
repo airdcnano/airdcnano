@@ -56,7 +56,7 @@ public:
 
 	HelpHandler::CommandList commands = {
 		{ "clear", std::bind(&Window::handleClear, this), nullptr },
-		{ "window", std::bind(&Window::window_callback, this), nullptr },
+		{ "window", std::bind(&Window::window_callback, this), COMPLETION(Window::handleSuggestWindow) },
 		{ "wc", std::bind(&Window::close, this), nullptr },
 		{ "favorites", [this] { handleOpenTab<ui::WindowFavorites>(display::TYPE_FAVORITES); }, nullptr },
 		{ "syslog", [this] { handleOpenTab<ui::WindowLog>(display::TYPE_LOGWND); }, nullptr },
@@ -67,12 +67,20 @@ public:
 	HelpHandler help;
 
     Window() : help(&commands, "Window") {
-        /*events::add_listener("command window",
-            std::bind(&Window::window_callback, this));
 
-        events::add_listener("command wc",
-			std::bind(&Window::close, this));*/
     }
+
+	void handleSuggestWindow(const StringList& aArgs, int pos, StringList& suggest_) {
+		if (pos == 0) {
+			StringList ret = { "move", "list", "close", "prev", "next" };
+			suggest_.swap(ret);
+		} else if (pos == 1) {
+			if (aArgs[0] == "move") {
+				StringList ret = { "prev", "next", "first", "last" };
+				suggest_.swap(ret);
+			}
+		}
+	}
 
 	void handleClear() {
 		auto cur = *display::Manager::get()->get_current();
@@ -96,23 +104,39 @@ public:
 			close();
         } else if (command == "move") {
 			if (parser.args() < 2) {
-				mger->cmdMessage("Usage: /window move <new pos>");
+				mger->cmdMessage("Usage: /window move <first|last|prev|next|[0-X]>");
 				return;
 			}
 
-			auto newPos = Util::toInt(parser.arg(1));
-			if (newPos < 1 || newPos > static_cast<int>(mger->size())) {
-				mger->cmdMessage("Invalid position");
-				return;
+			int newPos = 0;
+			auto pos = parser.arg(1);
+			if (pos == "next") {
+				auto newCur = current == mger->end() - 1 ? mger->begin() : current + 1;
+				newPos = distance(mger->begin(), newCur);
+			} else if (pos == "prev") {
+				auto newCur = current == mger->begin() ? mger->end() - 1 : current - 1;
+				newPos = distance(mger->begin(), newCur);
+			} else if (pos == "first") {
+				newPos = 0;
+			} else if (pos == "last") {
+				newPos = distance(mger->begin(), mger->end()-1);
+			} else {
+				newPos = Util::toInt(parser.arg(1));
+				if (newPos < 1 || newPos > static_cast<int>(mger->size())) {
+					mger->cmdMessage("Invalid position");
+					return;
+				}
+
+				newPos--;
 			}
 
-			auto p = mger->begin() + newPos - 1;
+			auto p = mger->begin() + newPos;
 			if (p < current) {
 				std::rotate(p, current, current+1);
 			} else if (current < p) {
 				std::rotate(current, current+1, p + 1);
 			}
-			mger->set_current(mger->begin() + newPos - 1);
+			mger->set_current(mger->begin() + newPos);
 		} else if (command == "next") {
 			mger->next();
 		} else if(command == "prev") {

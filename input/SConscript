@@ -1,7 +1,6 @@
 _files = [
     'manager.cc',
     'text_input.cc',
-    'completion.cc',
     'help_handler.cc',
 ]
 

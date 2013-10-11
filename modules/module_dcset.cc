@@ -345,14 +345,14 @@ class DcSet
 {
 public:
 	HelpHandler::CommandList commands = {
-		{ "connectioninfo", std::bind(&DcSet::connection, this) },
-		{ "dcset", std::bind(&DcSet::set, this) },
-		{ "nick", std::bind(&DcSet::set_nick, this) }
+		{ "connectioninfo", std::bind(&DcSet::connection, this), nullptr },
+		{ "dcset", std::bind(&DcSet::set, this), COMPLETION(DcSet::handleSuggest) },
+		{ "nick", std::bind(&DcSet::set_nick, this), nullptr }
 	};
 
 	HelpHandler help;
 
-	DcSet() : help(&commands, "Config", std::bind(&DcSet::handleSuggest, this, placeholders::_1, placeholders::_2)) {
+	DcSet() : help(&commands, "Config") {
         /*events::add_listener("command dcset",
                 std::bind(&DcSet::set, this));
 
@@ -361,12 +361,10 @@ public:
     }
 
 	void handleSuggest(const StringList& aArgs, StringList& suggest_) {
-		if (aArgs.size() <= 2) {
-			if (aArgs[0] == "dcset") {
-				for (const auto& s : settings) {
-					if (!s.name.empty())
-						suggest_.push_back(s.name);
-				}
+		if (aArgs.size() == 1) {
+			for (const auto& s : settings) {
+				if (!s.isTitle)
+					suggest_.push_back(s.name);
 			}
 		}
 	}

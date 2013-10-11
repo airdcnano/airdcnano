@@ -55,13 +55,13 @@ public:
 	}
 
 	HelpHandler::CommandList commands = {
-		{ "clear", std::bind(&Window::handleClear, this) },
-		{ "window", std::bind(&Window::window_callback, this) },
-		{ "wc", std::bind(&Window::close, this) },
-		{ "favorites", [this] { handleOpenTab<ui::WindowFavorites>(display::TYPE_FAVORITES); } },
-		{ "syslog", [this] { handleOpenTab<ui::WindowLog>(display::TYPE_LOGWND); } },
-		{ "hubs", [this] { handleOpenTab<ui::WindowHubs>(display::TYPE_HUBLIST); } },
-		{ "transfers", [this] { handleOpenTab<ui::WindowTransfers>(display::TYPE_TRANSFERS); } }
+		{ "clear", std::bind(&Window::handleClear, this), nullptr },
+		{ "window", std::bind(&Window::window_callback, this), nullptr },
+		{ "wc", std::bind(&Window::close, this), nullptr },
+		{ "favorites", [this] { handleOpenTab<ui::WindowFavorites>(display::TYPE_FAVORITES); }, nullptr },
+		{ "syslog", [this] { handleOpenTab<ui::WindowLog>(display::TYPE_LOGWND); }, nullptr },
+		{ "hubs", [this] { handleOpenTab<ui::WindowHubs>(display::TYPE_HUBLIST); }, nullptr },
+		{ "transfers", [this] { handleOpenTab<ui::WindowTransfers>(display::TYPE_TRANSFERS); }, nullptr }
 	};
 
 	HelpHandler help;

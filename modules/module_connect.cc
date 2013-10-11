@@ -38,7 +38,7 @@ class Connect
 {
 public: 
 	HelpHandler::CommandList commands = {
-		{ "connect", std::bind(&Connect::connect_callback, this) }
+		{ "connect", std::bind(&Connect::connect_callback, this), nullptr }
 	};
 
 	HelpHandler help; 

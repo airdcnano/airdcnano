@@ -39,7 +39,7 @@ namespace modules {
 class Away : private TimerManagerListener {
 public:
 	HelpHandler::CommandList commands = {
-		{ "away", std::bind(&Away::handleAway, this) }
+		{ "away", std::bind(&Away::handleAway, this), nullptr }
 	};
 
 	HelpHandler help;

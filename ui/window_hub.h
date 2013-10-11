@@ -103,7 +103,7 @@ public:
 	void on(ClientListener::NickTaken, const Client*) noexcept{ add_line(display::LineEntry("Nick taken")); }
 	void on(ClientListener::SearchFlood, const Client*, const string &msg) noexcept{ add_line(display::LineEntry(msg)); }
 
-	std::vector<std::string> complete(const std::string& aStr);
+	void complete(const std::vector<std::string>& aArgs, std::vector<std::string>& suggest_);
 private:
 	void handleFav() noexcept;
 	void handleCreated() noexcept;
@@ -111,6 +111,7 @@ private:
 	void onPrivateMessage(const ChatMessage&) noexcept;
 
 	void handleShowJoins();
+	void handleMsg();
 
     Client *m_client;
     uint64_t m_lastJoin = 0;

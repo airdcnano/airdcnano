@@ -161,17 +161,8 @@ void WindowTransfers::remove_source()
 
 void WindowTransfers::msg()
 {
-	/*auto user = get_user();
-	auto dm = display::Manager::get();
-	auto h = dm->find(display::TYPE_PRIVMSG, user.user->getCID().toBase32());
-
-	auto p = dm->find(display::TYPE_PRIVMSG, user.user->getCID().toBase32());
-	if (p == dm->end()) {
-		dm->push_back(new ui::WindowPrivateMessage(user));
-		p = dm->end() - 1;
-	}
-
-	dm->set_active_window(distance(dm->begin(), p));*/
+	auto user = get_user();
+	WindowPrivateMessage::openWindow(user);
 }
 
 void WindowTransfers::disconnect()

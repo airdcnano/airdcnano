@@ -32,6 +32,30 @@
 
 namespace ui {
 
+void WindowPrivateMessage::openWindow(const HintedUser& user) {
+	auto n = ClientManager::getInstance()->getMyNick(user.hint);
+	if (n.empty()) {
+		display::Manager::get()->cmdMessage("Hub/user offline");
+		return;
+	}
+
+	getWindow(user, n);
+}
+
+WindowPrivateMessage* WindowPrivateMessage::getWindow(const HintedUser& user, const std::string &mynick, bool setActive) {
+	auto dm = display::Manager::get();
+	auto it = dm->find(display::TYPE_PRIVMSG, user.user->getCID().toBase32());
+	if (it == dm->end()) {
+		auto pm = new ui::WindowPrivateMessage(user, mynick);
+		dm->push_back(pm);
+	}
+
+	if (setActive)
+		dm->set_current(it);
+
+	return static_cast<WindowPrivateMessage*>(*it);
+}
+
 WindowPrivateMessage::WindowPrivateMessage(const HintedUser& user, const std::string &mynick) :
 m_user(user), ScrolledWindow(user.user->getCID().toBase32(), display::TYPE_PRIVMSG)
 {

@@ -38,6 +38,8 @@ class WindowPrivateMessage:
     public display::ScrolledWindow
 {
 public:
+	static void openWindow(const HintedUser& user);
+	static WindowPrivateMessage* getWindow(const HintedUser& user, const std::string &mynick, bool setActive = true);
     WindowPrivateMessage(const HintedUser& user, const std::string &mynick);
 
     /** Send private message to the user */

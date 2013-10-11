@@ -34,8 +34,8 @@
 
 vector<HelpHandler*> HelpHandler::list;
 
-HelpHandler::HelpHandler(const CommandList* aHandlers, const string& aTitle, CommandCompletionF aCompletionF, display::Window* aWindow) : 
-		handlers(aHandlers), title(aTitle), completionF(aCompletionF), window(aWindow) {
+HelpHandler::HelpHandler(const CommandList* aHandlers, const string& aTitle, display::Window* aWindow) : 
+		handlers(aHandlers), title(aTitle), window(aWindow) {
 
 
 	for (const auto& c : *handlers) {

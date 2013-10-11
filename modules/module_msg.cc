@@ -43,8 +43,8 @@ class Msg
 {
 public:
     Msg() {
-        events::add_listener("command msg",
-                std::bind(&Msg::msg_callback, this));
+        //events::add_listener("command msg",
+        //        std::bind(&Msg::msg_callback, this));
     }
 
     /** /msg nick message */

@@ -37,7 +37,7 @@ class Search
 {
 public:
 	HelpHandler::CommandList commands = {
-		{ "search", std::bind(&Search::search_callback, this) }
+		{ "search", std::bind(&Search::search_callback, this), nullptr }
 	};
 
 	HelpHandler help;

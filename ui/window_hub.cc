@@ -32,7 +32,10 @@
 #include <utils/lock.h>
 #include <utils/strings.h>
 #include <client/HubEntry.h>
+#include <input/completion.h>
+
 #include <core/events.h>
+#include <core/argparser.h>
 
 #include <client/LogManager.h>
 #include <client/FavoriteManager.h>
@@ -54,13 +57,14 @@ WindowHub::WindowHub(const std::string &address):
 	ScrolledWindow(address, display::TYPE_HUBWINDOW),
 	createdConn(events::add_listener_last("hub created", boost::bind(&WindowHub::handleCreated, this))),
 	commands({
-		{ "reconnect", boost::bind(&WindowHub::reconnect, this) },
-		{ "fav", boost::bind(&WindowHub::handleFav, this) },
-		{ "names", boost::bind(&WindowHub::handleNames, this) },
-		{ "showjoins", boost::bind(&WindowHub::handleShowJoins, this) }
+		{ "fav", boost::bind(&WindowHub::handleFav, this), nullptr },
+		{ "msg", boost::bind(&WindowHub::handleMsg, this), COMPLETION(WindowHub::complete), false },
+		{ "names", boost::bind(&WindowHub::handleNames, this), nullptr },
+		{ "reconnect", boost::bind(&WindowHub::reconnect, this), nullptr },
+		{ "showjoins", boost::bind(&WindowHub::handleShowJoins, this), nullptr }
 	})
 {
-	help.reset(new HelpHandler(&commands, "Hub-specific", nullptr, this));
+	help.reset(new HelpHandler(&commands, "Hub-specific", this));
     set_title(address);
     set_name(address);
     update_config();
@@ -71,6 +75,33 @@ void WindowHub::print_help() {
 		return;
 
 	add_line(display::LineEntry("Hub context: /fav /names /reconnect /showjoins"));
+}
+
+void WindowHub::handleMsg() {
+	core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
+	parser.parse();
+
+	if (parser.args() < 1) {
+		display::Manager::get()->cmdMessage("Not enough parameters given");
+		return;
+	}
+
+	auto nick = parser.arg(0);
+
+	auto p = m_users.find(nick);
+	if (p == m_users.end()) {
+		display::Manager::get()->cmdMessage("User " + nick + " not found");
+		return;
+	}
+
+	auto user = p->second;
+	auto pm = WindowPrivateMessage::getWindow(HintedUser(user->getUser(), user->getHubUrl()), m_client->getMyNick());
+
+	if (parser.args() > 1) {
+		/* all text after first argument (nick) */
+		auto line = parser.get_text(1);
+		pm->handle_line(line);
+	}
 }
 
 void WindowHub::handleFav() noexcept{
@@ -598,15 +629,14 @@ const OnlineUser *WindowHub::get_user(const std::string &nick)
     return it->second;
 }
 
-std::vector<std::string> WindowHub::complete(const std::string& aStr) {
-	StringList ret;
+void WindowHub::complete(const std::vector<std::string>& aArgs, std::vector<std::string>& suggest_) {
+	if (aArgs.empty())
+		return;
+
+	auto s = aArgs[0];
 
 	utils::Lock l(m_mutex);
-	boost::algorithm::copy_if(m_users | map_keys, back_inserter(ret), [&aStr](const string& aNick) { return Util::findSubString(aNick, aStr) != string::npos; });
-	return ret;
-	//for (const auto& u : m_users | map_keys) {
-
-	//}
+	boost::algorithm::copy_if(m_users | map_keys, back_inserter(suggest_), input::PrefixComparator(s));
 }
 
 WindowHub::~WindowHub()

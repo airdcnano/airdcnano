@@ -64,7 +64,7 @@ class Window:
 {
 public:
     /** Constructor. */
-    Window(const std::string& aID, Type aType);
+    Window(const std::string& aID, Type aType, bool allowCommands);
 
     /** Draws the title window and calls \ref redraw. */
     void draw();
@@ -136,6 +136,11 @@ public:
 
 	void callAsync(std::function<void()> aF);
 	void handleAsync();
+
+	virtual void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_) { }
+
+	// does this window have an input line for commands
+	const bool allowCommands;
 protected:
 	const std::string id;
     std::string m_prompt;

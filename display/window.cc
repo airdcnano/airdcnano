@@ -37,7 +37,7 @@ namespace display {
 
 input::TextInput Window::m_input;
 
-Window::Window(const std::string& aID, Type aType) :
+Window::Window(const std::string& aID, Type aType, bool aAllowCommands) :
 	id(aID),
     m_name("window"),
     m_title("title"),
@@ -47,6 +47,7 @@ Window::Window(const std::string& aID, Type aType) :
     m_bindings(),
     m_insertMode(true),
     m_drawTitle(true),
+	allowCommands(aAllowCommands),
 	asyncConn(events::add_listener("async" + id, std::bind(&Window::handleAsync, this)))
 {
     // ^X

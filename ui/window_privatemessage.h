@@ -58,6 +58,7 @@ public:
     ~WindowPrivateMessage();
 
 	void fillLogParams(ParamMap& params) const;
+	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_);
 private:
     HintedUser m_user;
     std::string m_nick;
@@ -69,6 +70,7 @@ private:
 	void onOnlineStateChanged();
 	bool online = true;
 	void addStatusMessage(const string& aMsg);
+	void updateTitles();
 };
 
 } // namespace ui

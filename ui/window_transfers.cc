@@ -464,8 +464,7 @@ std::string WindowTransfers::get_infobox_line(unsigned int n)
             break;
         case 3:
         {
-            auto hubs = ClientManager::getInstance()->getHubNames(get_user());
-            oss << "%21Hubs:%21 " + (hubs.empty() ? std::string("(Offline)") : Util::listToString(hubs));
+			oss << "%21Hubs:%21 " + ClientManager::getInstance()->getFormatedHubNames(get_user());
 			if (!item->m_ip.empty())
 				oss << " %21IP:%21 " + item->m_ip;
 
@@ -536,7 +535,7 @@ void WindowTransfers::handleUpdateInfo(UpdateInfo* ui, bool added) {
 		item->m_started = ui->start;
 	}
 	if (updateMask & UpdateInfo::MASK_USER) {
-		set_text(2, row, Util::listToString(ClientManager::getInstance()->getNicks(ui->user)));
+		set_text(2, row, ClientManager::getInstance()->getFormatedNicks(ui->user));
 	}
 
 	delete ui;

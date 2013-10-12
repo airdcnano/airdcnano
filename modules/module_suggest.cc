@@ -40,20 +40,21 @@
 namespace modules {
 	class Completion {
 	public:
-		Completion(input::Comparator* comp, StringList&& aItems, string aAppend = "") : append(move(aAppend)) {
+		Completion(input::Comparator* comp, StringList&& aItems) {
 			//m_items.erase(remove_if(m_items.begin(), m_items.end(), comp), m_items.end());
 			//auto uniqueEnd = unique(items.begin(), items.end());
-			if (comp)
+			if (comp) {
 				copy_if(aItems.begin(), aItems.end(), back_inserter(m_items), *comp);
-			else
+
+				//fix whitespaces
+				for (auto& i : m_items) {
+					boost::replace_all(i, " ", "\\ ");
+				}
+			} else {
 				m_items = move(aItems);
+			}
 
 			sort(m_items.begin(), m_items.end());
-
-			//fix whitespaces
-			for (auto& i : m_items) {
-				boost::replace_all(i, " ", "\\ ");
-			}
 		}
 
 		optional<string> next() throw(std::out_of_range) {
@@ -68,7 +69,6 @@ namespace modules {
 
 		StringList m_items;
 		int m_currentItem = -1;
-		string append;
 	};
 
 
@@ -106,11 +106,6 @@ namespace modules {
 
 			// erase the last suggestion or the incomplete word
 			line.erase(startPos, lastLen);
-			if (line.empty()) {
-				// add ": " or similar at the end
-				*next += c->append;
-			}
-
 			line.insert(startPos, *next);
 
 			// save the last suggestion length
@@ -120,7 +115,9 @@ namespace modules {
 		}
 
 		void createComparator(const string& aLine, int pos) {
-			bool isCommand = !aLine.empty() && aLine.front() == '/';
+			auto mger = display::Manager::get();
+			auto cur = mger->get_current_window();
+			bool isCommand = !aLine.empty() && aLine.front() == '/' && cur->allowCommands;
 
 			// parse the words
 			auto parser = core::ArgParser(aLine, pos);
@@ -134,9 +131,9 @@ namespace modules {
 				wordPos = static_cast<int>(args.size() > 0 ? args.size() - 1 : 0);
 			}
 
-			if (isCommand && aLine.back() == ' ') {
+			if (aLine.back() == ' ') {
 				// get clean suggestions in those cases
-				if (wordPos == args.size() - 1)
+				if (wordPos == static_cast<int>(args.size()) - 1)
 					wordPos++;
 				args.push_back("");
 			} else if (args.empty()) {
@@ -154,12 +151,6 @@ namespace modules {
 				return;
 			}
 
-			// get the word from the position
-			//auto word = args[wordPos];
-
-			auto mger = display::Manager::get();
-			auto cur = mger->get_current_window();
-
 			if (isCommand) {
 				bool defaultSug = true;
 				StringList suggest;
@@ -171,10 +162,6 @@ namespace modules {
 					auto word = args[0];
 					auto c = HelpHandler::getCommand(word.erase(0, 1));
 					if (c) {
-						// drop the actual command
-						args.erase(args.begin());
-						wordPos--;
-
 						//get the suggestions
 						c->completionF(args, wordPos, suggest);
 						defaultSug = c->defaultComp;
@@ -183,12 +170,11 @@ namespace modules {
 
 				auto comp = input::Comparator(args[wordPos]);
 				c.reset(new Completion(defaultSug ? &comp : nullptr, move(suggest)));
-			} else if (cur->get_type() == display::TYPE_HUBWINDOW) {
-				// nick completion
-				auto hub = static_cast<ui::WindowHub*>(cur);
+			} else {
 				StringList suggest;
-				hub->complete({ args[wordPos] }, wordPos, suggest);
-				c.reset(new Completion(nullptr, move(suggest), ": "));
+				cur->complete(args, wordPos, suggest);
+				if (!suggest.empty())
+					c.reset(new Completion(nullptr, move(suggest)));
 			}
 
 			lastLen = args[wordPos].length();

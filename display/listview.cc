@@ -44,7 +44,7 @@ namespace display {
     m_rowCount(0),
     m_currentItem(std::numeric_limits<int>::min()),
     m_infoboxHeight(4),
-	Window(aID, aType)
+	Window(aID, aType, false)
 {
     m_insertMode = false;
 

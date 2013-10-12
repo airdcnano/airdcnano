@@ -40,7 +40,7 @@ ScrolledWindow::ScrolledWindow(const std::string& aID, display::Type aType) :
     m_scrollPosition(-1),
     m_lastlogSize(200),
     m_timestamp("[%H:%M:%S] "),
-	Window(aID, aType)
+	Window(aID, aType, true)
 {
     m_bindings[KEY_PPAGE] = std::bind(&ScrolledWindow::scroll_window, this, -10);
     m_bindings[KEY_NPAGE] = std::bind(&ScrolledWindow::scroll_window, this, 10);

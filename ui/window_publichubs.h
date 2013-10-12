@@ -58,6 +58,8 @@ public:
 	void on(LoadedFromCache, const string& l, const string& d) noexcept;
     /** Destructor. */
     ~WindowHubs();
+
+	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_);
 private:
     enum Property {
         PROP_NONE,

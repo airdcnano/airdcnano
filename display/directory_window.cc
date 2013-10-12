@@ -39,7 +39,7 @@ DirectoryWindow::DirectoryWindow(display::Type aType, const std::string& aID) :
     m_selectedView(DIRECTORIES),
 	m_dirView(new display::ListView()),
 	m_fileView(new display::ListView()),
-	Window(aID, aType)
+	Window(aID, aType, false)
 {
     m_bindings['\t'] = std::bind(&DirectoryWindow::change_focus, this);
     m_bindings[KEY_LEFT] = std::bind(&DirectoryWindow::change_dirview_width, this, -1);

@@ -77,6 +77,7 @@ public:
 
     Directory *m_root;
     Directory *m_current;
+	virtual void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_) {}
 protected:
     /** The width of the directory view (if m_viewType is DIRSANDFILES) */
     unsigned int m_dirViewWidth;

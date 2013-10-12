@@ -29,6 +29,7 @@
 #include <utils/utils.h>
 #include <utils/strings.h>
 #include <client/DirectoryListingManager.h>
+#include <input/completion.h>
 
 namespace ui {
 
@@ -227,6 +228,12 @@ void WindowSearch::handle_line(const std::string &line)
     m_property = PROP_NONE;
 }
 
+void WindowSearch::complete(const std::vector<std::string>& aArgs, int /*pos*/, std::vector<std::string>& suggest_) {
+	if (m_property == PROP_FILETARGET || m_property == PROP_DIRECTORYTARGET) {
+		input::Completion::getDiskPathSuggestions(aArgs[0], suggest_);
+	}
+}
+
 void WindowSearch::create_list()
 {
     delete_all();
@@ -276,7 +283,7 @@ void WindowSearch::add_result(const SearchResultPtr& result)
     if(matches(result)) {
         int row = insert_row();
         set_text(0, row, result->getUser().user->getCID().toBase32() + "-" + result->getTTH().toBase32());
-		set_text(1, row, Util::listToString(ClientManager::getInstance()->getNicks(result->getUser())));
+		set_text(1, row, ClientManager::getInstance()->getFormatedNicks(result->getUser()));
         set_text(2, row, utils::to_string(result->getFreeSlots())
             + "/" + utils::to_string(result->getSlots()));
         set_text(3, row, Util::formatBytes(result->getSize()));
@@ -396,7 +403,7 @@ std::string WindowSearch::get_infobox_line(unsigned int n)
     switch(n) {
         case 1:
             ss << "%21User:%21 " << std::left << std::setw(18) 
-				<< Util::listToString(ClientManager::getInstance()->getNicks(result->getUser()))
+				<< ClientManager::getInstance()->getFormatedNicks(result->getUser())
                 << " %21IP:%21 " << result->getIP();
             break;
         case 2:
@@ -406,7 +413,7 @@ std::string WindowSearch::get_infobox_line(unsigned int n)
             break;
         case 3:
 			ss << "%21Hub:%21 " << std::left << std::setw(18) 
-				<< Util::listToString(ClientManager::getInstance()->getHubNames(result->getUser()))
+				<< ClientManager::getInstance()->getFormatedHubNames(result->getUser())
 				<< " %21Date:%21 " << Util::getDateTime(result->getDate());
             break;
         case 4:

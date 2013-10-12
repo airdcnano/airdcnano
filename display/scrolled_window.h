@@ -85,6 +85,7 @@ public:
     /** Scroll the window. */
     void scroll_window(int lines);
 	void clear();
+	virtual void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_) {}
 private:
     void set_activity(display::LineEntry::Type type);
     display::LineEntry koskenkorva_viina(const display::LineEntry &line);

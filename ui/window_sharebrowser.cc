@@ -35,8 +35,7 @@ WindowShareBrowser::WindowShareBrowser(DirectoryListing* aList, const std::strin
 	m_path(aDir), DirectoryWindow(display::TYPE_LISTBROWSER, aList->getUser()->getCID().toBase32())
 {
 	setInsertMode(false);
-    set_title("Browsing user " + Util::listToString(ClientManager::getInstance()->getNicks(aList->getHintedUser())));
-	set_name("List:" + Util::listToString(ClientManager::getInstance()->getNicks(aList->getHintedUser())));
+	updateTitles();
 
 	aList->addListener(this);
     try {
@@ -47,8 +46,14 @@ WindowShareBrowser::WindowShareBrowser(DirectoryListing* aList, const std::strin
 		}
     } catch(Exception &e) {
 		core::Log::get()->log("Cannot open list '" + aDir + "'" +
-			" for user " + Util::listToString(ClientManager::getInstance()->getNicks(aList->getHintedUser())));
+			" for user " + ClientManager::getInstance()->getFormatedNicks(aList->getHintedUser()));
     }
+}
+
+void WindowShareBrowser::updateTitles() {
+	auto nicks = ClientManager::getInstance()->getFormatedNicks(m_listing->getHintedUser());
+	set_title("Browsing user " + nicks);
+	set_name("List:" + nicks);
 }
 
 WindowShareBrowser::~WindowShareBrowser() {

@@ -43,9 +43,11 @@
 #include <client/StringTokenizer.h>
 
 #include <boost/algorithm/cxx11/copy_if.hpp>
+#include <boost/range/adaptor/filtered.hpp>
 
 namespace ui {
 
+	using boost::adaptors::filtered;
 
 WindowHub::WindowHub(const std::string &address):
     m_client(nullptr),
@@ -483,7 +485,8 @@ void WindowHub::on(ClientListener::Redirect, const Client*, const string &msg) n
 }
 
 void WindowHub::on(ClientListener::HubTopic, const Client*, const string&) noexcept{
-
+	utils::Lock l(m_mutex);
+	updateTitle();
 }
 void WindowHub::on(ClientListener::AddLine, const Client*, const string& aMsg) noexcept{
 	add_line(display::LineEntry(aMsg));
@@ -535,7 +538,6 @@ struct _identity
 
 void WindowHub::print_names()
 {
-    std::string time = utils::time_to_string("[%H:%M:%S] ");
     for(auto i=m_users.begin(); i != m_users.end();) {
         std::ostringstream oss;
         for(int j=0; j<4 && i != m_users.end(); ++j, ++i) {
@@ -633,10 +635,12 @@ void WindowHub::complete(const std::vector<std::string>& aArgs, int pos, std::ve
 	if (aArgs.empty())
 		return;
 
-	auto s = aArgs[0];
+	auto s = aArgs[pos];
 
 	utils::Lock l(m_mutex);
-	boost::algorithm::copy_if(m_users | map_keys, back_inserter(suggest_), input::PrefixComparator(s));
+	for (const auto& n : m_users | map_keys | filtered(input::PrefixComparator(s))) {
+		suggest_.push_back(pos == 0 ? n + ": " : n);
+	}
 }
 
 WindowHub::~WindowHub()

@@ -83,12 +83,12 @@ public:
     }
 
 	void handleSuggest(const StringList& aArgs, int pos, StringList& suggest_) {
-		if (pos == 0) {
+		if (pos == 1) {
 			auto hubs = FavoriteManager::getInstance()->getRecentHubs();
 			for (const auto& h : hubs) {
 				suggest_.push_back(h->getServer());
 			}
-		} else if (pos == 1 && AirUtil::isAdcHub(aArgs[0])) {
+		} else if (pos == 2 && AirUtil::isAdcHub(aArgs[1])) {
 			auto& profiles = ShareManager::getInstance()->getProfiles();
 			for (const auto& p : profiles) {
 				suggest_.push_back(p->getPlainName());

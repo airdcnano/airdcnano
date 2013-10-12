@@ -65,6 +65,8 @@ private:
 
     };
 
+	void updateTitles();
+
 	void on(DirectoryListingListener::LoadingFinished, int64_t aStart, const string& aDir, bool reloadList, bool changeDir, bool loadInGUIThread) noexcept;
 	void on(DirectoryListingListener::LoadingFailed, const string& aReason) noexcept;
 	void on(DirectoryListingListener::LoadingStarted, bool changeDir) noexcept;

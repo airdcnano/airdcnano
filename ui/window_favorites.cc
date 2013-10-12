@@ -66,6 +66,10 @@ WindowFavorites::WindowFavorites():
     FavoriteManager::getInstance()->addListener(this);
 }
 
+void WindowFavorites::complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_) {
+
+}
+
 void WindowFavorites::updateTitle() {
 	set_title("Favorite hubs: " + utils::to_string(FavoriteManager::getInstance()->getFavoriteHubs().size()));
 }

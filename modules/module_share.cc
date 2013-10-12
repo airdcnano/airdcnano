@@ -322,8 +322,8 @@ namespace modules {
 		/* SUGGESTIONS */
 
 		void handleSuggestList(const HelpHandler::CommandList& list, const StringList& aArgs, int pos, StringList& suggest_) {
-			auto command = aArgs[0];
-			auto s = boost::find_if(list, HelpHandler::CommandCompare(command));
+			auto action = aArgs[1];
+			auto s = boost::find_if(list, HelpHandler::CommandCompare(action));
 			if (s != list.end()) {
 				if ((*s).completionF)
 					(*s).completionF(aArgs, pos, suggest_);
@@ -342,24 +342,6 @@ namespace modules {
 			handleSuggestList(shareProfileCommands, aArgs, pos, suggest_);
 		}
 
-		void getDiskPathSuggestions(const string& aPath, StringList& suggest_) {
-			string pattern;
-			string path;
-			if (aPath.empty()) {
-				path = PATH_SEPARATOR;
-			} else {
-				if (aPath.back() != PATH_SEPARATOR) {
-					auto p = aPath.rfind(PATH_SEPARATOR);
-					path = aPath.substr(0, p + 1);
-					pattern = aPath.substr(p + 1) + "*";
-				} else {
-					path = aPath;
-				}
-			}
-
-			suggest_ = File::findFiles(path, pattern, File::TYPE_DIRECTORY | (SETTING(SHARE_HIDDEN) ? File::FLAG_HIDDEN : 0));
-		}
-
 		void getProfileSuggestions(StringList& suggest_, bool listDefault = true) {
 			auto& profiles = ShareManager::getInstance()->getProfiles();
 			for (const auto& p : profiles) {
@@ -369,29 +351,29 @@ namespace modules {
 		}
 
 		void getProfileSuggestionsDefault(const StringList& /*aArgs*/, int pos, StringList& suggest_) {
-			if (pos == 1) {
+			if (pos == 2) {
 				getProfileSuggestions(suggest_, true);
 			}
 		}
 
 		void getProfileSuggestionsRemove(const StringList& /*aArgs*/, int pos, StringList& suggest_) {
-			if (pos == 1) {
+			if (pos == 2) {
 				getProfileSuggestions(suggest_, false);
 			}
 		}
 
 		void handleShareAddSuggest(const StringList& aArgs, int pos, StringList& suggest_) {
-			if (pos == 1) {
+			if (pos == 2) {
 				// path
-				getDiskPathSuggestions(aArgs[1], suggest_);
-			} else if (pos == 2) {
+				input::Completion::getDiskPathSuggestions(aArgs[2], suggest_);
+			} else if (pos == 3) {
 				// vname
 				auto l = ShareManager::getInstance()->getGroupedDirectories();
 				boost::copy(l | map_keys, back_inserter(suggest_));
-			} else if (pos == 3) {
+			} else if (pos == 4) {
 				// profile
 				getProfileSuggestions(suggest_);
-			} else if (pos == 4) {
+			} else if (pos == 5) {
 				// incoming
 				suggest_.push_back("0");
 				suggest_.push_back("1");
@@ -399,14 +381,14 @@ namespace modules {
 		}
 
 		void handleShareRemoveSuggest(const StringList& aArgs, int pos, StringList& suggest_) {
-			if (pos == 1) {
+			if (pos == 2) {
 				// path
 				ShareManager::getInstance()->getParentPaths(suggest_);
-			} else if (pos == 2) {
+			} else if (pos == 3) {
 				// profile
 				auto& profiles = ShareManager::getInstance()->getProfiles();
 				for (const auto& p : profiles) {
-					if (existsInProfile(aArgs[1], p->getToken())) {
+					if (existsInProfile(aArgs[2], p->getToken())) {
 						suggest_.push_back(p->getPlainName());
 					}
 				}
@@ -414,7 +396,7 @@ namespace modules {
 		}
 
 		void handleSuggestRefresh(const StringList& aArgs, int pos, StringList& suggest_) {
-			if (pos == 0) {
+			if (pos == 1) {
 				auto list = ShareManager::getInstance()->getGroupedDirectories();
 				for (const auto& p : list) {
 					suggest_.push_back(p.first);

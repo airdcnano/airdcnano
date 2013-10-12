@@ -361,7 +361,7 @@ public:
     }
 
 	void handleSuggest(const StringList& /*aArgs*/, int pos, StringList& suggest_) {
-		if (pos == 0) {
+		if (pos == 1) {
 			for (const auto& s : settings) {
 				if (!s.isTitle)
 					suggest_.push_back(s.name);

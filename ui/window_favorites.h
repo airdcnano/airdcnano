@@ -62,6 +62,7 @@ public:
     void update();
 	void on(FavoriteManagerListener::FavoriteAdded, const FavoriteHubEntryPtr& entry) noexcept;
 	void on(FavoriteManagerListener::FavoriteRemoved, const FavoriteHubEntryPtr& entry) noexcept;
+	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_);
 private:
     enum EditState {
         EDIT_NONE,

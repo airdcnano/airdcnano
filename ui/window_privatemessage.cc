@@ -56,19 +56,27 @@ WindowPrivateMessage* WindowPrivateMessage::getWindow(const HintedUser& user, co
 	return static_cast<WindowPrivateMessage*>(*it);
 }
 
+void WindowPrivateMessage::complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_) {
+
+}
+
 WindowPrivateMessage::WindowPrivateMessage(const HintedUser& user, const std::string &mynick) :
 m_user(user), ScrolledWindow(user.user->getCID().toBase32(), display::TYPE_PRIVMSG)
 {
     m_nick = mynick;
-	set_title("Conversation with " + Util::listToString(ClientManager::getInstance()->getNicks(user)));
+	updateTitles();
     m_state = display::STATE_NO_ACTIVITY;
-
-	set_name("PM:" + Util::listToString(ClientManager::getInstance()->getNicks(user)));
 
     // ^B = get file list
     m_bindings[2] = std::bind(&WindowPrivateMessage::get_list, this);
 	online = user.user->isOnline();
 	ClientManager::getInstance()->addListener(this);
+}
+
+void WindowPrivateMessage::updateTitles() {
+	auto nicks = ClientManager::getInstance()->getFormatedNicks(m_user);
+	set_title("Conversation with " + nicks);
+	set_name("PM:" + nicks);
 }
 
 void WindowPrivateMessage::handle_line(const std::string &line)
@@ -84,7 +92,7 @@ void WindowPrivateMessage::get_list()
     try {
         QueueManager::getInstance()->addList(m_user, QueueItem::FLAG_CLIENT_VIEW);
     } catch(Exception &e) {
-		add_line(display::LineEntry("Couldn't get file list from: " + Util::listToString(ClientManager::getInstance()->getNicks(m_user)) + " " + e.getError()));
+		add_line(display::LineEntry("Couldn't get file list from: " + ClientManager::getInstance()->getFormatedNicks(m_user) + " " + e.getError()));
     }
 }
 
@@ -127,7 +135,13 @@ void WindowPrivateMessage::onOnlineStateChanged() {
 		online = true;
 	}
 
+	updateTitles();
 	m_nick = ClientManager::getInstance()->getMyNick(m_user.hint);
+
+	if (m_state == display::STATE_IS_ACTIVE) {
+		events::emit("window changed");
+		events::emit("window updated", this);
+	}
 }
 
 void WindowPrivateMessage::addStatusMessage(const string& aMsg) {

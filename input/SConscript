@@ -1,4 +1,5 @@
 _files = [
+	'completion.cc',
     'manager.cc',
     'text_input.cc',
     'help_handler.cc',

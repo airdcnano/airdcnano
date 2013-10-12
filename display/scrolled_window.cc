@@ -94,8 +94,7 @@ void ScrolledWindow::add_line(const display::LineEntry &line_,
 
     if(redraw_screen && m_state == STATE_IS_ACTIVE) {
         events::emit("window updated", this);
-    }
-    else if(m_state != STATE_IS_ACTIVE) {
+    } else if(m_state != STATE_IS_ACTIVE) {
         if(line.m_type == LineEntry::HIGHLIGHT || line.m_type == LineEntry::ACTIVITY_ERROR) {
             m_state = STATE_HIGHLIGHT;
         }

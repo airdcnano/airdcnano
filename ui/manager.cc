@@ -106,6 +106,8 @@ void Manager::create_windows()
 	UpdateManager::getInstance()->checkVersion(false);
 	if (!Util::hasParam("-no-autoconnect"))
 		FavoriteManager::getInstance()->autoConnect();
+
+	core::Log::get()->log("Client loaded");
 }
 
 void Manager::init_statusbar()

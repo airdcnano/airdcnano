@@ -31,22 +31,6 @@ namespace core {
 
 Log::Log()
 {
-    core::Settings *settings = core::Settings::get();
-
-    m_logFilename = settings->find("log_filename", "%Y-%m-%d");
-    m_logToFile = settings->find_bool("log_to_file", true);
-    m_logTimestamp = settings->find("log_timestamp", "%H:%M:%S");
-
-    m_realFilename = utils::time_to_string(m_logFilename);
-    m_file.open(m_realFilename.c_str(), std::ios::out | std::ios::app);
-}
-
-void Log::update_config()
-{
-    core::Settings *settings = core::Settings::get();
-    m_logFilename = settings->find("log_filename", "%Y-%m-%d");
-    m_logToFile = settings->find_bool("log_to_file", true);
-    m_logTimestamp = settings->find("log_timestamp", "%H:%M:%S");
 }
 
 void Log::log(const std::string &message, MessageType mt /* = MT_MSG */)
@@ -54,29 +38,11 @@ void Log::log(const std::string &message, MessageType mt /* = MT_MSG */)
     if(mt == MT_DEBUG && !LOG_DEBUG)
         return;
 
-    {
-        utils::Lock lock(m_mutex);
-        if(m_logToFile) {
-            std::string temp = m_realFilename;
-            m_realFilename = utils::time_to_string(m_logFilename);
-
-            // day or format string changed?
-            if(temp != m_realFilename) {
-                m_file.close();
-                m_file.open(m_realFilename.c_str(), std::ios::out | std::ios::app);
-            }
-
-            m_file << utils::time_to_string(m_logTimestamp) 
-                   << " " << message << std::endl;
-        }
-    }
-
     m_logSig(message, mt);
 }
 
 Log::~Log()
 {
-    m_file.close();
 }
 
 } // namespace core

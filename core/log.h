@@ -69,17 +69,7 @@ public:
     /** Destructor. Closes the output file. */
     virtual ~Log();
 private:
-    /** Called when settings are changed. */
-    void update_config();
-
-    std::ofstream m_file; //!< Output file
-    std::string m_logFilename; //!< Format of the log file name
-    std::string m_realFilename; //!< The real file name
-    std::string m_logTimestamp; //!< Timestamp format in log file
-    bool m_logToFile; //!< Whether to log to file
     boost::signals2::signal<void (const std::string &, MessageType)> m_logSig;
-
-    utils::Mutex m_mutex;
 };
 
 } // namespace core

@@ -26,6 +26,7 @@
 
 #include <client/stdinc.h>
 #include <client/forward.h>
+#include "../client/ClientManagerListener.h"
 
 #include <client/HintedUser.h>
 #include <display/scrolled_window.h>
@@ -35,7 +36,8 @@ using namespace dcpp;
 namespace ui {
 
 class WindowPrivateMessage:
-    public display::ScrolledWindow
+    public display::ScrolledWindow,
+	private ClientManagerListener
 {
 public:
 	static void openWindow(const HintedUser& user);
@@ -59,6 +61,14 @@ public:
 private:
     HintedUser m_user;
     std::string m_nick;
+
+	// ClientManagerListener
+	void on(ClientManagerListener::UserConnected, const OnlineUser& aUser, bool wasOffline) noexcept;
+	void on(ClientManagerListener::UserDisconnected, const UserPtr& aUser, bool wentOffline) noexcept;
+
+	void onOnlineStateChanged();
+	bool online = true;
+	void addStatusMessage(const string& aMsg);
 };
 
 } // namespace ui

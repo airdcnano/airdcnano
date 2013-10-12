@@ -299,8 +299,9 @@ void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
 	StringTokenizer<string> lines(text, '\n');
 	auto displaySender = myPM ? "%21%08<%21%08%21" + nick + "%21%21%08>%21%08" : "%21%08<%21%08" + nick + "%21%08>%21%08";
 
+	int indent = 4 + g_utf8_strlen(nick.c_str(), -1);
 	for (const auto& l : lines.getTokens()) {
-		pm->add_line(displaySender + " " + l);
+		pm->add_line(display::LineEntry(displaySender + " " + l, indent, time(0), display::LineEntry::MESSAGE));
 	}
 
 	if (!myPM && pm->get_state() != display::STATE_IS_ACTIVE) {

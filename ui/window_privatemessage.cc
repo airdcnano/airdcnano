@@ -67,6 +67,8 @@ m_user(user), ScrolledWindow(user.user->getCID().toBase32(), display::TYPE_PRIVM
 
     // ^B = get file list
     m_bindings[2] = std::bind(&WindowPrivateMessage::get_list, this);
+	online = user.user->isOnline();
+	ClientManager::getInstance()->addListener(this);
 }
 
 void WindowPrivateMessage::handle_line(const std::string &line)
@@ -98,7 +100,38 @@ void WindowPrivateMessage::fillLogParams(ParamMap& params) const {
 
 WindowPrivateMessage::~WindowPrivateMessage()
 {
+	ClientManager::getInstance()->removeListener(this);
+}
 
+void WindowPrivateMessage::on(ClientManagerListener::UserConnected, const OnlineUser& aUser, bool) noexcept{
+	if (aUser.getUser() == m_user.user) {
+		callAsync([this] { onOnlineStateChanged(); });
+	}
+}
+
+void WindowPrivateMessage::on(ClientManagerListener::UserDisconnected, const UserPtr& aUser, bool wentOffline) noexcept{
+	if (aUser == m_user.user) {
+		callAsync([this] { onOnlineStateChanged(); });
+	}
+}
+
+void WindowPrivateMessage::onOnlineStateChanged() {
+	auto p = ClientManager::getInstance()->getNickHubPair(m_user.user, m_user.hint);
+	if (p.second.empty() && online) {
+		addStatusMessage("The user went offline");
+		online = false;
+	}
+
+	if (!online && !p.second.empty()) {
+		addStatusMessage("The user came online in " + p.second);
+		online = true;
+	}
+
+	m_nick = ClientManager::getInstance()->getMyNick(m_user.hint);
+}
+
+void WindowPrivateMessage::addStatusMessage(const string& aMsg) {
+	add_line(display::LineEntry(aMsg));
 }
 
 } // namespace ui

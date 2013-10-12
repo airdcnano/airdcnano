@@ -45,16 +45,23 @@ namespace modules {
 			//auto uniqueEnd = unique(items.begin(), items.end());
 			if (comp) {
 				copy_if(aItems.begin(), aItems.end(), back_inserter(m_items), *comp);
-
-				//fix whitespaces
-				for (auto& i : m_items) {
-					boost::replace_all(i, " ", "\\ ");
-				}
 			} else {
 				m_items = move(aItems);
 			}
 
 			sort(m_items.begin(), m_items.end());
+
+			//fix whitespaces
+			for (auto& i : m_items) {
+				if (i.empty()) {
+					continue;
+				}
+
+				if (i.back() == ' ')
+					i = boost::replace_all_copy(i.substr(0, i.length()-1), " ", "\\ ") + ' '; // a hacky fix for nick suggestions with ": "
+				else
+					boost::replace_all(i, " ", "\\ ");
+			}
 		}
 
 		optional<string> next() throw(std::out_of_range) {
@@ -141,10 +148,10 @@ namespace modules {
 				args.push_back("");
 			}
 
-			// get the current word pos
 			//core::Log::get()->log("wordpos: " + Util::toString(wordPos) + " pos: " + Util::toString(pos) + " linelen: " + 
 			//	Util::toString(aLine.length()) + " args: " + 
-			//	Util::toString(args.size()) + " startPos: " + Util::toString(parser.getWordStartPos()));
+			//	Util::toString(args.size()) + " startPos: " + Util::toString(parser.getWordStartPos()) +
+			//	" args: " + Util::listToString(args));
 
 			if (wordPos == -1) {
 				// we are somewhere within sequential whitespaces...

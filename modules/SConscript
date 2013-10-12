@@ -7,7 +7,6 @@ modules_files = [
     'module_connect.cc',
     'module_window.cc',
     'module_dcset.cc',
-    'module_msg.cc',
     'module_search.cc',
 	'module_share.cc',
 	'module_suggest.cc',

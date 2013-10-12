@@ -38,6 +38,23 @@ void ArgParser::parse(bool unescapeWhitespaces /*true*/)
 	size_t end = 0;
 	size_t start = 0;
 
+	auto addString = [&] {
+		auto arg = m_line.substr(start, end - start);
+
+		/* skip whitespace (and the quotation mark) */
+		if (quote)
+			end++;
+		while (m_line[end + 1] == ' ' && end++);
+
+		if (!arg.empty()) {
+			// core::Log::get()->log("'" + arg + "'");
+			if (unescapeWhitespaces)
+				boost::replace_all(arg, "\\ ", " ");
+			m_args.push_back(arg);
+		}
+		start = end + 1;
+	};
+
     do {
         char ch = m_line[end];
 		if (end == cursorPos) {
@@ -47,32 +64,16 @@ void ArgParser::parse(bool unescapeWhitespaces /*true*/)
 
         /* end of a word if we aren't inside quotes */
 		if (ch == ' ' && !quote && (end == 0 || m_line[end - 1] != '\\')) {
-            auto arg = m_line.substr(start, end-start);
-
-            /* skip whitespace */
-            while(m_line[end+1] == ' ' && end++);
-
-            if(!arg.empty()) {
-               // core::Log::get()->log("'" + arg + "'");
-				if (unescapeWhitespaces)
-					boost::replace_all(arg, "\\ ", " ");
-                m_args.push_back(arg);
-            }
-            start = end+1;
-			continue;
-        }
-        /* start of quoted string */
-        else if(ch == '"' && !quote) {
+			addString();
+        } else if(ch == '"' && !quote) {
+			/* start of quoted string */
             quote = true;
             /* don't include the quotation mark */
             start++;
-        }
-        /* end of quoted string */
-        else if(ch == '"' && quote) {
-            //std::string arg = m_line.substr(start, end-start);
-            //core::Log::get()->log("'" + arg + "'");
+        } else if(ch == '"' && quote) {
+			/* end of quoted string */
+			addString();
             quote = false;
-            start = end+1;
         }
     } while(end++ < m_line.length());
 

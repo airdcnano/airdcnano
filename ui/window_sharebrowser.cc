@@ -52,7 +52,7 @@ WindowShareBrowser::WindowShareBrowser(DirectoryListing* aList, const std::strin
 
 void WindowShareBrowser::updateTitles() {
 	auto nicks = ClientManager::getInstance()->getFormatedNicks(m_listing->getHintedUser());
-	set_title("Browsing user " + nicks);
+	set_title("Browsing user " + nicks + " (" + ClientManager::getInstance()->getFormatedHubNames(m_listing->getHintedUser()) + ")");
 	set_name("List:" + nicks);
 }
 

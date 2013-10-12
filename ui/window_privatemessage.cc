@@ -75,7 +75,7 @@ m_user(user), ScrolledWindow(user.user->getCID().toBase32(), display::TYPE_PRIVM
 
 void WindowPrivateMessage::updateTitles() {
 	auto nicks = ClientManager::getInstance()->getFormatedNicks(m_user);
-	set_title("Conversation with " + nicks);
+	set_title("Conversation with " + nicks + " (" + ClientManager::getInstance()->getFormatedHubNames(m_user) + ")");
 	set_name("PM:" + nicks);
 }
 

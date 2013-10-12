@@ -492,8 +492,8 @@ void WindowTransfers::speak(UpdateInfo* ui, bool added) {
 void WindowTransfers::handleUpdateInfo(UpdateInfo* ui, bool added) {
 	int row = get_row(ui->token);
 	auto item = added ? create_transfer(ui->user, ui->download, ui->token) : get_transfer(ui->token);
-	if (!item) {
-		dcassert(0);
+	if (!item || row == -1) {
+		//dcassert(0);
 		return;
 	}
 

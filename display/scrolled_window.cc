@@ -109,6 +109,8 @@ void ScrolledWindow::add_line(const display::LineEntry &line_,
 LineEntry ScrolledWindow::koskenkorva_viina(const display::LineEntry &line_)
 {
     auto line = line_;
+	Util::replace(line.m_text, "\r", "");
+
     std::string text;
  
     text = utils::time_to_string(m_timestamp, line.m_time);
@@ -121,7 +123,7 @@ LineEntry ScrolledWindow::koskenkorva_viina(const display::LineEntry &line_)
 	if (line.m_type == LineEntry::ACTIVITY || line.m_type == LineEntry::ACTIVITY_ERROR)
         text += "%21%01-%01!%01-%01%21 ";
 
-    line.m_text = text + line.str();
+	line.m_text = text + line.str();
     return line;
 }
 

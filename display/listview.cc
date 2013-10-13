@@ -157,11 +157,12 @@ void ListView::handle(wint_t key)
 {
     if(m_insertMode) {
 		if (m_input.pressed(key)) {
-			//        m_windowupdated(this);
+			events::emit("window updated", static_cast<display::Window*>(this));
 		} else if (key >= 0x20) {
 			string tmp;
 			Text::wcToUtf8(key, tmp);
 			m_input.text_insert(tmp);
+			events::emit("window updated", static_cast<display::Window*>(this));
 		}
 		return;
     }

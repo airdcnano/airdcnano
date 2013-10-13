@@ -41,9 +41,7 @@ public:
     {
         std::ostringstream oss;
         oss << "Key pressed: " << events::arg<std::string>(0) << " " << events::arg<wint_t>(1);
-#if 0
-        core::Log::get()->log(oss.str(), core::MT_DEBUG);
-#endif
+        //core::Log::get()->log(oss.str(), core::MT_DEBUG);
     }
 };
 

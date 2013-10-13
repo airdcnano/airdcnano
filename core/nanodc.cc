@@ -180,11 +180,20 @@ void Nanodc::handle_crash(int sig)
     trace.generate_frames();
     std::copy(trace.begin(), trace.end(),
         std::ostream_iterator<cow::StackFrame>(std::cerr, "\n"));
+
+	auto stackPath = Util::getPath(Util::PATH_USER_CONFIG) + "exceptioninfo.txt";
+	std::ofstream f;
+	f.open(stackPath.c_str());
+	std::copy(trace.begin(), trace.end(),
+		std::ostream_iterator<cow::StackFrame>(f, "\n"));
+	f.close();
+	std::cout << "\nException info to be posted on the bug tracker has also been saved in " + stackPath << std::endl;
 #else
     std::cerr << "Stacktrace is not enabled\n";
 #endif
-
-    exit(sig);
+	std::cout << "If you exited with Ctrl+C, you can ignore this message (and please use /quit in future)" << std::endl;
+	std::cout << "Press any key to continue" << std::endl;
+	cin.ignore();
 }
 
 Nanodc::~Nanodc()

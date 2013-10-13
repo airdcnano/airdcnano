@@ -194,6 +194,7 @@ void Nanodc::handle_crash(int sig)
 	std::cout << "If you exited with Ctrl+C, you can ignore this message (and please use /quit in future)" << std::endl;
 	std::cout << "Press any key to continue" << std::endl;
 	cin.ignore();
+	exit(sig);
 }
 
 Nanodc::~Nanodc()

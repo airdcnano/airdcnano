@@ -105,11 +105,11 @@ bool TextInput::hasBinding(wint_t key) const {
 	return m_bindings.find(key) != m_bindings.end(); 
 }
 
-void TextInput::pressed(int key) 
+bool TextInput::pressed(int key) 
 {
     if(hasBinding(key)) {
         m_bindings[key]();
-        return;
+        return true;
     }
     switch (key) {
         // ^W
@@ -179,8 +179,10 @@ void TextInput::pressed(int key)
 				noClear = false;
             break;
         default:
-            return;
+            return false;
     }
+
+	return true;
 }
 
 } // namespace input

@@ -156,13 +156,12 @@ void ListView::set_text(int column, int row, const std::string &text)
 void ListView::handle(wint_t key)
 {
     if(m_insertMode) {
-		if (key >= 0x20 && key < 0xFF) {
+		if (m_input.pressed(key)) {
+			//        m_windowupdated(this);
+		} else if (key >= 0x20) {
 			string tmp;
 			Text::wcToUtf8(key, tmp);
 			m_input.text_insert(tmp);
-		} else {
-			m_input.pressed(key);
-			//        m_windowupdated(this);
 		}
 		return;
     }

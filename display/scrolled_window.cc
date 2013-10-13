@@ -64,18 +64,14 @@ void ScrolledWindow::update_config()
     m_timestamp = core::Settings::get()->find("timestamp_format", "[%H:%M:%S] ");
 }
 
-void ScrolledWindow::handle(wint_t key)
-{
-    if(m_bindings.find(key) != m_bindings.end()) {
-        m_bindings[key]();
-    }
-    else if(key >= 0x20 && key < 0xFF) {
+void ScrolledWindow::handle(wint_t key) {
+	if (m_bindings.find(key) != m_bindings.end()) {
+		m_bindings[key]();
+	} else if (m_input.pressed(key)) {
+		/* backspace, arrow keys.. */
+		events::emit("window updated", static_cast<display::Window*>(this));
+	} else if (key >= 0x20) {
         m_input.key_insert(key);
-        events::emit("window updated", static_cast<display::Window*>(this));
-    }
-    else {
-        /* backspace, arrow keys.. */
-        m_input.pressed(key);
         events::emit("window updated", static_cast<display::Window*>(this));
     }
 }

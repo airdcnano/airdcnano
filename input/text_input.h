@@ -48,7 +48,9 @@ public:
     void enter();
     void key_insert(wint_t key);
     void text_insert(const std::string &str);
-    void pressed(int key);
+
+	// returns true if the key was handled
+    bool pressed(int key);
 
     void set_pos(size_type pos) { m_pos = pos; }
     size_t get_pos() const;

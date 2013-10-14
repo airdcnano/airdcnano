@@ -68,7 +68,7 @@ public:
     /** @todo regular expressions in filters */
     bool filter_messages(const std::string &nick, const std::string &msg);
     std::string get_nick() const;
-    const OnlineUser *get_user(const std::string &nick) throw (std::out_of_range);
+    const OnlineUserPtr get_user(const std::string &nick) throw (std::out_of_range);
     ~WindowHub();
 
     void on(TimerManagerListener::Second, uint64_t) noexcept;
@@ -116,7 +116,7 @@ private:
     uint64_t m_lastJoin = 0;
     bool m_joined;
     bool m_timer;
-    typedef std::map<std::string, const OnlineUser*> Users;
+    typedef std::unordered_map<std::string, const OnlineUserPtr> Users;
     typedef Users::const_iterator UserIter;
     Users m_users;
     UserIter m_currentUser;

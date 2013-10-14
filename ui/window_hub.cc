@@ -340,8 +340,6 @@ void WindowHub::handleUserUpdated(const OnlineUserPtr& aUser) {
 		utils::find_in_string(nick, m_showNicks.begin(), m_showNicks.end())
 		)
 		) {
-			aUser->inc();
-
 			// Lehmis [127.0.0.1] has joined the hub
 			std::ostringstream oss;
 			auto ip = aUser->getIdentity().getIp();
@@ -363,7 +361,7 @@ void WindowHub::handleUserUpdated(const OnlineUserPtr& aUser) {
 	}
 
 	m_lastJoin = GET_TICK();
-	m_users[nick] = aUser.get();
+	m_users.emplace(nick, aUser);
 }
 
 void WindowHub::on(ClientListener::UserConnected, const Client* c, const OnlineUserPtr& aUser) noexcept{
@@ -381,7 +379,6 @@ void WindowHub::handleUserRemoved(const OnlineUserPtr& aUser) {
 		return;
 
 	m_users.erase(p);
-	aUser->dec();
 
 	bool showJoin = m_client->get(HubSettings::ShowJoins) ||
 		utils::find_in_string(nick, m_showNicks.begin(),
@@ -436,7 +433,7 @@ void WindowHub::on(ClientListener::UsersUpdated, const Client*, const OnlineUser
 	callAsync([=] {
 		for (const auto& u : users) {
 			if (!u->isHidden())
-				m_users[u->getIdentity().getNick()] = u.get();
+				m_users.emplace(u->getIdentity().getNick(), u);
 		}
 	});
 }
@@ -536,7 +533,7 @@ struct _identity
 {
     typedef bool result_type;
     _identity(bool (Identity::*__pf)()const) : _M_f(__pf) {}
-    bool operator()(const std::pair<std::string, const OnlineUser*> &pair) const {
+    bool operator()(const std::pair<std::string, const OnlineUserPtr> &pair) const {
         return (pair.second->getIdentity().*_M_f)();
     }
     bool (Identity::*_M_f)()const;
@@ -623,7 +620,7 @@ std::string WindowHub::get_nick() const
     return nick;
 }
 
-const OnlineUser *WindowHub::get_user(const std::string &nick)
+const OnlineUserPtr WindowHub::get_user(const std::string &nick)
     throw(std::out_of_range)
 {
     auto it = m_users.find(nick);

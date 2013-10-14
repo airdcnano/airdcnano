@@ -78,6 +78,37 @@ WindowTransfers::WindowTransfers() : ListView(display::TYPE_TRANSFERS, "transfer
     m_bindings['c'] = std::bind(&WindowTransfers::disconnect, this);
     m_bindings['R'] = std::bind(&WindowTransfers::remove_download, this);
 
+	// add the existing connections
+	{
+		auto cm = ConnectionManager::getInstance();
+		RLock l(cm->getCS());
+		for (const auto& d : cm->getConnections(true)) {
+			on(ConnectionManagerListener::Added(), d);
+		}
+
+		for (const auto& u : cm->getConnections(false)) {
+			on(ConnectionManagerListener::Added(), u);
+		}
+	}
+
+	{
+		auto um = UploadManager::getInstance();
+		RLock l(um->getCS());
+		for (const auto& u : um->getUploads()) {
+			if (u->getUserConnection().getState() == UserConnection::STATE_RUNNING)
+				on(UploadManagerListener::Starting(), u);
+		}
+	}
+
+	{
+		auto dm = DownloadManager::getInstance();
+		RLock l(dm->getCS());
+		for (const auto& d : dm->getDownloads()) {
+			if (d->getUserConnection().getState() == UserConnection::STATE_RUNNING)
+				on(DownloadManagerListener::Starting(), d);
+		}
+	}
+
     // browse
 	//m_bindings['b'] = std::bind(&QueueManager::addList, QueueManager::getInstance(),
 	 //                   std::bind(&WindowTransfers::get_user, this), QueueItem::FLAG_CLIENT_VIEW);

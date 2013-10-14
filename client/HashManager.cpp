@@ -718,6 +718,12 @@ void HashManager::HashStore::getDbSizes(int64_t& fileDbSize_, int64_t& hashDbSiz
 }
 
 void HashManager::HashStore::openDb(StepFunction stepF, MessageFunction messageF) throw(DbException) {
+	auto hashDataPath = Util::getPath(Util::PATH_USER_CONFIG) + "HashData";
+	auto fileIndexPath = Util::getPath(Util::PATH_USER_CONFIG) + "FileIndex";
+
+	Util::migrate(fileIndexPath, "*");
+	Util::migrate(hashDataPath, "*");
+
 	uint32_t cacheSize = static_cast<uint32_t>(Util::convertSize(max(SETTING(DB_CACHE_SIZE), 1), Util::MB));
 	auto blockSize = File::getBlockSize(Util::getPath(Util::PATH_USER_CONFIG));
 

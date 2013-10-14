@@ -56,12 +56,11 @@ WindowHub::WindowHub(const std::string &address):
     m_timer(false),
     m_currentUser(m_users.end()),
 	ScrolledWindow(address, display::TYPE_HUBWINDOW),
-	createdConn(events::add_listener_last("hub created", boost::bind(&WindowHub::handleCreated, this))),
 	commands({
 		{ "fav", boost::bind(&WindowHub::handleFav, this), nullptr },
 		{ "msg", boost::bind(&WindowHub::handleMsg, this), COMPLETION(WindowHub::complete), false },
 		{ "names", boost::bind(&WindowHub::handleNames, this), nullptr },
-		{ "reconnect", boost::bind(&WindowHub::reconnect, this), nullptr },
+		{ "reconnect", boost::bind(&WindowHub::handleReconnect, this), nullptr },
 		{ "showjoins", boost::bind(&WindowHub::handleShowJoins, this), nullptr }
 	})
 {
@@ -126,25 +125,18 @@ void WindowHub::handleFav() noexcept{
 }
 
 void WindowHub::handleNames() {
-	utils::Lock l(m_mutex);
 	print_names();
 }
 
 void WindowHub::handleCreated() noexcept{
-	auto url = events::arg<std::string>(0);
-	if (url == get_title()) {
-		utils::Lock l(m_mutex);
-		m_client = ClientManager::getInstance()->getClient(url);
-		dcassert(m_client);
-		m_client->addListener(this);
-		m_client->connect();
-	}
+	m_client = ClientManager::getInstance()->getClient(get_title());
+	dcassert(m_client);
+	m_client->addListener(this);
+	m_client->connect();
 }
 
 void WindowHub::update_config()
 {
-    utils::Lock l(m_mutex);
-
     this->ScrolledWindow::update_config();
 
     core::Settings *settings = core::Settings::get();
@@ -160,8 +152,6 @@ void WindowHub::update_config()
 
 void WindowHub::handle_line(const std::string &line)
 {
-    utils::Lock l(m_mutex);
-
 	if (!m_client || !m_client->isConnected()) {
 		return;
 	}
@@ -175,25 +165,23 @@ void WindowHub::handle_line(const std::string &line)
 void WindowHub::on(TimerManagerListener::Second, uint64_t)
     noexcept
 {
-    utils::Lock l(m_mutex);
-
     // group users in 2 seconds
-    if(m_lastJoin && !m_joined && m_lastJoin+2000 < TimerManager::getInstance()->getTick()) {
-        m_joined = true;
-        TimerManager::getInstance()->removeListener(this);
-        m_timer = false;
-        if(m_client->isConnected()) {
-            add_line(display::LineEntry("Joined to the hub"));
-            if(m_showNickList)
-                print_names();
-        }
-    }
+	callAsync([this] {
+		if (m_lastJoin && !m_joined && m_lastJoin + 2000 < TimerManager::getInstance()->getTick()) {
+			m_joined = true;
+			TimerManager::getInstance()->removeListener(this);
+			m_timer = false;
+			if (m_client->isConnected()) {
+				add_line(display::LineEntry("Joined to the hub"));
+				if (m_showNickList)
+					print_names();
+			}
+		}
+	});
 }
 
 void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
 	bool myPM = aMessage.from->getUser() == ClientManager::getInstance()->getMe();
-
-	utils::Lock l(m_mutex);
 
 	auto text(strings::escape(aMessage.text));
 	auto nick = aMessage.from->getIdentity().getNick();
@@ -251,8 +239,6 @@ void WindowHub::handleShowJoins() {
 
 void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
 	bool myPM = aMessage.replyTo->getUser() == ClientManager::getInstance()->getMe();
-
-	utils::Lock l(m_mutex);
 
 	auto nick = aMessage.from->getIdentity().getNick();
 	auto text = strings::escape(aMessage.text);
@@ -312,11 +298,13 @@ void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
 }
 
 void WindowHub::on(ClientListener::Message, const Client *, const ChatMessage& aMessage) noexcept{
-	if (aMessage.to && aMessage.replyTo) {
-		onPrivateMessage(aMessage);
-	} else {
-		onChatMessage(aMessage);
-	}
+	callAsync([=] {
+		if (aMessage.to && aMessage.replyTo) {
+			onPrivateMessage(aMessage);
+		} else {
+			onChatMessage(aMessage);
+		}
+	});
 }
 
 void WindowHub::on(ClientListener::StatusMessage, const Client*, const string& line, int)
@@ -332,20 +320,17 @@ void WindowHub::on(ClientListener::StatusMessage, const Client*, const string& l
 	}
 
 	std::string tmp = strings::escape(line);
-	add_line(display::LineEntry(tmp));
+	callAsync([=] { add_line(display::LineEntry(tmp)); });
 }
 
-void WindowHub::on(ClientListener::UserConnected, const Client* c, const OnlineUserPtr& aUser) noexcept{
-	on(UserUpdated(), c, aUser);
-}
-
-void WindowHub::on(ClientListener::UserUpdated, const Client*, const OnlineUserPtr& aUser)
-    noexcept
-{
+void WindowHub::handleUserUpdated(const OnlineUserPtr& aUser) {
 	if (aUser->isHidden())
 		return;
 
-	utils::Lock l(m_mutex);
+	if (!m_joined && !m_timer && !aUser->getIdentity().isBot()) {
+		TimerManager::getInstance()->addListener(this);
+		m_timer = true;
+	}
 
 	auto user = HintedUser(aUser->getUser(), aUser->getHubUrl());
 	auto nick = aUser->getIdentity().getNick();
@@ -355,6 +340,8 @@ void WindowHub::on(ClientListener::UserUpdated, const Client*, const OnlineUserP
 		utils::find_in_string(nick, m_showNicks.begin(), m_showNicks.end())
 		)
 		) {
+			aUser->inc();
+
 			// Lehmis [127.0.0.1] has joined the hub
 			std::ostringstream oss;
 			auto ip = aUser->getIdentity().getIp();
@@ -379,120 +366,145 @@ void WindowHub::on(ClientListener::UserUpdated, const Client*, const OnlineUserP
 	m_users[nick] = aUser.get();
 }
 
-void WindowHub::on(ClientListener::UserRemoved, const Client*, const OnlineUserPtr& aUser)
-    noexcept
-{
-    utils::Lock l(m_mutex);
+void WindowHub::on(ClientListener::UserConnected, const Client* c, const OnlineUserPtr& aUser) noexcept{
+	callAsync([=] { handleUserUpdated(aUser); });
+}
+
+void WindowHub::on(ClientListener::UserUpdated, const Client*, const OnlineUserPtr& aUser) noexcept {
+	callAsync([=] { handleUserUpdated(aUser); });
+}
+
+void WindowHub::handleUserRemoved(const OnlineUserPtr& aUser) {
 	auto nick = aUser->getIdentity().getNick();
 	auto p = m_users.find(nick);
 	if (p == m_users.end())
 		return;
 
-    m_users.erase(p);
+	m_users.erase(p);
+	aUser->dec();
 
 	bool showJoin = m_client->get(HubSettings::ShowJoins) ||
-                    utils::find_in_string(nick, m_showNicks.begin(),
-                            m_showNicks.end());
+		utils::find_in_string(nick, m_showNicks.begin(),
+		m_showNicks.end());
 
-    if(m_users.find(nick) == m_users.end() && m_joined && showJoin)
-    {
-        // Lehmis [127.0.0.1] has left the hub
-        std::ostringstream oss;
+	if (m_users.find(nick) == m_users.end() && m_joined && showJoin) {
+		// Lehmis [127.0.0.1] has left the hub
+		std::ostringstream oss;
 		std::string ip = aUser->getIdentity().getIp();
-        oss << "%03" << nick << "%03 ";
-        if(!ip.empty()) {
-            if(m_resolveIps) {
-                try {
-                    ip = utils::ip_to_host(ip);
-                } catch(std::exception &e) {
-                    //core::Log::get()->log("utils::ip_to_host(" + ip + "): " + std::string(e.what()));
-                }
-            }
-            oss << "%21%08[%21%08" << ip 
-                << "%21%08]%21%08 ";
-        }
+		oss << "%03" << nick << "%03 ";
+		if (!ip.empty()) {
+			if (m_resolveIps) {
+				try {
+					ip = utils::ip_to_host(ip);
+				} catch (std::exception &e) {
+					//core::Log::get()->log("utils::ip_to_host(" + ip + "): " + std::string(e.what()));
+				}
+			}
+			oss << "%21%08[%21%08" << ip
+				<< "%21%08]%21%08 ";
+		}
 
-        oss << "has left the hub";
-        add_line(display::LineEntry(oss.str()));
-    }
+		oss << "has left the hub";
+		add_line(display::LineEntry(oss.str()));
+	}
 
-    if(!m_joined) {
-        m_joined = true;
-        if(m_timer) {
-            TimerManager::getInstance()->removeListener(this);
-            m_timer = false;
-        }
-        if(m_client->isConnected()) {
-            add_line(display::LineEntry("Joined to the hub"));
-            if(m_showNickList)
-                print_names();
-        }
-        else {
-            core::Log::get()->log(m_client->getAddress() + " is not connected");
-        }
-    }
+	if (!m_joined) {
+		m_joined = true;
+		if (m_timer) {
+			TimerManager::getInstance()->removeListener(this);
+			m_timer = false;
+		}
+		if (m_client->isConnected()) {
+			add_line(display::LineEntry("Joined to the hub"));
+			if (m_showNickList)
+				print_names();
+		} else {
+			core::Log::get()->log(m_client->getAddress() + " is not connected");
+		}
+	}
+}
+
+void WindowHub::on(ClientListener::UserRemoved, const Client*, const OnlineUserPtr& aUser)
+    noexcept
+{
+	callAsync([=] { handleUserRemoved(aUser); });
 }
 
 void WindowHub::on(ClientListener::UsersUpdated, const Client*, const OnlineUserList &users)
     noexcept
 {
-    utils::Lock l(m_mutex);
-    
-	for (const auto& u: users) {
-		if (!u->isHidden())
-			m_users[u->getIdentity().getNick()] = u.get();
-    }
+	callAsync([=] {
+		for (const auto& u : users) {
+			if (!u->isHidden())
+				m_users[u->getIdentity().getNick()] = u.get();
+		}
+	});
 }
 
 void WindowHub::on(ClientListener::GetPassword, const Client*)
     noexcept
 {
-    utils::Lock l(m_mutex);
+	callAsync([=] { handlePassword();  });
+}
 
-    add_line(display::LineEntry("Sending password"));
-    m_client->password(m_client->getPassword());
+void WindowHub::handlePassword() {
+	if (!m_client->getPassword().empty()) {
+		add_line(display::LineEntry("Sending password"));
+		m_client->password(m_client->getPassword());
+	} else {
+		m_input.setText("/password ");
+		passwordConn = events::add_listener("command password", [=] {
+			if (display::Manager::get()->get_current_window() != this)
+				return;
+
+			auto pw = events::arg<std::string>(0);
+			m_client->password(pw);
+			passwordConn.disconnect();
+			m_input.setText("");
+		});
+	}
 }
 
 void WindowHub::on(ClientListener::HubUpdated, const Client *client)
     noexcept
 {
-    utils::Lock l(m_mutex);
+	callAsync([=] { updateTitle(); });
+}
+
+void WindowHub::handleFailed(const std::string& aMsg) {
 	updateTitle();
+	add_line(display::LineEntry(aMsg));
+	m_joined = false;
+	if (m_timer) {
+		TimerManager::getInstance()->removeListener(this);
+		m_timer = false;
+	}
+	m_lastJoin = 0;
+	m_users.clear();
 }
 
 void WindowHub::on(ClientListener::Failed, const string& /*url*/, const string& msg)
     noexcept
 {
-    utils::Lock l(m_mutex);
-
-	updateTitle();
-    add_line(display::LineEntry(msg));
-    m_joined = false;
-    if(m_timer) {
-        TimerManager::getInstance()->removeListener(this);
-        m_timer = false;
-    }
-    m_lastJoin = 0;
-    m_users.clear();
+	callAsync([=] { handleFailed(msg); });
 }
 
 void WindowHub::on(ClientListener::Connecting, const Client*) noexcept{
-	add_line(display::LineEntry("Connecting to " + m_client->getHubUrl() + " ...")); 
+	callAsync([=] { add_line(display::LineEntry("Connecting to " + m_client->getHubUrl() + " ...")); });
 }
 
 void WindowHub::on(ClientListener::Redirect, const Client*, const string &msg) noexcept{
-	add_line(display::LineEntry("Redirect: ")); 
+	callAsync([=] { add_line(display::LineEntry("Redirect: ")); });
 }
 
 void WindowHub::on(ClientListener::HubTopic, const Client*, const string&) noexcept{
-	utils::Lock l(m_mutex);
-	updateTitle();
+	callAsync([=] { updateTitle(); });
 }
 void WindowHub::on(ClientListener::AddLine, const Client*, const string& aMsg) noexcept{
-	add_line(display::LineEntry(aMsg));
+	callAsync([=] { add_line(display::LineEntry(aMsg)); });
 }
 
-void WindowHub::reconnect() {
+void WindowHub::handleReconnect() {
 	if (m_client)
 		m_client->reconnect();
 }
@@ -507,7 +519,7 @@ void WindowHub::openWindow(std::string address, ProfileToken shareProfile, bool 
 	if (it != mger->end()) {
 		auto hub = static_cast<ui::WindowHub*>(*it);
 		if (!hub->get_client()->isConnected())
-			hub->connect();
+			hub->get_client()->connect();
 		mger->set_current(it);
 	} else {
 		auto hub = new ui::WindowHub(address);
@@ -518,12 +530,6 @@ void WindowHub::openWindow(std::string address, ProfileToken shareProfile, bool 
 		RecentHubEntryPtr rp(new RecentHubEntry(address));
 		ClientManager::getInstance()->createClient(rp, shareProfile); 
 	}
-}
-
-void WindowHub::connect() noexcept {
-    utils::Lock l(m_mutex);
-
-    m_client->connect();
 }
 
 struct _identity
@@ -565,11 +571,12 @@ void WindowHub::print_names()
 void WindowHub::on(ClientListener::Connected, const Client*)
     noexcept
 {
-    utils::Lock l(m_mutex);
-    add_line(display::LineEntry("Connected"));
+	callAsync([=] { handleConnected(); });
+}
+
+void WindowHub::handleConnected() {
+	add_line(display::LineEntry("Connected"));
 	updateTitle();
-    TimerManager::getInstance()->addListener(this);
-    m_timer = true;
 }
 
 void WindowHub::updateTitle() {
@@ -586,8 +593,6 @@ void WindowHub::updateTitle() {
 
 bool WindowHub::filter_messages(const std::string &nick, const std::string &msg)
 {
-    //utils::Lock l(m_mutex);
-
     core::Settings *settings = core::Settings::get();
     core::StringVector blocked;
 
@@ -608,8 +613,6 @@ bool WindowHub::filter_messages(const std::string &nick, const std::string &msg)
 
 std::string WindowHub::get_nick() const
 {
-    utils::Lock l(m_mutex);
-
     if(!m_client)
         return utils::empty_string;
 
@@ -623,8 +626,6 @@ std::string WindowHub::get_nick() const
 const OnlineUser *WindowHub::get_user(const std::string &nick)
     throw(std::out_of_range)
 {
-    utils::Lock l(m_mutex);
-
     auto it = m_users.find(nick);
     if(it == m_users.end())
         throw std::out_of_range("user not found");
@@ -637,7 +638,6 @@ void WindowHub::complete(const std::vector<std::string>& aArgs, int pos, std::ve
 
 	auto s = aArgs[pos];
 
-	utils::Lock l(m_mutex);
 	for (const auto& n : m_users | map_keys | filtered(input::PrefixComparator(s))) {
 		suggest_.push_back(pos == 0 ? n + ": " : n);
 	}
@@ -654,7 +654,7 @@ WindowHub::~WindowHub()
     }
     m_users.clear();
 
-	createdConn.disconnect();
+	passwordConn.disconnect();
 
 	//events::remove_listener("command reconnect", std::bind(&WindowHub::reconnect, this));
 	//events::remove_listener("hub created", std::bind(&WindowHub::handleConnect, this));

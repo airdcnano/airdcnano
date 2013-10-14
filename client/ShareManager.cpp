@@ -1580,13 +1580,15 @@ bool ShareManager::loadCache(function<void(float)> progressF) noexcept{
 
 	mergeRefreshChanges(ll, dirNameMap, newRoots, tthIndex, hashSize, sharedSize, nullptr);
 
+	//make sure that the subprofiles are added too
+	for (auto& p: newRoots)
+		rootPaths[p.first] = p.second;
+
 	//were all parents loaded?
 	StringList refreshPaths;
 	for (auto& i: parents) {
 		auto p = newRoots.find(i.first);
-		if (p != newRoots.end()) {
-			rootPaths[i.first] = p->second;
-		} else {
+		if (p == newRoots.end()) {
 			//add for refresh
 			refreshPaths.push_back(i.second->getProfileDir()->getPath());
 		}

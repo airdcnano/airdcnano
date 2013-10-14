@@ -130,9 +130,11 @@ void Manager::on(ClientManagerListener::ClientCreated, Client* c) noexcept {
 	if (it == mger->end()) {
 		ui::WindowHub *hub = new ui::WindowHub(c->getHubUrl());
 		mger->push_back(hub);
+		it = mger->end() - 1;
 	}
 
-	events::emit("hub created", c->getHubUrl());
+	auto h = static_cast<ui::WindowHub*>(*it);
+	h->callAsync([=] { h->handleCreated(); });
 }
 
 void Manager::on(DirectoryListingManagerListener::OpenListing, DirectoryListing* aList, const std::string& aDir, const std::string& aXML) noexcept{

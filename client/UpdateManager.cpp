@@ -59,7 +59,7 @@ UpdateManager::UpdateManager() : installedUpdate(0), lastIPUpdate(GET_TICK()) {
 	links.geoip6 = "http://geoip6.airdcpp.net";
 	links.geoip4 = "http://geoip4.airdcpp.net";
 	links.guides = links.homepage + "guides/";
-	links.customize = links.homepage + "c/customizations/";
+	links.customize = links.homepage + "customizations/";
 	links.discuss = links.homepage + "forum/";
 	links.ipcheck4 = "http://checkip.dyndns.org/";
 	links.ipcheck6 = "http://checkip.dyndns.org/";
@@ -550,7 +550,7 @@ void UpdateManager::completeVersionDownload(bool manualCheck) {
 
 			//Check for updated version
 
-			if((remoteBuild > ownBuild && remoteBuild > installedUpdate && Util::toDouble(versionString) >= Util::toDouble(VERSIONSTRING)) || manualCheck) {
+			if((remoteBuild > ownBuild && remoteBuild > installedUpdate) || manualCheck) {
 				auto updateMethod = SETTING(UPDATE_METHOD);
 				if ((!autoUpdateEnabled || updateMethod == UPDATE_PROMPT) || manualCheck) {
 					if(xml.findChild("Title")) {
@@ -643,7 +643,7 @@ void UpdateManager::checkVersion(bool aManual) {
 
 	versionSig.clear();
 	conns[CONN_SIGNATURE].reset(new HttpDownload(static_cast<string>(VERSION_URL) + ".sign",
-	//conns[CONN_VERSION] = make_unique<HttpDownload>("http://beta.airdcpp.net/testversion/version.xml.sign",
+	//conns[CONN_SIGNATURE].reset(new HttpDownload("http://beta.airdcpp.net/testversion/version.xml.sign",
 		[this, aManual] { completeSignatureDownload(aManual); }, false));
 }
 

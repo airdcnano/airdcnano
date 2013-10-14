@@ -59,7 +59,7 @@ public:
 
     virtual void update_config();
 
-	void reconnect();
+	void handleReconnect();
     static void openWindow(std::string address, ProfileToken shareProfile, bool activate);
     void handle_line(const std::string &line);
     Client* get_client() const { return m_client; }
@@ -70,7 +70,6 @@ public:
     std::string get_nick() const;
     const OnlineUser *get_user(const std::string &nick) throw (std::out_of_range);
     ~WindowHub();
-	void connect() noexcept;
 
     void on(TimerManagerListener::Second, uint64_t) noexcept;
 
@@ -104,9 +103,9 @@ public:
 	void on(ClientListener::SearchFlood, const Client*, const string &msg) noexcept{ add_line(display::LineEntry(msg)); }
 
 	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_);
+	void handleCreated() noexcept;
 private:
 	void handleFav() noexcept;
-	void handleCreated() noexcept;
 	void onChatMessage(const ChatMessage&) noexcept;
 	void onPrivateMessage(const ChatMessage&) noexcept;
 
@@ -129,19 +128,17 @@ private:
     bool m_utf8;
     std::string m_nmdcCharset;
 
-    mutable utils::Mutex m_mutex;
-
-	//boost::signals2::connection reconnectConn;
-	boost::signals2::connection createdConn;
-	/*boost::signals2::connection favConn;
-	boost::signals2::connection favoriteConn;
-	boost::signals2::connection namesConn;
-	boost::signals2::connection helpConn;
-	boost::signals2::connection joinsConn;*/
-
 	void print_help();
 	void handleNames();
 	void updateTitle();
+
+	void handleUserUpdated(const OnlineUserPtr& aUser);
+	void handleUserRemoved(const OnlineUserPtr& aUser);
+	void handlePassword();
+	void handleConnected();
+
+	boost::signals2::connection passwordConn;
+	void handleFailed(const std::string& aMsg);
 };
 
 } // namespace ui

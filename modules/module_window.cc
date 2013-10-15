@@ -27,6 +27,7 @@
 #include <core/argparser.h>
 #include <display/manager.h>
 #include <input/help_handler.h>
+#include <input/manager.h>
 
 #include <ui/window_favorites.h>
 #include <ui/window_log.h>
@@ -67,8 +68,21 @@ public:
 	HelpHandler help;
 
     Window() : help(&commands, "Window") {
+		events::add_listener("key pressed", std::bind(&Window::keyPressed, this));
+	}
 
-    }
+	void keyPressed() {
+		auto key = events::arg<wint_t>(1);
+		if (key == INPUT_CTRL('P')) {
+			handleOpenTab<ui::WindowHubs>(display::TYPE_HUBLIST);
+		} else if (key == INPUT_CTRL('H')) {
+			handleOpenTab<ui::WindowFavorites>(display::TYPE_FAVORITES);
+		} else if (key == INPUT_CTRL('T')) {
+			handleOpenTab<ui::WindowTransfers>(display::TYPE_TRANSFERS);
+		} else if (key == INPUT_CTRL('S')) {
+			handleOpenTab<ui::WindowLog>(display::TYPE_LOGWND);
+		}
+	}
 
 	void handleSuggestWindow(const StringList& aArgs, int pos, StringList& suggest_) {
 		if (pos == 1) {

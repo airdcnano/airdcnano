@@ -44,7 +44,7 @@ ScrolledWindow::ScrolledWindow(const std::string& aID, display::Type aType) :
 {
     m_bindings[KEY_PPAGE] = std::bind(&ScrolledWindow::scroll_window, this, -10);
     m_bindings[KEY_NPAGE] = std::bind(&ScrolledWindow::scroll_window, this, 10);
-	m_bindings['L' - '@'] = [this] { clear(); };
+	m_bindings[INPUT_CTRL('L')] = std::bind(&ScrolledWindow::clear, this);
 
     update_config();
     m_lines.reserve(m_lastlogSize);

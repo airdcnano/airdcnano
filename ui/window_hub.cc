@@ -33,6 +33,7 @@
 #include <utils/strings.h>
 #include <client/HubEntry.h>
 #include <input/completion.h>
+#include <input/manager.h>
 
 #include <core/events.h>
 #include <core/argparser.h>
@@ -68,6 +69,7 @@ WindowHub::WindowHub(const std::string &address):
     set_title(address);
     set_name(address);
     update_config();
+	m_bindings[INPUT_CTRL('R')] = std::bind(&WindowHub::handleReconnect, this);
 }
 
 void WindowHub::print_help() {

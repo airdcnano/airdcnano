@@ -32,6 +32,7 @@
 #include <client/ShareManager.h>
 
 #include <input/help_handler.h>
+#include <input/manager.h>
 
 #include <boost/range/algorithm/copy.hpp>
 
@@ -64,6 +65,14 @@ namespace modules {
 		HelpHandler help;
 		Share() : help(&commands, "Share") {
 			events::add_listener("command allow", std::bind(&Share::handleAllow, this));
+			events::add_listener("key pressed", std::bind(&Share::keyPressed, this));
+		}
+
+		void keyPressed() {
+			auto key = events::arg<wint_t>(1);
+			if (key == INPUT_CTRL('E')) {
+				ShareManager::getInstance()->refresh(false, ShareManager::TYPE_MANUAL);
+			}
 		}
 
 		void handleAllow() {
@@ -310,7 +319,7 @@ namespace modules {
 
 				auto& dirs = shares[*profileToken];
 				for (const auto& sdi : dirs) {
-					auto fmt = sdi->vname + ": " + sdi->path + " (" + Util::formatBytes(sdi->size) + ", incoming: " + (sdi->incoming ? "yes" : "false") + ")";
+					auto fmt = sdi->vname + ": " + sdi->path + " (" + Util::formatBytes(sdi->size) + ", incoming: " + (sdi->incoming ? "yes" : "no") + ")";
 					log(fmt);
 				}
 			} else {

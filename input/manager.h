@@ -32,6 +32,7 @@
 #include <utils/instance.h>
 
 #define KEY_ESCAPE (KEY_MAX+1)
+#define INPUT_CTRL(x) (x - '@')
 
 namespace input {
 

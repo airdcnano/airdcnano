@@ -1,4 +1,0 @@
-airdcnano
-=========
-
-AirDC++ nano

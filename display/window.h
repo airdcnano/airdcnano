@@ -152,6 +152,7 @@ protected:
     std::map<wint_t, std::function<void ()> > m_bindings;
     bool m_drawTitle;
 	virtual void setInsertMode(bool enable);
+	virtual void handleEscape() { }
 	bool getInsertMode() const { return m_insertMode; }
 private:
 	friend class ListView;

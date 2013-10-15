@@ -70,6 +70,10 @@ void WindowHubs::complete(const std::vector<std::string>& aArgs, int pos, std::v
 
 }
 
+void WindowHubs::handleEscape() {
+	m_property = PROP_NONE;
+}
+
 void WindowHubs::connect()
 {
     int row = get_selected_row();

@@ -234,6 +234,10 @@ void WindowSearch::complete(const std::vector<std::string>& aArgs, int /*pos*/, 
 	}
 }
 
+void WindowSearch::handleEscape() {
+	m_property = PROP_NONE;
+}
+
 void WindowSearch::create_list()
 {
     delete_all();

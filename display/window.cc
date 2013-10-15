@@ -54,6 +54,7 @@ Window::Window(const std::string& aID, Type aType, bool aAllowCommands) :
     m_bindings['X' - '@'] = std::bind(&display::Manager::remove,
                                     std::bind(&display::Manager::get),
                                     this);
+	m_bindings[KEY_ESCAPE] = std::bind(&Window::handleEscape, this);
     set_prompt();
     resize();
 }

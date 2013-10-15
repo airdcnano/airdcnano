@@ -1457,7 +1457,7 @@ struct ShareManager::ShareLoader : public SimpleXMLReader::ThreadedCallBack, pub
 				hashSize += File::getSize(curDirPath + fname);
 				dcdebug("Error loading file list %s \n", e.getError().c_str());
 			}
-		} else if (compare(name, SHARE)) {
+		} else if (compare(name, SHARE) == 0) {
 			int version = Util::toInt(getAttrib(attribs, SVERSION, 0));
 			if (version > Util::toInt(SHARE_CACHE_VERSION))
 				throw("Newer cache version"); //don't load those...

@@ -70,6 +70,11 @@ void WindowFavorites::complete(const std::vector<std::string>& aArgs, int pos, s
 
 }
 
+void WindowFavorites::handleEscape() {
+	m_newFav = nullptr;
+	m_editState = EDIT_NONE;
+}
+
 void WindowFavorites::updateTitle() {
 	set_title("Favorite hubs: " + utils::to_string(FavoriteManager::getInstance()->getFavoriteHubs().size()));
 }

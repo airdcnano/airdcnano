@@ -31,6 +31,8 @@
 #include <input/completion.h>
 #include <utils/instance.h>
 
+#define KEY_ESCAPE (KEY_MAX+1)
+
 namespace input {
 
 /* Reads input from stdin. After reading the character, it

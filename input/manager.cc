@@ -56,12 +56,24 @@ void Manager::main_loop()
 {
     //core::Log::get()->log("input::Manager: " + utils::to_string(utils::gettid()));
 
-    wint_t ch = 0;
+	wint_t code = 0;
+	int r;
+	bool lastEsc = false;
+
     while(m_running)
     {
-        if(get_wch(&ch) != ERR) {
-            handle_char(ch);
-        }
+		while ((r = get_wch(&code)) != ERR) {
+			// we use SIGWINCH, so KEY_RESIZE can be ignored
+			if (r == KEY_CODE_YES && code == KEY_RESIZE)
+				continue;
+			lastEsc = code == 27;
+			handle_char(code);
+		}
+
+		if (lastEsc) {
+			handle_char(KEY_ESCAPE);
+			lastEsc = false;
+		}
     }
 }
 

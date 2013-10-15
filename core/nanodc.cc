@@ -191,7 +191,7 @@ void Nanodc::handle_crash(int sig)
 #else
     std::cerr << "Stacktrace is not enabled\n";
 #endif
-	std::cout << "If you exited with Ctrl+C, you can ignore this message (and please use /quit in future)" << std::endl;
+	std::cout << "You can ignore this message if you exited with Ctrl+C and the client was functioning correctly (and please use /quit in future)" << std::endl;
 	std::cout << "Press any key to continue" << std::endl;
 	cin.ignore();
 	exit(sig);

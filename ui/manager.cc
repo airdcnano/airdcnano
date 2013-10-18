@@ -90,9 +90,12 @@ void Manager::init()
 void Manager::create_windows()
 {
     display::Manager *dm = display::Manager::get();
-    dm->push_back(new ui::WindowHubs());
-    dm->push_back(new ui::WindowFavorites());
-    dm->push_back(new ui::WindowTransfers());
+	if (SETTING(OPEN_PUBLIC))
+		dm->push_back(new ui::WindowHubs());
+	if (SETTING(OPEN_FAVORITE_HUBS))
+		dm->push_back(new ui::WindowFavorites());
+	if (SETTING(SHOW_TRANSFERVIEW))
+		dm->push_back(new ui::WindowTransfers());
 
 	ClientManager::getInstance()->addListener(this);
 	DirectoryListingManager::getInstance()->addListener(this);

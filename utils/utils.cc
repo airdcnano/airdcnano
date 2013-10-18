@@ -72,8 +72,8 @@ std::string time_to_string(const std::string &format, time_t _tt)
 
     tm* _tm = localtime(&_tt);
 
-    if(_tm == NULL)
-        throw std::runtime_error("_tm == NULL");
+    //if(_tm == NULL)
+    //    throw std::runtime_error("_tm == NULL");
 
     strftime(buf, BUF_SIZE, format.c_str(), _tm);
 

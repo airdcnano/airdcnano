@@ -145,9 +145,7 @@ void ListView::delete_all()
     events::emit("window updated", this);
 }
 
-void ListView::set_text(int column, int row, const std::string &text)
-    throw(std::out_of_range)
-{
+void ListView::set_text(int column, int row, const std::string &text) {
     Column *c = m_columns.at(column);
     c->set_text(row, text);
     events::emit("window updated", this);

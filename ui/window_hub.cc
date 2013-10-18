@@ -622,13 +622,9 @@ std::string WindowHub::get_nick() const
     return nick;
 }
 
-const OnlineUserPtr WindowHub::get_user(const std::string &nick)
-    throw(std::out_of_range)
-{
+const OnlineUserPtr WindowHub::get_user(const std::string &nick) {
     auto it = m_users.find(nick);
-    if(it == m_users.end())
-        throw std::out_of_range("user not found");
-    return it->second;
+	return it != m_users.end() ? it->second : nullptr;
 }
 
 void WindowHub::complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_) {

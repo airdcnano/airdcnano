@@ -66,12 +66,7 @@ void Manager::push_back(display::Window *window)
     window->resize();
 }
 
-void Manager::set_active_window(unsigned int n)
-    throw(std::out_of_range)
-{
-    if(n >= m_windows->size())
-        throw std::out_of_range("Manager::set_active_window: Window index out of range");
-
+void Manager::set_active_window(unsigned int n) {
     set_current(m_windows->begin()+n);
 }
 

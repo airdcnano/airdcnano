@@ -86,7 +86,7 @@ public:
 
     /** Set the current active window
         @param current Number of the window */
-    void set_active_window(unsigned int n) throw(std::out_of_range);
+    void set_active_window(unsigned int n);
 
     /** Find window by its name.
         @return Iterator to window or end() if not found. */

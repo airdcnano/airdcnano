@@ -55,23 +55,23 @@ public:
      * @param item The item.
      * @param pos The position of the item.
      * @throw std::runtime_error if item with same name already exists */
-    void add_item(display::StatusItem *item, int pos = -1) throw(std::runtime_error);
+    void add_item(display::StatusItem *item, int pos = -1);
 
     /** Remove an item from the status bar. Doesn't free the memory of the item.
      * @param name The name of the item. 
      * @throw std::runtime_error if item is not found.
      * @return Returns the item. */
-    StatusItem *remove_item(const std::string &name) throw(std::runtime_error);
+    StatusItem *remove_item(const std::string &name);
 
     /** Remove an item from the status bar and free the memory.
      * @param name The name of the item.
      * @throw std::runtime_error if item is not found. */
-    void free_item(const std::string &name) throw(std::runtime_error);
+    void free_item(const std::string &name);
 
     /** Update an item.
      * @param name Items name.
      * @throw std::runtime_error if the item doesn't exist*/
-    void update_item(const std::string &name) throw(std::runtime_error);
+    void update_item(const std::string &name);
 
     /** Destructor. Frees the memory of all items. */
     ~StatusBar();

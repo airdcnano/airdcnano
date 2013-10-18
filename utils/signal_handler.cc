@@ -34,8 +34,8 @@ std::map<uint32_t, SignalHandler::SigHandler> SignalHandler::m_handlers;
 
 void SignalHandler::ignore(uint32_t sig)
 {
-    if(sig >= __SIGRTMIN)
-        throw std::logic_error("SignalHandler::ignore(): Invalid signal");
+    //if(sig >= __SIGRTMIN)
+    //    throw std::logic_error("SignalHandler::ignore(): Invalid signal");
 
     signal(sig, SIG_IGN);
     m_handlers.erase(sig);
@@ -43,8 +43,8 @@ void SignalHandler::ignore(uint32_t sig)
 
 void SignalHandler::add_handler(uint32_t sig, SigHandler handler)
 {
-    if(sig >= __SIGRTMIN)
-        throw std::logic_error("SignalHandler::handle(): Invalid signal");
+    //if(sig >= __SIGRTMIN)
+    //    throw std::logic_error("SignalHandler::handle(): Invalid signal");
 
     /* handle all signals in handle() and
      * call the right signal handler from there */

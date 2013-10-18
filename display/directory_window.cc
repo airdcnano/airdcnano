@@ -101,14 +101,11 @@ void DirectoryWindow::handle(int key)
                 m_selectedView = DIRECTORIES;
             }
         }
-    }
-    else if(m_selectedView == DIRECTORIES) {
+    }  else if(m_selectedView == DIRECTORIES) {
         m_dirView->handle(key);
-    }
-    else if(m_selectedView == FILES) {
+    } else if(m_selectedView == FILES) {
         m_fileView->handle(key);
-    }
-    else {
+    }  else {
         throw std::logic_error("DirectoryWindow::handle");
     }
 }

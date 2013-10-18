@@ -68,7 +68,7 @@ public:
     /** @todo regular expressions in filters */
     bool filter_messages(const std::string &nick, const std::string &msg);
     std::string get_nick() const;
-    const OnlineUserPtr get_user(const std::string &nick) throw (std::out_of_range);
+    const OnlineUserPtr get_user(const std::string &nick);
     ~WindowHub();
 
     void on(TimerManagerListener::Second, uint64_t) noexcept;

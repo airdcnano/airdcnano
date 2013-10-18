@@ -44,8 +44,9 @@ void StatusWindowList::window_closed()
 {
     display::Window *window = events::arg<display::Window*>(0);
     if(m_list.find(window) != m_list.end()) {
-        if(m_list.erase(window) != 1)
-            throw std::logic_error("m_list.erase(window) != 1");
+		m_list.erase(window);
+		//if(m_list.erase(window) != 1)
+		//	throw std::logic_error("m_list.erase(window) != 1");
     }
 }
 
@@ -58,10 +59,10 @@ void StatusWindowList::window_status_updated()
     if(state == display::STATE_IS_ACTIVE &&
             m_list.find(window) != m_list.end())
     {
-        if(m_list.erase(window) != 1)
-            throw std::logic_error("m_list.erase(window) != 1");
-    }
-    else {
+		m_list.erase(window);
+        //if(m_list.erase(window) != 1)
+        //    throw std::logic_error("m_list.erase(window) != 1");
+    } else {
         m_list[window] = state;
     }
     update();

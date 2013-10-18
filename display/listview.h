@@ -68,7 +68,7 @@ public:
 
     void delete_row(int row) { m_rows.erase(m_rows.begin()+row); }
 
-    void set_text(int row, const std::string &text) throw(std::out_of_range) { m_rows.at(row) = text; }
+    void set_text(int row, const std::string &text) { m_rows.at(row) = text; }
     std::string get_text(int row) { return m_rows.at(row); }
 
     void clear() { m_rows.clear(); }
@@ -104,7 +104,7 @@ public:
     int insert_row();
 
     /** Find a row by its content. Returns -1 if row is not found. */
-    int find_row(int column, const std::string &content) throw(std::out_of_range) {
+    int find_row(int column, const std::string &content) {
         int row = m_columns.at(column)->find_row(content);
         return row >= m_rowCount ? -1 : row;
     }
@@ -118,18 +118,18 @@ public:
     int get_selected_row() { return m_currentItem; }
 
     /** @throw std::out_of_range if column or row is invalid. */
-    void set_text(int column, int row, const std::string &text) throw(std::out_of_range);
+    void set_text(int column, int row, const std::string &text);
 
-    void set_text(int column, int row, const char *text) throw(std::out_of_range)
+    void set_text(int column, int row, const char *text)
         { set_text(column, row, std::string(text)); }
 
-    void set_text(int column, int row, bool value) throw(std::out_of_range)
+    void set_text(int column, int row, bool value)
         { set_text(column, row, value ? "[x]" : "[ ]"); }
 
-    void set_text(int column, int row, int i) throw(std::out_of_range)
+    void set_text(int column, int row, int i)
         { set_text(column, row, utils::to_string(i)); }
 
-    std::string get_text(int column, int row) throw(std::out_of_range)
+    std::string get_text(int column, int row)
         { return m_columns.at(column)->get_text(row); }
 
     /** Returns the number of rows in the window. */

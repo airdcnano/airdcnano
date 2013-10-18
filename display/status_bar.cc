@@ -41,19 +41,16 @@ StatusBar::StatusBar():
         std::bind(&StatusBar::update_config, this));
 }
 
-void StatusBar::add_item(display::StatusItem *item, int pos)
-    throw(std::runtime_error)
-{
+void StatusBar::add_item(display::StatusItem *item, int pos) {
     utils::Lock l(m_mutex);
-    StatusItems::iterator it = std::find_if(m_items.begin(), m_items.end(),
+    auto it = std::find_if(m_items.begin(), m_items.end(),
         std::bind(
             std::bind2nd(std::equal_to<std::string>(), item->get_name()),
             std::bind(&StatusItem::get_name, std::placeholders::_1)
         ));
 
-    if(it != m_items.end())
-        throw std::runtime_error("Statusbar already has a item named "
-                + item->get_name());
+	if (it != m_items.end())
+		return;
 
     if(pos == -1 || pos > static_cast<int>(m_items.size()))
         m_items.push_back(item);
@@ -61,38 +58,27 @@ void StatusBar::add_item(display::StatusItem *item, int pos)
         m_items.insert(m_items.begin()+pos, item);
 }
 
-StatusItem* StatusBar::remove_item(const std::string &name)
-    throw(std::runtime_error)
-{
+StatusItem* StatusBar::remove_item(const std::string &name) {
     utils::Lock l(m_mutex);
 	auto it = std::find_if(m_items.begin(), m_items.end(), [&](const StatusItem* si) { return si->get_name() == name; });
 
-    if(it == m_items.end())
-        throw std::runtime_error("Unknown item: " + name);
+   // if(it == m_items.end())
+	//	return;
 
     m_items.erase(it);
     return *it;
 }
 
-void StatusBar::free_item(const std::string &name)
-    throw(std::runtime_error)
-{
+void StatusBar::free_item(const std::string &name) {
     delete remove_item(name);
 }
 
-void StatusBar::update_item(const std::string &name)
-    throw(std::runtime_error)
-{
+void StatusBar::update_item(const std::string &name) {
     utils::Lock l(m_mutex);
 
-    StatusItems::iterator it = std::find_if(m_items.begin(), m_items.end(),
-        std::bind(
-            std::bind2nd(std::equal_to<std::string>(), name),
-            std::bind(&StatusItem::get_name, std::placeholders::_1)
-        ));
-
-    if(it == m_items.end())
-        throw std::runtime_error("Unknown item: " + name);
+	auto it = std::find_if(m_items.begin(), m_items.end(), [&](const StatusItem* si) { return si->get_name() == name; });
+    //if(it == m_items.end())
+    //    return;
 
     (*it)->update();
     redraw();

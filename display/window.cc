@@ -96,7 +96,7 @@ unsigned int Window::calculate_height(const gchar *message_start,
         unsigned int indent)
 {
     if(screen_width < 1)
-        throw std::logic_error("screen_width < 1");
+        return 0;
     if(screen_width - indent < 4)
         indent = 0;
 
@@ -132,10 +132,10 @@ std::string::size_type Window::find_line_end(const std::string& message,
 const gchar *Window::find_line_end(const gchar *line_start,
         const gchar *message_end, unsigned int screen_width)
 {
-    if(line_start > message_end)
-        throw std::invalid_argument("line_start > message_end");
-    if(screen_width == 0)
-        throw std::invalid_argument("screen_width == 0");
+    //if(line_start > message_end)
+    //    throw std::invalid_argument("line_start > message_end");
+    //if(screen_width == 0)
+     //   throw std::invalid_argument("screen_width == 0");
 
     /* The maximum amount of visible characters is the number of bytes.
      * If the number of remaining bytes is less than or equal to the screen

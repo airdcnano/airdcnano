@@ -65,8 +65,7 @@ public:
     /** Add a listener for a specific event.
      * @throw std::logic_error If event is not created. */
     boost::signals2::connection add_listener(const std::string &event,
-		const EventFunc &func, Priority priority = DEFAULT)
-        throw(std::logic_error);
+		const EventFunc &func, Priority priority = DEFAULT) noexcept;
 
     /** Emit the event named \c event. */
     void emit(const std::string &event, boost::any a1=boost::any(),

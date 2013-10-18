@@ -64,11 +64,8 @@ void Manager::create_event(const std::string &event)
 }
 
 boost::signals2::connection
-Manager::add_listener(const std::string &event, const EventFunc &func, Priority priority)
-    throw(std::logic_error)
-{
+Manager::add_listener(const std::string &event, const EventFunc &func, Priority priority) noexcept {
     if(m_events.find(event) == m_events.end()) {
-        //throw std::logic_error("Event doesn't exist: " + event);
         m_events[event] = new EventSig();
     }
 

@@ -40,7 +40,7 @@
 namespace modules {
 	class Completion {
 	public:
-		Completion(input::Comparator* comp, StringList&& aItems) {
+		Completion(input::Comparator* comp, StringList&& aItems) noexcept {
 			//m_items.erase(remove_if(m_items.begin(), m_items.end(), comp), m_items.end());
 			//auto uniqueEnd = unique(items.begin(), items.end());
 			if (comp) {
@@ -64,7 +64,7 @@ namespace modules {
 			}
 		}
 
-		optional<string> next() throw(std::out_of_range) {
+		optional<string> next() noexcept {
 			if (m_items.size() == 0)
 				return nullptr;
 
@@ -86,7 +86,7 @@ namespace modules {
 				std::bind(&Suggest::key_pressed, this));
 		}
 
-		void key_pressed() {
+		void key_pressed() noexcept {
 			auto key = events::arg<wint_t>(1);
 			if (key == 0x09) {
 				handleTab();
@@ -95,7 +95,7 @@ namespace modules {
 			}
 		}
 
-		void handleTab() {
+		void handleTab() noexcept {
 			auto line = display::Window::m_input.str();
 			auto pos = display::Window::m_input.get_pos();
 
@@ -121,7 +121,7 @@ namespace modules {
 			display::Window::m_input.set_pos(startPos + lastLen);
 		}
 
-		void createComparator(const string& aLine, int pos) {
+		void createComparator(const string& aLine, int pos) noexcept {
 			auto mger = display::Manager::get();
 			auto cur = mger->get_current_window();
 			bool isCommand = !aLine.empty() && aLine.front() == '/' && cur->allowCommands;

@@ -77,8 +77,10 @@ void TextInput::enter()
 void TextInput::text_insert(const std::string &ch)
 {
     try {
-        if(!g_utf8_validate(ch.c_str(), -1, 0))
-            throw std::runtime_error("g_utf8_validate failed");
+		if (!g_utf8_validate(ch.c_str(), -1, 0)) {
+			core::Log::get()->log("g_utf8_validate failed");
+			return;
+		}
 
         String::insert(m_pos, ch);
         m_pos += ch.length();

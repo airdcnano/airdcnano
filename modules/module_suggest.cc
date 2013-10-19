@@ -96,11 +96,12 @@ namespace modules {
 		}
 
 		void handleTab() noexcept {
+			auto cur = display::Manager::get()->get_current_window();
 			auto line = display::Window::m_input.str();
 			auto pos = display::Window::m_input.get_pos();
 
 			if (!c) {
-				createComparator(line, pos);
+				createComparator(line, pos, cur);
 			}
 
 			if (!c)
@@ -119,11 +120,10 @@ namespace modules {
 			lastLen = (*next).length();
 			display::Window::m_input.setText(line, false);
 			display::Window::m_input.set_pos(startPos + lastLen);
+			events::emit("window updated", cur);
 		}
 
-		void createComparator(const string& aLine, int pos) noexcept {
-			auto mger = display::Manager::get();
-			auto cur = mger->get_current_window();
+		void createComparator(const string& aLine, int pos, display::Window* cur) noexcept {
 			bool isCommand = !aLine.empty() && aLine.front() == '/' && cur->allowCommands;
 
 			// parse the words

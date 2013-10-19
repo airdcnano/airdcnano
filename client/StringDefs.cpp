@@ -2645,7 +2645,7 @@ std::string dcpp::ResourceManager::names[] = {
 "Browsew", 
 "SettingsIgnore", 
 "AlreadyIgnored", 
-"IgnoreClear", 
+"Clear", 
 "UseRegexpOrWc", 
 "IgnoredUsers", 
 "Incoming", 

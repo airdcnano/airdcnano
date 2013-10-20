@@ -496,7 +496,6 @@ void FavoriteManager::save() {
 			xml.addChildAttrib("Description", i->getDescription());
 			xml.addChildAttrib("Password", i->getPassword());
 			xml.addChildAttrib("Server", i->getServerStr());
-			xml.addChildAttrib("Encoding", i->getEncoding());
 			xml.addChildAttrib("ChatUserSplit", i->getChatUserSplit());
 			xml.addChildAttrib("StealthMode", i->getStealth());
 			xml.addChildAttrib("UserListState", i->getUserListState());
@@ -725,7 +724,6 @@ void FavoriteManager::load(SimpleXML& aXml) {
 			}
 			e->setServerStr(server);
 
-			e->setEncoding(aXml.getChildAttrib("Encoding"));
 			e->setChatUserSplit(aXml.getIntChildAttrib("ChatUserSplit"));
 			e->setStealth(aXml.getBoolChildAttrib("StealthMode"));
 			e->setUserListState(aXml.getBoolChildAttrib("UserListState"));
@@ -1188,17 +1186,18 @@ void FavoriteManager::on(UserDisconnected, const UserPtr& user, bool wentOffline
 }
 
 void FavoriteManager::on(UserConnected, const OnlineUser& aUser, bool /*wasOffline*/) noexcept {
-	bool isFav = false;
+	//bool isFav = false;
 	UserPtr user = aUser.getUser();
+	/*
 	{
 		RLock l(cs);
 		auto i = users.find(user->getCID());
 		if(i != users.end()) {
 			isFav = true;
 		}
-	}
+	}*/
 
-	if(isFav)
+	if(user->isSet(User::FAVORITE))
 		fire(FavoriteManagerListener::StatusChanged(), user);
 }
 

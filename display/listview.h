@@ -79,6 +79,7 @@ public:
     }
 
 	virtual void handleMove(int /*prevPos*/, int /*diff*/) { }
+	virtual ~Column() { }
 private:
     std::string m_name;
     std::vector<std::string> m_rows;

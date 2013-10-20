@@ -192,12 +192,12 @@ public:
 	void setHubUrl(const string& newUrl, bool isGuiChange) noexcept;
 		
 	GETSET(bool, partialList, PartialList);
-	GETSET(bool, abort, Abort);
 	GETSET(bool, isOwnList, IsOwnList);
 	GETSET(bool, isClientView, isClientView);
 	GETSET(string, fileName, FileName);
 	GETSET(bool, matchADL, MatchADL);
-	GETSET(bool, waiting, Waiting);	
+	IGETSET(bool, waiting, Waiting, false);
+	IGETSET(bool, closing, Closing, false);
 
 	void addMatchADLTask() noexcept;
 	void addListDiffTask(const string& aFile, bool aOwnList) noexcept;
@@ -272,12 +272,12 @@ private:
 	void matchQueueImpl();
 	void removedQueueImpl(const string& aDir) noexcept;
 
-	void waitActionFinish() const noexcept;
+	void waitActionFinish() const throw(AbortException);
 	HintedUser hintedUser;
 };
 
-inline bool operator==(DirectoryListing::Directory::Ptr a, const string& b) { return Util::stricmp(a->getName(), b) == 0; }
-inline bool operator==(DirectoryListing::File::Ptr a, const string& b) { return Util::stricmp(a->getName(), b) == 0; }
+inline bool operator==(const DirectoryListing::Directory::Ptr& a, const string& b) { return Util::stricmp(a->getName(), b) == 0; }
+inline bool operator==(const DirectoryListing::File::Ptr& a, const string& b) { return Util::stricmp(a->getName(), b) == 0; }
 
 } // namespace dcpp
 

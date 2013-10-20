@@ -35,6 +35,7 @@
 #include <client/stdinc.h>
 #include <client/Exception.h>
 #include <client/Text.h>
+#include <client/Pointer.h>
 
 using namespace dcpp;
 
@@ -255,7 +256,7 @@ void ListView::redraw()
             const auto& text = c->get_text(range.first);
             auto width = c->get_real_width();
 
-			print(strings::length(text) >= width ? text.substr(0, width - 1) : text, x, y);
+			print(static_cast<int>(strings::length(text)) >= width ? text.substr(0, width - 1) : text, x, y);
             x += width;
 
             if(m_currentItem == static_cast<int>(range.first))
@@ -273,7 +274,7 @@ void ListView::redraw()
 
 ListView::~ListView()
 {
-    std::for_each(m_columns.begin(), m_columns.end(), utils::delete_functor<Column>());
+    std::for_each(m_columns.begin(), m_columns.end(), DeleteFunction());
 }
 
 } // namespace display

@@ -210,6 +210,7 @@ static NamedSettingItem settings [] = {
 	{ "away_message", SettingsManager::DEFAULT_AWAY_MESSAGE, ResourceManager::SETTINGS_DEFAULT_AWAY_MSG },
 	{ "away_idle_time", SettingsManager::AWAY_IDLE_TIME, ResourceManager::AWAY_IDLE_TIME_BEGIN },
 	{ "away_no_bots", SettingsManager::NO_AWAYMSG_TO_BOTS, ResourceManager::SETTINGS_NO_AWAYMSG_TO_BOTS },
+	{ "nmdc_encoding", SettingsManager::NMDC_ENCODING, ResourceManager::INVALID_ENCODING },
 
 	{ ResourceManager::SETTINGS_DOWNLOADS },
 	{ "dl_dir", SettingsManager::DOWNLOAD_DIRECTORY, ResourceManager::SETTINGS_DOWNLOAD_DIRECTORY },

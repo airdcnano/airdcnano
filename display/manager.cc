@@ -131,15 +131,18 @@ void Manager::redraw()
     (*m_current)->draw();
     m_statusbar->redraw();
 
+	if ((*m_current)->draw_prompt()) {
+		m_inputWindow.set_prompt((*m_current)->get_prompt());
+		m_inputWindow.redraw();
+	} else {
+		m_inputWindow.erase();
+		m_inputWindow.refresh();
+	}
+
     if((*m_current)->insert_mode()) {
-        m_inputWindow.set_prompt((*m_current)->get_prompt());
-        m_inputWindow.redraw();
-        curs_set((*m_current)->insert_mode() ? 1 : 0);
-    }
-    else {
-        m_inputWindow.erase();
-        m_inputWindow.refresh();
-        curs_set((*m_current)->insert_mode() ? 1 : 0);
+        curs_set(1);
+    } else {
+        curs_set(0);
     }
     display::Screen::do_update();
 }

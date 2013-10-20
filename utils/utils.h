@@ -24,6 +24,7 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
+#include <algorithm>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -172,6 +173,17 @@ inline static pid_t gettid() {
             "0" (SYS_gettid));
 #endif
     return tid;
+}
+
+template<typename T>
+static void slide(T& list, int oldPos, int diff) {
+	auto cur = std::begin(list) + oldPos + diff;
+	auto p = std::begin(list) + oldPos;
+	if (diff > 0) {
+		std::rotate(p, cur, cur + 1);
+	} else if (diff < 0) {
+		std::rotate(cur, cur + 1, p + 1);
+	}
 }
 
 

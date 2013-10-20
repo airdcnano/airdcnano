@@ -40,7 +40,7 @@ namespace ui {
 WindowFavorites::WindowFavorites():
     m_editState(EDIT_NONE),
     m_confirmRemove(-1),
-	ListView(display::TYPE_FAVORITES, "favorites")
+	ListView(display::TYPE_FAVORITES, "favorites", true)
 {
 	updateTitle();
     set_name("favorites");
@@ -75,6 +75,10 @@ void WindowFavorites::handleEscape() {
 	m_editState = EDIT_NONE;
 }
 
+void WindowFavorites::handleMove(int prevPos, int diff) {
+	utils::slide(FavoriteManager::getInstance()->getFavoriteHubs(), prevPos, diff);
+}
+
 void WindowFavorites::updateTitle() {
 	set_title("Favorite hubs: " + utils::to_string(FavoriteManager::getInstance()->getFavoriteHubs().size()));
 }
@@ -101,7 +105,7 @@ void WindowFavorites::add_new()
 }
 
 FavoriteHubEntryPtr WindowFavorites::find_entry(int row) {
-    auto favhubs = FavoriteManager::getInstance()->getFavoriteHubs();
+    auto& favhubs = FavoriteManager::getInstance()->getFavoriteHubs();
 	auto p = std::find_if(favhubs.begin(), favhubs.end(), [=](const FavoriteHubEntryPtr& aFav) {
 		return aFav->getServerStr() == get_text(2, row);
 	});

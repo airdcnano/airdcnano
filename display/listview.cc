@@ -40,23 +40,41 @@ using namespace dcpp;
 
 namespace display {
 
-	ListView::ListView(display::Type aType, const std::string& aID) :
+ListView::ListView(display::Type aType, const std::string& aID, bool allowMove) :
     m_rowCount(0),
     m_currentItem(std::numeric_limits<int>::min()),
     m_infoboxHeight(4),
 	Window(aID, aType, false)
 {
     m_insertMode = false;
-
+	m_prompt = "";
     m_bindings[KEY_UP] = std::bind(&ListView::scroll_list, this, -1);
     m_bindings[KEY_DOWN] = std::bind(&ListView::scroll_list, this, 1);
     m_bindings[KEY_PPAGE] = std::bind(&ListView::scroll_list, this, -20);
     m_bindings[KEY_NPAGE] = std::bind(&ListView::scroll_list, this, 20);
+	if (allowMove)
+		m_bindings['m'] = std::bind(&ListView::handleMove, this);
 
     resize();
 }
 
+void ListView::handleMove() {
+	if (m_rowCount == 0)
+		return;
+
+	if (moving) {
+		moving = false;
+		set_prompt("");
+	} else {
+		moving = true;
+		set_prompt("Move mode enabled. Press 'm' when you are ready.");
+	}
+
+	events::emit("window updated", this);
+}
+
 void ListView::setInsertMode(bool enable) {
+	moving = false;
 	m_insertMode = enable;
 	m_input.clear_text();
 }
@@ -146,7 +164,7 @@ void ListView::delete_all()
 }
 
 void ListView::set_text(int column, int row, const std::string &text) {
-    Column *c = m_columns.at(column);
+	auto c = m_columns[column];
     c->set_text(row, text);
     events::emit("window updated", this);
 }
@@ -182,7 +200,21 @@ void ListView::handle(wint_t key)
 
 void ListView::scroll_list(int items)
 {
-    m_currentItem += items;
+	if (m_currentItem+items >= m_rowCount) {
+		return;
+	}
+
+	if (m_currentItem + items < 0) {
+		return;
+	}
+
+	if (moving) {
+		for (auto& c : m_columns) {
+			utils::slide(c->m_rows, m_currentItem, items);
+		}
+	}
+
+	m_currentItem += items;
     events::emit("window updated", this);
 }
 
@@ -197,8 +229,7 @@ void ListView::redraw()
 
     unsigned int y = 0;
     unsigned int x = 0;
-    for(unsigned int i=0; i<m_columns.size(); ++i) {
-        Column *c = m_columns[i];
+    for(const auto& c: m_columns) {
         if(!c->is_hidden()) {
             print("%21" + c->get_name() + "%21", x, y);
             x += c->get_real_width();
@@ -211,25 +242,20 @@ void ListView::redraw()
         return;
     }
 
-    typedef std::pair<unsigned int, unsigned int> Range;
-    Range range = rak::advance_bidirectional<unsigned int>(0, m_currentItem, m_rowCount, get_height()-1-m_infoboxHeight);
-
+    auto range = rak::advance_bidirectional<unsigned int>(0, m_currentItem, m_rowCount, get_height()-1-m_infoboxHeight);
     while(range.first != range.second) {
         x = 0;
         y++;
 
-        for(unsigned int i=0; i<m_columns.size(); ++i) {
-            Column *c = m_columns[i];
+		for (const auto& c : m_columns) {
             if(c->is_hidden()) {
                 continue;
             }
 
-            std::string text = c->get_text(range.first);
-            unsigned int width = c->get_real_width();
-            if(strings::length(text) >= width)
-                text = text.substr(0, width-1);
+            const auto& text = c->get_text(range.first);
+            auto width = c->get_real_width();
 
-            print(text, x, y);
+			print(strings::length(text) >= width ? text.substr(0, width - 1) : text, x, y);
             x += width;
 
             if(m_currentItem == static_cast<int>(range.first))

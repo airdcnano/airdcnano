@@ -50,7 +50,7 @@ public:
         m_realWidth(0), m_hidden(true) {  }
 
     void set_name(const std::string &name) { m_name = name; }
-    std::string get_name() const { return m_name; }
+	const std::string& get_name() const { return m_name; }
     bool is_hidden() const { return m_hidden; }
     void set_real_width(int width) { m_realWidth = width; }
     int get_preferred_width() const { return m_preferredWidth; }
@@ -69,7 +69,7 @@ public:
     void delete_row(int row) { m_rows.erase(m_rows.begin()+row); }
 
     void set_text(int row, const std::string &text) { m_rows.at(row) = text; }
-    std::string get_text(int row) { return m_rows.at(row); }
+	const std::string& get_text(int row) { return m_rows[row]; }
 
     void clear() { m_rows.clear(); }
 
@@ -77,6 +77,8 @@ public:
     static int calc_width(int width, Column *column) {
         return width + column->m_realWidth;
     }
+
+	virtual void handleMove(int /*prevPos*/, int /*diff*/) { }
 private:
     std::string m_name;
     std::vector<std::string> m_rows;
@@ -93,7 +95,7 @@ class ListView:
 {
 public:
     /** Default constructor. Creates the window with correct size. */
-	ListView(display::Type aType = display::TYPE_UNKNOWN, const std::string& aID = "");
+	ListView(display::Type aType = display::TYPE_UNKNOWN, const std::string& aID = "", bool allowMove = false);
 
     /** Insert a new column. The ListView class is responsible for
      * deleting Column's allocated on the heap.*/
@@ -129,8 +131,8 @@ public:
     void set_text(int column, int row, int i)
         { set_text(column, row, utils::to_string(i)); }
 
-    std::string get_text(int column, int row)
-        { return m_columns.at(column)->get_text(row); }
+    const std::string& get_text(int column, int row)
+        { return m_columns[column]->get_text(row); }
 
     /** Returns the number of rows in the window. */
     unsigned int get_size() { return m_rowCount; }
@@ -156,7 +158,9 @@ public:
     typedef std::vector<Column*> Columns;
 
 	void setInsertMode(bool enable);
+	void handleMove();
 protected:
+	bool moving = false;
     int m_rowCount;
     Columns m_columns;
     //utils::Mutex m_itemLock;

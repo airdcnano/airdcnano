@@ -82,17 +82,17 @@ public:
     virtual void handle_line(const std::string &line) { }
 
     /** Set the name of the window. */
-    void set_name(std::string name) { m_name = name; }
+    void set_name(std::string name) { m_name.swap(name); }
 
     /** Get the name of the window.  */
     const std::string& get_name() const { return m_name; }
 
     /** Set window title. The title of the active window 
      * appears in top of the screen. */
-    void set_title(std::string title) { m_title = title; }
+    void set_title(std::string title) { m_title.swap(title); }
 
     /** Get the title */
-    std::string get_title() const { return m_title; }
+	const std::string& get_title() const { return m_title; }
 
     void set_state(State state) { m_state = state; }
 
@@ -100,9 +100,10 @@ public:
 
     Type get_type() const { return m_type; }
 
-    virtual bool insert_mode() const { return m_insertMode; }
+    bool insert_mode() const { return m_insertMode; }
+	bool draw_prompt() const { return m_insertMode || !m_prompt.empty(); }
 
-    std::string get_prompt() { return m_prompt; }
+    const std::string& get_prompt() { return m_prompt; }
 
     void set_prompt() { m_prompt = default_prompt; }
     void set_prompt(const std::string &prompt) { m_prompt = prompt; }

@@ -67,6 +67,8 @@ void Manager::push_back(display::Window *window)
 }
 
 void Manager::set_active_window(unsigned int n) {
+	if (n >= m_windows->size())
+		return;
     set_current(m_windows->begin()+n);
 }
 
@@ -107,17 +109,11 @@ void Manager::handle_key()
 
     m_altPressed = false;
     if(key >= '1' && key <= '9') {
-        try {
-            set_active_window(key - '1');
-        } catch(std::out_of_range &e) {
-
-        }
+		set_active_window(key - '1');
         events::stop();
-    }
-    else if(key == KEY_LEFT) {
+    } else if(key == KEY_LEFT) {
 		prev();
-    }
-    else if(key == KEY_RIGHT) {
+    } else if(key == KEY_RIGHT) {
 		next();
     }
 }

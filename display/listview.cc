@@ -213,6 +213,7 @@ void ListView::scroll_list(int items)
 		for (auto& c : m_columns) {
 			utils::slide(c->m_rows, m_currentItem, items);
 		}
+		onListMove(m_currentItem, items);
 	}
 
 	m_currentItem += items;

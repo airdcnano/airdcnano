@@ -160,6 +160,7 @@ public:
 
 	void setInsertMode(bool enable);
 	void handleMove();
+	virtual void onListMove(int prevPos, int diff) {}
 protected:
 	bool moving = false;
     int m_rowCount;

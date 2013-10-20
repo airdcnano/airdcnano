@@ -65,7 +65,7 @@ public:
 	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_);
 
 	void handleEscape();
-	void handleMove(int prevPos, int diff);
+	void onListMove(int prevPos, int diff);
 private:
     enum EditState {
         EDIT_NONE,

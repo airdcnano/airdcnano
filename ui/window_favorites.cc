@@ -75,8 +75,8 @@ void WindowFavorites::handleEscape() {
 	m_editState = EDIT_NONE;
 }
 
-void WindowFavorites::onListMove(int prevPos, int diff) {
-	utils::slide(FavoriteManager::getInstance()->getFavoriteHubs(), prevPos, diff);
+void WindowFavorites::onListMove(int prevPos, int newPos) {
+	utils::slide(FavoriteManager::getInstance()->getFavoriteHubs(), prevPos, newPos);
 	FavoriteManager::getInstance()->save();
 }
 

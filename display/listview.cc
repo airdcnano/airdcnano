@@ -201,22 +201,19 @@ void ListView::handle(wint_t key)
 
 void ListView::scroll_list(int items)
 {
-	if (m_currentItem+items >= m_rowCount) {
-		return;
-	}
-
-	if (m_currentItem + items < 0) {
+	auto newPos = m_currentItem + items;
+	if (moving && (newPos < 0 || newPos >= m_rowCount)) {
 		return;
 	}
 
 	if (moving) {
 		for (auto& c : m_columns) {
-			utils::slide(c->m_rows, m_currentItem, items);
+			utils::slide(c->m_rows, m_currentItem, newPos);
 		}
-		onListMove(m_currentItem, items);
+		onListMove(m_currentItem, newPos);
 	}
 
-	m_currentItem += items;
+	m_currentItem = newPos;
     events::emit("window updated", this);
 }
 

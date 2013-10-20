@@ -176,12 +176,12 @@ inline static pid_t gettid() {
 }
 
 template<typename T>
-static void slide(T& list, int oldPos, int diff) {
-	auto cur = std::begin(list) + oldPos + diff;
+static void slide(T& list, int oldPos, int newPos) {
+	auto cur = std::begin(list) + newPos;
 	auto p = std::begin(list) + oldPos;
-	if (diff > 0) {
+	if (p < cur) {
 		std::rotate(p, cur, cur + 1);
-	} else if (diff < 0) {
+	} else if (cur < p) {
 		std::rotate(cur, cur + 1, p + 1);
 	}
 }

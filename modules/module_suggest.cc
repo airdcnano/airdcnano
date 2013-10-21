@@ -53,14 +53,7 @@ namespace modules {
 
 			//fix whitespaces
 			for (auto& i : m_items) {
-				if (i.empty()) {
-					continue;
-				}
-
-				if (i.back() == ' ')
-					i = boost::replace_all_copy(i.substr(0, i.length()-1), " ", "\\ ") + ' '; // a hacky fix for nick suggestions with ": "
-				else
-					boost::replace_all(i, " ", "\\ ");
+				boost::replace_all(i, " ", "\\ ");
 			}
 		}
 
@@ -117,8 +110,8 @@ namespace modules {
 			line.insert(startPos, *next);
 
 			// save the last suggestion length
-			lastLen = (*next).length();
-			display::Window::m_input.setText(line, false);
+			lastLen = (*next).length()+1;
+			display::Window::m_input.setText(line + " ", false);
 			display::Window::m_input.set_pos(startPos + lastLen);
 			events::emit("window updated", cur);
 		}
@@ -138,12 +131,12 @@ namespace modules {
 				wordPos = static_cast<int>(args.size() > 0 ? args.size() - 1 : 0);
 			}
 
-			if (aLine.back() == ' ') {
+			/*if (aLine.back() == ' ') {
 				// get clean suggestions in those cases
 				if (wordPos == static_cast<int>(args.size()) - 1)
 					wordPos++;
 				args.push_back("");
-			} else if (args.empty()) {
+			} else*/ if (args.empty()) {
 				wordPos = 0;
 				args.push_back("");
 			}

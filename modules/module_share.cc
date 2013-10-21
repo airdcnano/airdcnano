@@ -27,6 +27,7 @@
 #include <ui/window_hub.h>
 #include <display/manager.h>
 
+#include <client/FavoriteManager.h>
 #include <client/HashManager.h>
 #include <client/QueueManager.h>
 #include <client/ShareManager.h>
@@ -132,7 +133,10 @@ namespace modules {
 				ShareProfileInfo::List profiles { new ShareProfileInfo(Util::emptyString, *profileToken) };
 				ShareManager::getInstance()->removeProfiles(profiles);
 
-				log("The profile " + profileName + " has been removed");
+				auto reset = FavoriteManager::getInstance()->resetProfiles(profiles, SETTING(DEFAULT_SP));
+				ClientManager::getInstance()->resetProfiles(profiles, SETTING(DEFAULT_SP));
+
+				log("The profile " + profileName + " has been removed (" + Util::toString(reset) + " favorite hubs have been reset to use the default profile)");
 				SettingsManager::getInstance()->save();
 			} else if (param == "list") {
 				auto& profiles = ShareManager::getInstance()->getProfiles();

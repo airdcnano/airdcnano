@@ -29,6 +29,8 @@
 #include <core/events.h>
 #include <core/log.h>
 
+#include <boost/algorithm/string/trim.hpp>
+
 namespace modules {
 
 class LineHandler
@@ -49,6 +51,7 @@ public:
             return;
 
 		auto line = display::Window::m_input.str();
+		boost::trim_right(line);
 
         if(!line.empty() && line[0] == m_commandChar) {
             size_t space = line.find(' ');

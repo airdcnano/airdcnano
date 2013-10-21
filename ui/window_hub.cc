@@ -634,7 +634,7 @@ void WindowHub::complete(const std::vector<std::string>& aArgs, int pos, std::ve
 	auto s = aArgs[pos];
 
 	for (const auto& n : m_users | map_keys | filtered(input::PrefixComparator(s))) {
-		suggest_.push_back(pos == 0 ? n + ": " : n);
+		suggest_.push_back(pos == 0 ? n + ":" : n);
 	}
 }
 

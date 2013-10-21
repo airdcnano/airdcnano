@@ -67,11 +67,15 @@ WindowFavorites::WindowFavorites():
 }
 
 void WindowFavorites::complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_) {
-
+	if (m_editState == SHARE_PROFILE-1) {
+		auto p = getEditProfiles();
+		copy_if(p.begin(), p.end(), back_inserter(suggest_), input::Comparator(m_input));
+	}
 }
 
 void WindowFavorites::handleEscape() {
 	m_newFav = nullptr;
+	m_editFav = nullptr;
 	m_editState = EDIT_NONE;
 }
 
@@ -132,6 +136,26 @@ void WindowFavorites::set_promt_text(const std::string &text)
 	m_input.setText(text);
 }
 
+StringList WindowFavorites::getEditProfiles() {
+	auto profiles = ShareManager::getInstance()->getProfiles();
+
+	StringList ret;
+	if (m_newFav->isAdcHub()) {
+		for (const auto& p : profiles) {
+			ret.push_back(p->getPlainName());
+		}
+	} else {
+		ret.push_back(ShareManager::getInstance()->getProfile(SETTING(DEFAULT_SP))->getPlainName());
+		ret.push_back(ShareManager::getInstance()->getProfile(SP_HIDDEN)->getPlainName());
+	}
+	return ret;
+}
+
+struct GetString : boost::static_visitor<string> {
+	string operator()(const string& s) const { return s; }
+	string operator()(const std::function<string()>& f) const { return f(); }
+};
+
 void WindowFavorites::handle_line(const std::string &line)
 {
     /* if we are confirming hub removal */
@@ -143,23 +167,11 @@ void WindowFavorites::handle_line(const std::string &line)
         return;
     }
 
-	auto listProfiles = [] {
-		auto profiles = ShareManager::getInstance()->getProfiles();
-
-		string ret;
-		for (const auto& p : profiles) {
-			ret += p->getPlainName() + "|";
-		}
-
-		ret.pop_back();
-		return ret;
-	};
-
-    string questions[] = { 
+	boost::variant<string, std::function<string()>> questions[] = {
         "Hub address?",
         "Hub name?",
         "Hub description?",
-		"Share profile (" + listProfiles() + ")?",
+		[&] { return "Share profile (" + Util::toString("|", getEditProfiles()) + ")?"; },
         "Your nick?",
         "Your description?",
         "Hub password?",
@@ -196,15 +208,8 @@ void WindowFavorites::handle_line(const std::string &line)
             break;}
         case SERVER_DESCRIPTION:
 			m_newFav->setDescription(line);
-			if (m_newFav->isAdcHub()) {
-				if (m_editFav)
-					set_promt_text(m_editFav->getShareProfile() ? m_editFav->getShareProfile()->getPlainName() : "");
-			} else {
-				m_newFav->setShareProfile(ShareManager::getInstance()->getShareProfile(SETTING(DEFAULT_SP)));
-				if (m_editFav)
-					set_promt_text(m_editFav->get(HubSettings::Nick));
-				m_editState++;
-			}
+			if (m_editFav)
+				set_promt_text(m_editFav->getShareProfile() ? m_editFav->getShareProfile()->getPlainName() : "");
             break;
 		case SHARE_PROFILE:
 		{
@@ -286,7 +291,8 @@ void WindowFavorites::handle_line(const std::string &line)
             throw std::logic_error("should not be reached");
     }
 
-	set_prompt(questions[m_editState-1]);
+	auto prompt = boost::apply_visitor(GetString(), questions[m_editState - 1]);
+	set_prompt(prompt);
 }
 
 void WindowFavorites::connect(bool activate)

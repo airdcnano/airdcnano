@@ -71,7 +71,7 @@ void ListView::handleMove() {
 		set_prompt("Move mode enabled. Press 'm' when you are ready.");
 	}
 
-	events::emit("window updated", this);
+	//events::emit("window updated", this);
 }
 
 void ListView::setInsertMode(bool enable) {
@@ -177,6 +177,7 @@ void ListView::handle(wint_t key)
 			setInsertMode(false);
 			set_prompt();
 			handleEscape();
+			events::emit("window updated", static_cast<display::Window*>(this));
 		} else if (m_input.pressed(key)) {
 			events::emit("window updated", static_cast<display::Window*>(this));
 		} else if (key >= 0x20) {
@@ -189,8 +190,10 @@ void ListView::handle(wint_t key)
     }
     
     try {
-        if(m_bindings.find(key) != m_bindings.end())
-            m_bindings[key]();
+		if (m_bindings.find(key) != m_bindings.end()) {
+			m_bindings[key]();
+			events::emit("window updated", static_cast<display::Window*>(this));
+		}
     }
     catch(std::out_of_range &) {
     }
@@ -214,7 +217,7 @@ void ListView::scroll_list(int items)
 	}
 
 	m_currentItem = newPos;
-    events::emit("window updated", this);
+    //events::emit("window updated", this);
 }
 
 void ListView::redraw()

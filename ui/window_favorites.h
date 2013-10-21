@@ -67,6 +67,7 @@ public:
 	void handleEscape();
 	void onListMove(int prevPos, int diff);
 private:
+	StringList getEditProfiles();
     enum EditState {
         EDIT_NONE,
         EDIT_START,

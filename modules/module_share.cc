@@ -334,25 +334,26 @@ namespace modules {
 
 		/* SUGGESTIONS */
 
-		void handleSuggestList(const HelpHandler::CommandList& list, const StringList& aArgs, int pos, StringList& suggest_) {
+		void handleSuggestList(const HelpHandler::CommandList& list, const StringList& aArgs, int pos, StringList& suggest_, bool& appendSpace_) {
 			auto action = aArgs[1];
 			auto s = boost::find_if(list, HelpHandler::CommandCompare(action));
 			if (s != list.end()) {
 				if ((*s).completionF)
-					(*s).completionF(aArgs, pos, suggest_);
+					(*s).completionF(aArgs, pos, suggest_, appendSpace_);
 			} else {
 				for (const auto& c : list) {
 					suggest_.push_back(c.command);
 				}
+				appendSpace_ = true;
 			}
 		}
 
-		void handleSuggestShare(const StringList& aArgs, int pos, StringList& suggest_) {
-			handleSuggestList(shareCommands, aArgs, pos, suggest_);
+		void handleSuggestShare(const StringList& aArgs, int pos, StringList& suggest_, bool& appendSpace_) {
+			handleSuggestList(shareCommands, aArgs, pos, suggest_, appendSpace_);
 		}
 
-		void handleSuggestShareProfile(const StringList& aArgs, int pos, StringList& suggest_) {
-			handleSuggestList(shareProfileCommands, aArgs, pos, suggest_);
+		void handleSuggestShareProfile(const StringList& aArgs, int pos, StringList& suggest_, bool& appendSpace_) {
+			handleSuggestList(shareProfileCommands, aArgs, pos, suggest_, appendSpace_);
 		}
 
 		void getProfileSuggestions(StringList& suggest_, bool listDefault = true) {
@@ -363,40 +364,47 @@ namespace modules {
 			}
 		}
 
-		void getProfileSuggestionsDefault(const StringList& /*aArgs*/, int pos, StringList& suggest_) {
+		void getProfileSuggestionsDefault(const StringList& /*aArgs*/, int pos, StringList& suggest_, bool& appendSpace_) {
 			if (pos == 2) {
 				getProfileSuggestions(suggest_, true);
 			}
+			appendSpace_ = true;
 		}
 
-		void getProfileSuggestionsRemove(const StringList& /*aArgs*/, int pos, StringList& suggest_) {
+		void getProfileSuggestionsRemove(const StringList& /*aArgs*/, int pos, StringList& suggest_, bool& appendSpace_) {
 			if (pos == 2) {
 				getProfileSuggestions(suggest_, false);
 			}
+			appendSpace_ = false;
 		}
 
-		void handleShareAddSuggest(const StringList& aArgs, int pos, StringList& suggest_) {
+		void handleShareAddSuggest(const StringList& aArgs, int pos, StringList& suggest_, bool& appendSpace_) {
 			if (pos == 2) {
 				// path
 				input::Completion::getDiskPathSuggestions(aArgs[2], suggest_);
+				appendSpace_ = false;
 			} else if (pos == 3) {
 				// vname
 				auto l = ShareManager::getInstance()->getGroupedDirectories();
 				boost::copy(l | map_keys, back_inserter(suggest_));
+				appendSpace_ = true;
 			} else if (pos == 4) {
 				// profile
 				getProfileSuggestions(suggest_);
+				appendSpace_ = true;
 			} else if (pos == 5) {
 				// incoming
 				suggest_.push_back("0");
 				suggest_.push_back("1");
+				appendSpace_ = false;
 			}
 		}
 
-		void handleShareRemoveSuggest(const StringList& aArgs, int pos, StringList& suggest_) {
+		void handleShareRemoveSuggest(const StringList& aArgs, int pos, StringList& suggest_, bool& appendSpace_) {
 			if (pos == 2) {
 				// path
 				ShareManager::getInstance()->getParentPaths(suggest_);
+				appendSpace_ = true;
 			} else if (pos == 3) {
 				// profile
 				auto& profiles = ShareManager::getInstance()->getProfiles();
@@ -405,10 +413,11 @@ namespace modules {
 						suggest_.push_back(p->getPlainName());
 					}
 				}
+				appendSpace_ = true;
 			}
 		}
 
-		void handleSuggestRefresh(const StringList& aArgs, int pos, StringList& suggest_) {
+		void handleSuggestRefresh(const StringList& aArgs, int pos, StringList& suggest_, bool& appendSpace_) {
 			if (pos == 1) {
 				auto list = ShareManager::getInstance()->getGroupedDirectories();
 				for (const auto& p : list) {
@@ -416,6 +425,7 @@ namespace modules {
 					boost::copy(p.second, back_inserter(suggest_));
 				}
 			}
+			appendSpace_ = true;
 		}
 	};
 

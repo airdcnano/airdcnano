@@ -102,7 +102,7 @@ public:
 	void on(ClientListener::NickTaken, const Client*) noexcept{ add_line(display::LineEntry("Nick taken")); }
 	void on(ClientListener::SearchFlood, const Client*, const string &msg) noexcept{ add_line(display::LineEntry(msg)); }
 
-	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_);
+	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_);
 	void handleCreated() noexcept;
 private:
 	void handleFav() noexcept;

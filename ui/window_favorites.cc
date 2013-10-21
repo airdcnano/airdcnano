@@ -66,10 +66,11 @@ WindowFavorites::WindowFavorites():
     FavoriteManager::getInstance()->addListener(this);
 }
 
-void WindowFavorites::complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_) {
+void WindowFavorites::complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_) {
 	if (m_editState == SHARE_PROFILE-1) {
 		auto p = getEditProfiles();
 		copy_if(p.begin(), p.end(), back_inserter(suggest_), input::Comparator(m_input));
+		appendSpace_ = false;
 	}
 }
 

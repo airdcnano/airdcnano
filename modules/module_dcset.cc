@@ -364,12 +364,13 @@ public:
                 std::bind(&DcSet::set_nick, this));*/
     }
 
-	void handleSuggest(const StringList& /*aArgs*/, int pos, StringList& suggest_) {
+	void handleSuggest(const StringList& /*aArgs*/, int pos, StringList& suggest_, bool& appendSpace_) {
 		if (pos == 1) {
 			for (const auto& s : settings) {
 				if (!s.isTitle)
 					suggest_.push_back(s.name);
 			}
+			appendSpace_ = true;
 		}
 	}
 

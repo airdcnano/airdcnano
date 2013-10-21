@@ -627,7 +627,7 @@ const OnlineUserPtr WindowHub::get_user(const std::string &nick) {
 	return it != m_users.end() ? it->second : nullptr;
 }
 
-void WindowHub::complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_) {
+void WindowHub::complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_) {
 	if (aArgs.empty())
 		return;
 
@@ -636,6 +636,7 @@ void WindowHub::complete(const std::vector<std::string>& aArgs, int pos, std::ve
 	for (const auto& n : m_users | map_keys | filtered(input::PrefixComparator(s))) {
 		suggest_.push_back(pos == 0 ? n + ":" : n);
 	}
+	appendSpace_ = true;
 }
 
 WindowHub::~WindowHub()

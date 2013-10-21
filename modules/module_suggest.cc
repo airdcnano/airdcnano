@@ -40,7 +40,7 @@
 namespace modules {
 	class Completion {
 	public:
-		Completion(input::Comparator* comp, StringList&& aItems) noexcept {
+		Completion(input::Comparator* comp, StringList&& aItems, bool aAppendSpace) : appendSpace(aAppendSpace) {
 			//m_items.erase(remove_if(m_items.begin(), m_items.end(), comp), m_items.end());
 			//auto uniqueEnd = unique(items.begin(), items.end());
 			if (comp) {
@@ -69,6 +69,7 @@ namespace modules {
 
 		StringList m_items;
 		int m_currentItem = -1;
+		bool appendSpace;
 	};
 
 
@@ -105,13 +106,17 @@ namespace modules {
 				return;
 			}
 
+			auto add = *next;
+			if (c->appendSpace)
+				add += " ";
+
 			// erase the last suggestion or the incomplete word
 			line.erase(startPos, lastLen);
-			line.insert(startPos, *next);
+			line.insert(startPos, add);
 
 			// save the last suggestion length
-			lastLen = (*next).length()+1;
-			display::Window::m_input.setText(line + " ", false);
+			lastLen = add.length();
+			display::Window::m_input.setText(line, false);
 			display::Window::m_input.set_pos(startPos + lastLen);
 			events::emit("window updated", cur);
 		}
@@ -151,6 +156,7 @@ namespace modules {
 				return;
 			}
 
+			bool appendSpace = true;
 			if (isCommand) {
 				bool defaultSug = true;
 				StringList suggest;
@@ -163,18 +169,18 @@ namespace modules {
 					auto c = HelpHandler::getCommand(word.erase(0, 1));
 					if (c) {
 						//get the suggestions
-						c->completionF(args, wordPos, suggest);
+						c->completionF(args, wordPos, suggest, appendSpace);
 						defaultSug = c->defaultComp;
 					}
 				}
 
 				auto comp = input::Comparator(args[wordPos]);
-				c.reset(new Completion(defaultSug ? &comp : nullptr, move(suggest)));
+				c.reset(new Completion(defaultSug ? &comp : nullptr, move(suggest), appendSpace));
 			} else {
 				StringList suggest;
-				cur->complete(args, wordPos, suggest);
+				cur->complete(args, wordPos, suggest, appendSpace);
 				if (!suggest.empty())
-					c.reset(new Completion(nullptr, move(suggest)));
+					c.reset(new Completion(nullptr, move(suggest), appendSpace));
 			}
 
 			lastLen = args[wordPos].length();

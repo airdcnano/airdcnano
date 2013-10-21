@@ -34,11 +34,11 @@
 using namespace std;
 using namespace dcpp;
 
-#define COMPLETION(func) (std::bind(&func, this, placeholders::_1, placeholders::_2, placeholders::_3))
+#define COMPLETION(func) (std::bind(&func, this, placeholders::_1, placeholders::_2, placeholders::_3, placeholders::_4))
 
 class HelpHandler {
 public:
-	typedef function < void(const vector<string>& /*arguments*/, int /* current pos */, vector<string>& /*complete*/)> CommandCompletionF;
+	typedef function < void(const vector<string>& /*arguments*/, int /* current pos */, vector<string>& /*complete*/, bool& /*appendSpace*/)> CommandCompletionF;
 
 	struct Command {
 		Command(string aCommand, events::EventFunc aF, CommandCompletionF c = nullptr, bool aDefaultComp = true) : command(move(aCommand)), eF(aF), completionF(c), defaultComp(aDefaultComp) {}

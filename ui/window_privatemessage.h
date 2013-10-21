@@ -58,7 +58,7 @@ public:
     ~WindowPrivateMessage();
 
 	void fillLogParams(ParamMap& params) const;
-	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_);
+	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_);
 private:
     HintedUser m_user;
     std::string m_nick;

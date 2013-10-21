@@ -59,7 +59,7 @@ public:
     /** Destructor. */
     ~WindowHubs();
 
-	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_);
+	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_);
 	void handleEscape();
 private:
     enum Property {

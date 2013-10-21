@@ -84,14 +84,16 @@ public:
 		}
 	}
 
-	void handleSuggestWindow(const StringList& aArgs, int pos, StringList& suggest_) {
+	void handleSuggestWindow(const StringList& aArgs, int pos, StringList& suggest_, bool& appendSpace_) {
 		if (pos == 1) {
 			StringList ret = { "move", "list", "close", "prev", "next" };
 			suggest_.swap(ret);
+			appendSpace_ = true;
 		} else if (pos == 2) {
 			if (aArgs[1] == "move") {
 				StringList ret = { "prev", "next", "first", "last" };
 				suggest_.swap(ret);
+				appendSpace_ = false;
 			}
 		}
 	}

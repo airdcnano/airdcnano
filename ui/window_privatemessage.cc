@@ -56,7 +56,7 @@ WindowPrivateMessage* WindowPrivateMessage::getWindow(const HintedUser& user, co
 	return static_cast<WindowPrivateMessage*>(*it);
 }
 
-void WindowPrivateMessage::complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_) {
+void WindowPrivateMessage::complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_) {
 
 }
 

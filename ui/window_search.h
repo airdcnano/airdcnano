@@ -90,7 +90,7 @@ public:
 
     /** Called when a search result is received. */
     void on(SearchManagerListener::SR, const SearchResultPtr& result) noexcept;
-	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_);
+	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_);
 	void handleEscape();
 private:
     bool m_shutdown;

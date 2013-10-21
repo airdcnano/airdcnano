@@ -66,7 +66,7 @@ WindowHubs::WindowHubs():
     m_bindings['m'] = std::bind(&WindowHubs::set_property, this, PROP_MAXSHARE);
 }
 
-void WindowHubs::complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_) {
+void WindowHubs::complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_) {
 
 }
 

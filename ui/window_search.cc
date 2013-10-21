@@ -228,9 +228,10 @@ void WindowSearch::handle_line(const std::string &line)
     m_property = PROP_NONE;
 }
 
-void WindowSearch::complete(const std::vector<std::string>& aArgs, int /*pos*/, std::vector<std::string>& suggest_) {
+void WindowSearch::complete(const std::vector<std::string>& aArgs, int /*pos*/, std::vector<std::string>& suggest_, bool& appendSpace_) {
 	if (m_property == PROP_FILETARGET || m_property == PROP_DIRECTORYTARGET) {
 		input::Completion::getDiskPathSuggestions(aArgs[0], suggest_);
+		appendSpace_ = false;
 	}
 }
 

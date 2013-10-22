@@ -136,20 +136,20 @@ namespace modules {
 				wordPos = static_cast<int>(args.size() > 0 ? args.size() - 1 : 0);
 			}
 
-			/*if (aLine.back() == ' ') {
+			if (aLine.back() == ' ') {
 				// get clean suggestions in those cases
 				if (wordPos == static_cast<int>(args.size()) - 1)
 					wordPos++;
 				args.push_back("");
-			} else*/ if (args.empty()) {
+			} else if (args.empty()) {
 				wordPos = 0;
 				args.push_back("");
 			}
 
-			//core::Log::get()->log("wordpos: " + Util::toString(wordPos) + " pos: " + Util::toString(pos) + " linelen: " + 
-			//	Util::toString(aLine.length()) + " args: " + 
-			//	Util::toString(args.size()) + " startPos: " + Util::toString(parser.getWordStartPos()) +
-			//	" args: " + Util::listToString(args));
+			core::Log::get()->log("wordpos: " + Util::toString(wordPos) + " pos: " + Util::toString(pos) + " linelen: " + 
+				Util::toString(aLine.length()) + " args: " + 
+				Util::toString(args.size()) + " startPos: " + Util::toString(parser.getWordStartPos()) +
+				" args: " + Util::listToString(args));
 
 			if (wordPos == -1) {
 				// we are somewhere within sequential whitespaces...

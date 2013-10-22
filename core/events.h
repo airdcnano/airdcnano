@@ -33,7 +33,8 @@
 #include <utils/instance.h>
 #include <utils/mutex.h>
 #include <string>
-#include <boost/lockfree/queue.hpp>
+
+#include <client/concurrency.h>
 #include <client/Semaphore.h>
 
 namespace events {
@@ -103,7 +104,7 @@ private:
 		AnyList args;
 	};
 
-	boost::lockfree::queue<Callback*> tasks;
+	dcpp::concurrent_queue<Callback*> tasks;
 
     AnyList* m_args = nullptr;
     bool m_running = true;

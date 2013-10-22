@@ -321,7 +321,7 @@ void WindowHub::on(ClientListener::StatusMessage, const Client*, const string& l
 		LOG(LogManager::STATUS, params);
 	}
 
-	std::string tmp = strings::escape(line);
+	auto tmp = strings::escape(line);
 	callAsync([=] { add_line(display::LineEntry(tmp)); });
 }
 

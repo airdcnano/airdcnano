@@ -28,19 +28,18 @@
 namespace events {
 
 Manager::Manager():
-    m_running(true),
-	tasks(1024)
+    m_running(true)
 {
     //pthread_cond_init(&m_queueCond, NULL);
 }
 
 void Manager::main_loop()
 {
-	std::unique_ptr<Callback> callback;
+	Callback* callback;
     do {
         /* wait until there's events to process */
 		s.wait();
-		if (tasks.pop(callback)) {
+		if (tasks.try_pop(callback)) {
 			m_args = &callback->args;
 
 			/* stopping the current event works
@@ -50,6 +49,7 @@ void Manager::main_loop()
 			} catch (StopEvent &e) {
 				/* do nothing.. */
 			}
+			delete callback;
 		}
     } while(m_running);
 }

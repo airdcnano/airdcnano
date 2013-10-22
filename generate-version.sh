@@ -1,5 +1,12 @@
 #!/bin/sh
 
+#check if we have a repository
+git ls-remote > /dev/null
+if [ $? -ne 0 ];then
+   echo 'Not using a git version'
+   exit 0
+fi
+
 file=./client/version-revno.inc
 tmpFile="$file.tmp"
 git=`git describe --abbrev=4 --dirty=-d`

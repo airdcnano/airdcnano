@@ -20,8 +20,6 @@
 
 #define DCVERSIONSTRING "0.830"
 
-#define COMPATIBILITY_BUILD_NUMBER_STR "1750"
-
 #define BETAVER
 
 #ifdef _WIN64

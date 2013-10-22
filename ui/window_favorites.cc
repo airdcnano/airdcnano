@@ -153,7 +153,7 @@ StringList WindowFavorites::getEditProfiles() {
 }
 
 struct GetString : boost::static_visitor<string> {
-	string operator()(const string& s) const { return s; }
+	string operator()(const char* s) const { return s; }
 	string operator()(const std::function<string()>& f) const { return f(); }
 };
 
@@ -168,7 +168,7 @@ void WindowFavorites::handle_line(const std::string &line)
         return;
     }
 
-	boost::variant<string, std::function<string()>> questions[] = {
+	boost::variant<const char*, std::function<string()>> questions[] = {
         "Hub address?",
         "Hub name?",
         "Hub description?",

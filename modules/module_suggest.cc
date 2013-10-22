@@ -34,7 +34,6 @@
 #include <input/completion.h>
 
 #include <boost/algorithm/cxx11/copy_if.hpp>
-#include <boost/move/algorithm.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
 namespace modules {

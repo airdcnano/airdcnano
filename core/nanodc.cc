@@ -54,11 +54,6 @@ Nanodc::Nanodc(int argc, char **argv):
 
 int Nanodc::run()
 {
-    if(!check_pidfile())
-        return 2;
-
-    check_root() || raise(SIGKILL);
-
 	while (m_argc > 0) {
 		Util::addParam(Text::fromT(*m_argv));
 		m_argc--;
@@ -75,16 +70,21 @@ int Nanodc::run()
 		return 0;
 	}
 
-    try {
+    if(!check_pidfile())
+        return 2;
+
+    check_root() || raise(SIGKILL);
+
+   // try {
         core::Manager::create()->run();
-    } catch(std::exception& e) {
+    /*} catch(std::exception& e) {
         std::cerr << "Caught exception: " << e.what() << std::endl;
         core::Manager::destroy();
         erase(); refresh(); doupdate();
         endwin();
         std::cerr << "Caught exception: " << e.what() << std::endl;
         return 1;
-    }
+    }*/
     core::Manager::destroy();
     endwin();
     return 0;

@@ -304,7 +304,7 @@ void Manager::start_client()
 
 int Manager::run()
 {
-    std::string nanodcrc = Util::getPath(Util::PATH_USER_CONFIG) + ".nanodcrc";
+    auto nanodcrc = Util::getPath(Util::PATH_USER_CONFIG) + ".nanodcrc";
     core::Settings::create()->read(nanodcrc);
 
     core::Log::create();

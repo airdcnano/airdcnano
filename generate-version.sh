@@ -9,6 +9,7 @@ set -- $git
 echo "#define GIT_TAG $1" > $tmpFile
 echo "#define GIT_COMMIT $2" >> $tmpFile
 
+echo $4
 if [ -z "$4" ]; then
    echo "#define GIT_HASH \"$3\"" >> $tmpFile
 else

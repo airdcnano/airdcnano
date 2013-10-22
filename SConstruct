@@ -32,6 +32,13 @@ def CheckCXXVersion(context, name, major, minor):
     return retval
 
 env = Environment(ENV = os.environ)
+
+Execute('sh generate-version.sh') 
+#env.Alias('Run', env.Command('run.dummy', [], 'ls -l'))
+#from subprocess import call
+#call("sh git.sh")
+
+#env.Command('sh git.sh')
 #env.Append(LIBPATH = '/opt/local/lib/')
 
 conf = Configure(env,

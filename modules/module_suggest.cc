@@ -146,10 +146,10 @@ namespace modules {
 				args.push_back("");
 			}
 
-			core::Log::get()->log("wordpos: " + Util::toString(wordPos) + " pos: " + Util::toString(pos) + " linelen: " + 
-				Util::toString(aLine.length()) + " args: " + 
-				Util::toString(args.size()) + " startPos: " + Util::toString(parser.getWordStartPos()) +
-				" args: " + Util::listToString(args));
+			//core::Log::get()->log("wordpos: " + Util::toString(wordPos) + " pos: " + Util::toString(pos) + " linelen: " + 
+			//	Util::toString(aLine.length()) + " args: " + 
+			//	Util::toString(args.size()) + " startPos: " + Util::toString(parser.getWordStartPos()) +
+			//	" args: " + Util::listToString(args));
 
 			if (wordPos == -1) {
 				// we are somewhere within sequential whitespaces...

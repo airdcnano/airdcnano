@@ -37,7 +37,7 @@ class Search
 {
 public:
 	HelpHandler::CommandList commands = {
-		{ "search", std::bind(&Search::search_callback, this), nullptr }
+		{ "search", std::bind(&Search::search_callback, this), COMPLETION(Search::handleSuggest) }
 	};
 
 	HelpHandler help;
@@ -46,6 +46,13 @@ public:
         //events::add_listener("command search",
          //       std::bind(&Search::search_callback, this));
     }
+
+	void handleSuggest(const StringList& aArgs, int pos, StringList& suggest_, bool& appendSpace_) {
+		if (pos == 1) {
+			suggest_ = SettingsManager::getInstance()->getHistory(SettingsManager::HISTORY_SEARCH);
+			appendSpace_ = false;
+		}
+	}
 
     /** /search string */
     void search_callback()

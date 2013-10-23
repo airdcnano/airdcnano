@@ -115,7 +115,7 @@ SearchResultPtr WindowSearch::get_result() {
 		return nullptr;
 	}
 
-    auto cid = get_text(0, get_selected_row());
+    auto cid = get_text(0, row);
     auto n = cid.find('-');
     auto tth = cid.substr(n+1);
     cid = cid.substr(0, n);
@@ -173,6 +173,8 @@ void WindowSearch::search(const std::string &str)
 
     set_title("Search window: " + m_search);
     set_name("Search:" + m_search);
+
+	SettingsManager::getInstance()->addToHistory(str, SettingsManager::HISTORY_SEARCH);
 
     m_lastSearch = GET_TICK();
 	token = Util::toString(Util::rand());

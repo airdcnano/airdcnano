@@ -329,6 +329,12 @@ static NamedSettingItem settings [] = {
 	{ "log_status_format", SettingsManager::LOG_FORMAT_STATUS, ResourceManager::SETTINGS_FORMAT },
 	{ "single_log_per_cid", SettingsManager::PM_LOG_GROUP_CID, ResourceManager::LOG_COMBINE_ADC_PM },
 
+	{ ResourceManager::HISTORIES },
+	{ "history_search_max", SettingsManager::HISTORY_SEARCH_MAX, ResourceManager::SEARCH },
+	{ "history_search_clear_exit", SettingsManager::HISTORY_SEARCH_CLEAR, ResourceManager::CLEAR_EXIT },
+	//{ "history_download_max", SettingsManager::HISTORY_DIR_MAX, ResourceManager::DIRECTORY },
+	//{ "history_download_clear_exit", SettingsManager::HISTORY_DIR_CLEAR, ResourceManager::CLEAR_EXIT },
+
 	{ ResourceManager::SETTINGS_AIR_TABSPAGE },
 	{ "open_transfers", SettingsManager::SHOW_TRANSFERVIEW, ResourceManager::MENU_TRANSFERS },
 	{ "open_hublist", SettingsManager::OPEN_PUBLIC, ResourceManager::MAX_HASHING_THREADS },

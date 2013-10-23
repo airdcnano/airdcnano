@@ -50,11 +50,12 @@ public:
         if(key != 0xA)
             return;
 
+		auto wnd = display::Manager::get()->get_current_window();
 		auto line = display::Window::m_input.str();
 		boost::trim_right(line);
 
-        if(!line.empty() && line[0] == m_commandChar) {
-            size_t space = line.find(' ');
+        if(!line.empty() && line[0] == m_commandChar && wnd->allowCommands) {
+            auto space = line.find(' ');
             auto command = space != std::string::npos ? line.substr(1, space-1) : line.substr(1);
 			auto params = space != std::string::npos ? line.substr(space + 1) : "";
 			if (params.empty()) {
@@ -65,7 +66,6 @@ public:
 				events::emit("command", command, params);
 			}
         } else {
-            auto wnd = display::Manager::get()->get_current_window();
             wnd->handle_line(line);
         }
     }

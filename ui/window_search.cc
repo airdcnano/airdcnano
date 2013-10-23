@@ -246,7 +246,12 @@ void WindowSearch::handle_line(const std::string &line)
 
 void WindowSearch::complete(const std::vector<std::string>& aArgs, int /*pos*/, std::vector<std::string>& suggest_, bool& appendSpace_) {
 	if (m_property == PROP_FILETARGET || m_property == PROP_DIRECTORYTARGET) {
-		input::Completion::getDiskPathSuggestions(aArgs[0], suggest_);
+		if (!aArgs[0].empty()) {
+			input::Completion::getDiskPathSuggestions(aArgs[0], suggest_);
+		} else {
+			suggest_ = SettingsManager::getInstance()->getHistory(SettingsManager::HISTORY_DIR);
+		}
+
 		appendSpace_ = false;
 	}
 }
@@ -363,46 +368,39 @@ string getTarget(const string& aTarget) {
 	return target;
 }
 
-void WindowSearch::download(const std::string &path)
+void WindowSearch::download(const std::string& aPath)
 {
     auto result = get_result();
 	if (!result)
 		return;
 
-	auto target = getTarget(path);
+	auto target = getTarget(aPath);
 
     try {
         if(result->getType() == SearchResult::TYPE_FILE) {
-            std::ostringstream oss;
-            oss << "download to " << target << " "
-                << result->getTTH().toBase32()
-                << ", " << result->getPath();
-            core::Log::get()->log(oss.str());
-
-			std::string subdir = Util::getFileName(utils::linux_separator(result->getPath()));
-
             QueueManager::getInstance()->createFileBundle(
-                target + subdir,
+                target + result->getFileName(),
                 result->getSize(), result->getTTH(),
                 result->getUser(), result->getDate(), 0, QueueItemBase::DEFAULT);
         } else {
 			DirectoryListingManager::getInstance()->addDirectoryDownload(result->getPath(), result->getFileName(),
 				result->getUser(), target, TargetUtil::TARGET_PATH, NO_CHECK);
         }
-    }
-    catch(const Exception &e)
-    {
+
+		if (!aPath.empty())
+			SettingsManager::getInstance()->addToHistory(target, SettingsManager::HISTORY_DIR);
+    } catch(const Exception &e) {
         core::Log::get()->log("Error downloading the file: " + e.getError());
     }
 }
 
-void WindowSearch::download_directory(const std::string &path)
+void WindowSearch::download_directory(const std::string& aPath)
 {
     auto result = get_result();
 	if (!result)
 		return;
 
-	auto target = getTarget(path);
+	auto target = getTarget(aPath);
     try {
         if(result->getType() == SearchResult::TYPE_FILE)
         {
@@ -420,6 +418,9 @@ void WindowSearch::download_directory(const std::string &path)
     {
         core::Log::get()->log("Error downloading the directory: " + e.getError());
     }
+
+	if (!aPath.empty())
+		SettingsManager::getInstance()->addToHistory(target, SettingsManager::HISTORY_DIR);
 }
 
 std::string WindowSearch::get_infobox_line(unsigned int n)

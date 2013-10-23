@@ -352,8 +352,8 @@ static NamedSettingItem settings [] = {
 	{ ResourceManager::HISTORIES },
 	{ "history_search_max", SettingsManager::HISTORY_SEARCH_MAX, ResourceManager::SEARCH },
 	{ "history_search_clear_exit", SettingsManager::HISTORY_SEARCH_CLEAR, ResourceManager::CLEAR_EXIT },
-	//{ "history_download_max", SettingsManager::HISTORY_DIR_MAX, ResourceManager::DIRECTORY },
-	//{ "history_download_clear_exit", SettingsManager::HISTORY_DIR_CLEAR, ResourceManager::CLEAR_EXIT },
+	{ "history_download_max", SettingsManager::HISTORY_DIR_MAX, ResourceManager::DIRECTORY },
+	{ "history_download_clear_exit", SettingsManager::HISTORY_DIR_CLEAR, ResourceManager::CLEAR_EXIT },
 
 	{ ResourceManager::SETTINGS_AIR_TABSPAGE },
 	{ "open_transfers", SettingsManager::SHOW_TRANSFERVIEW, ResourceManager::MENU_TRANSFERS },

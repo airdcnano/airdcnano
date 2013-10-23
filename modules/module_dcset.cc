@@ -45,7 +45,10 @@ using namespace dcpp;
 
 namespace modules {
 
+#define SETTINGCOMP(func) (std::bind(&func, placeholders::_1, placeholders::_2))
+
 struct NamedSettingItem : public SettingItem {
+	typedef function<void(const string&, StringList&)> SettingCompletion;
 	enum Type {
 		TYPE_GENERAL,
 		TYPE_CONN_V4,
@@ -56,8 +59,8 @@ struct NamedSettingItem : public SettingItem {
 		TYPE_LIMITS_MCN
 	};
 
-	NamedSettingItem(const string& aName, int aKey, ResourceManager::Strings aDesc, Type aType = TYPE_GENERAL) :
-		name(aName), type(aType), SettingItem({ aKey, aDesc }) {
+	NamedSettingItem(const string& aName, int aKey, ResourceManager::Strings aDesc, Type aType = TYPE_GENERAL, SettingCompletion aCompletion = nullptr) :
+		name(aName), type(aType), completionF(aCompletion), SettingItem({ aKey, aDesc }) {
 
 	}
 
@@ -197,7 +200,24 @@ struct NamedSettingItem : public SettingItem {
 	bool isTitle = false;
 	string name;
 	Type type;
+	SettingCompletion completionF;
 };
+
+static void suggestBind(const string&, StringList& suggest_, bool v6) {
+	AirUtil::IpList ips;
+	AirUtil::getIpAddresses(ips, v6);
+	for (const auto& info : ips) {
+		suggest_.push_back(info.ip);
+	}
+}
+
+static void suggestBind4(const string& aStr, StringList& suggest_) {
+	suggestBind(aStr, suggest_, false);
+}
+
+static void suggestBind6(const string& aStr, StringList& suggest_) {
+	suggestBind(aStr, suggest_, true);
+}
 
 static NamedSettingItem settings [] = {
 	{ ResourceManager::SETTINGS_GENERAL },
@@ -213,8 +233,8 @@ static NamedSettingItem settings [] = {
 	{ "nmdc_encoding", SettingsManager::NMDC_ENCODING, ResourceManager::INVALID_ENCODING },
 
 	{ ResourceManager::SETTINGS_DOWNLOADS },
-	{ "dl_dir", SettingsManager::DOWNLOAD_DIRECTORY, ResourceManager::SETTINGS_DOWNLOAD_DIRECTORY },
-	{ "temp_dir", SettingsManager::TEMP_DOWNLOAD_DIRECTORY, ResourceManager::SETTINGS_UNFINISHED_DOWNLOAD_DIRECTORY },
+	{ "dl_dir", SettingsManager::DOWNLOAD_DIRECTORY, ResourceManager::SETTINGS_DOWNLOAD_DIRECTORY, NamedSettingItem::TYPE_GENERAL, SETTINGCOMP(input::Completion::getDiskPathSuggestions) },
+	{ "temp_dir", SettingsManager::TEMP_DOWNLOAD_DIRECTORY, ResourceManager::SETTINGS_UNFINISHED_DOWNLOAD_DIRECTORY, NamedSettingItem::TYPE_GENERAL, SETTINGCOMP(input::Completion::getDiskPathSuggestions) },
 	{ "temp_use_dest", SettingsManager::DCTMP_STORE_DESTINATION, ResourceManager::UNFINISHED_STORE_DESTINATION },
 	{ "add_finished", SettingsManager::ADD_FINISHED_INSTANTLY, ResourceManager::ADD_FINISHED_INSTANTLY },
 	{ "finished_no_hash", SettingsManager::FINISHED_NO_HASH, ResourceManager::SETTINGS_FINISHED_NO_HASH },
@@ -243,13 +263,13 @@ static NamedSettingItem settings [] = {
 
 	{ ResourceManager::IP_V4 },
 	{ "connection4_auto", SettingsManager::AUTO_DETECT_CONNECTION, ResourceManager::ALLOW_AUTO_DETECT_V4 },
-	{ "connection4_bind", SettingsManager::BIND_ADDRESS, ResourceManager::SETTINGS_BIND_ADDRESS, NamedSettingItem::TYPE_CONN_V4 },
+	{ "connection4_bind", SettingsManager::BIND_ADDRESS, ResourceManager::SETTINGS_BIND_ADDRESS, NamedSettingItem::TYPE_CONN_V4, SETTINGCOMP(suggestBind4) },
 	{ "connection4_mode", SettingsManager::INCOMING_CONNECTIONS, ResourceManager::CONNECTIVITY, NamedSettingItem::TYPE_CONN_V4 },
 	{ "connection4_ip", SettingsManager::EXTERNAL_IP, ResourceManager::SETTINGS_EXTERNAL_IP, NamedSettingItem::TYPE_CONN_V4 },
 
 	{ ResourceManager::IP_V6 },
 	{ "connection6_auto", SettingsManager::AUTO_DETECT_CONNECTION6, ResourceManager::ALLOW_AUTO_DETECT_V6 },
-	{ "connection6_bind", SettingsManager::BIND_ADDRESS6, ResourceManager::SETTINGS_BIND_ADDRESS, NamedSettingItem::TYPE_CONN_V6 },
+	{ "connection6_bind", SettingsManager::BIND_ADDRESS6, ResourceManager::SETTINGS_BIND_ADDRESS, NamedSettingItem::TYPE_CONN_V6, SETTINGCOMP(suggestBind6) },
 	{ "connection6_mode", SettingsManager::INCOMING_CONNECTIONS6, ResourceManager::CONNECTIVITY, NamedSettingItem::TYPE_CONN_V6 },
 	{ "connection6_ip", SettingsManager::EXTERNAL_IP6, ResourceManager::SETTINGS_EXTERNAL_IP, NamedSettingItem::TYPE_CONN_V6 },
 
@@ -308,7 +328,7 @@ static NamedSettingItem settings [] = {
 	{ "report_skiplist_files", SettingsManager::REPORT_SKIPLIST, ResourceManager::REPORT_SKIPLIST },
 
 	{ ResourceManager::SETTINGS_LOGGING },
-	{ "log_dir", SettingsManager::LOG_DIRECTORY, ResourceManager::SETTINGS_LOG_DIR },
+	{ "log_dir", SettingsManager::LOG_DIRECTORY, ResourceManager::SETTINGS_LOG_DIR, NamedSettingItem::TYPE_GENERAL, SETTINGCOMP(input::Completion::getDiskPathSuggestions) },
 	{ "log_main", SettingsManager::LOG_MAIN_CHAT, ResourceManager::SETTINGS_LOG_MAIN_CHAT },
 	{ "log_main_file", SettingsManager::LOG_FILE_MAIN_CHAT, ResourceManager::FILENAME },
 	{ "log_main_format", SettingsManager::LOG_FORMAT_MAIN_CHAT, ResourceManager::SETTINGS_FORMAT },
@@ -351,8 +371,8 @@ static NamedSettingItem settings [] = {
 };
 
 
-class DcSet
-{
+class DcSet {
+
 public:
 	HelpHandler::CommandList commands = {
 		{ "connectioninfo", std::bind(&DcSet::connection, this), nullptr },
@@ -370,13 +390,19 @@ public:
                 std::bind(&DcSet::set_nick, this));*/
     }
 
-	void handleSuggest(const StringList& /*aArgs*/, int pos, StringList& suggest_, bool& appendSpace_) {
+	void handleSuggest(const StringList& aArgs, int pos, StringList& suggest_, bool& appendSpace_) {
 		if (pos == 1) {
 			for (const auto& s : settings) {
 				if (!s.isTitle)
 					suggest_.push_back(s.name);
 			}
 			appendSpace_ = true;
+		} else if (pos == 2) {
+			auto p = find_setting(aArgs[1]);
+			if (p > 0 && settings[p].completionF) {
+				settings[p].completionF(aArgs[2], suggest_);
+			}
+			appendSpace_ = false;
 		}
 	}
 

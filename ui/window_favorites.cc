@@ -159,6 +159,9 @@ struct GetString : boost::static_visitor<string> {
 
 void WindowFavorites::handle_line(const std::string &line)
 {
+	if (!getInsertMode())
+		return;
+
     /* if we are confirming hub removal */
     if(m_confirmRemove != -1) {
         if(line == "y")

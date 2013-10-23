@@ -75,16 +75,16 @@ int Nanodc::run()
 
     check_root() || raise(SIGKILL);
 
-   // try {
+   try {
         core::Manager::create()->run();
-    /*} catch(std::exception& e) {
+    } catch(std::exception& e) {
         std::cerr << "Caught exception: " << e.what() << std::endl;
         core::Manager::destroy();
         erase(); refresh(); doupdate();
         endwin();
         std::cerr << "Caught exception: " << e.what() << std::endl;
         return 1;
-    }*/
+    }
     core::Manager::destroy();
     endwin();
     return 0;

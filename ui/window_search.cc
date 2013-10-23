@@ -88,6 +88,9 @@ WindowSearch::WindowSearch(const std::string &str):
 }
 
 void WindowSearch::handleGetList() {
+	if (get_selected_row() == -1)
+		return;
+
 	try {
 		QueueManager::getInstance()->addList(get_user(), QueueItem::FLAG_CLIENT_VIEW, get_result()->getPath());
 	} catch (...) {
@@ -96,6 +99,9 @@ void WindowSearch::handleGetList() {
 }
 
 void WindowSearch::handleMatchQueue() {
+	if (get_selected_row() == -1)
+		return;
+
 	try {
 		QueueManager::getInstance()->addList(get_user(), QueueItem::FLAG_MATCH_QUEUE);
 	} catch (...) {
@@ -104,6 +110,11 @@ void WindowSearch::handleMatchQueue() {
 }
 
 SearchResultPtr WindowSearch::get_result() {
+	int row = get_selected_row();
+	if (row == -1) {
+		return nullptr;
+	}
+
     auto cid = get_text(0, get_selected_row());
     auto n = cid.find('-');
     auto tth = cid.substr(n+1);
@@ -117,7 +128,7 @@ SearchResultPtr WindowSearch::get_result() {
             return result;
         }
     }
-    return 0;
+    return nullptr;
 }
 
 void WindowSearch::set_property(Property property)
@@ -170,6 +181,9 @@ void WindowSearch::search(const std::string &str)
 
 void WindowSearch::handle_line(const std::string &line)
 {
+	if (!getInsertMode())
+		return;
+
     if(!line.empty()) {
         if(m_property == PROP_FILETARGET) {
             download(line);
@@ -218,7 +232,7 @@ void WindowSearch::handle_line(const std::string &line)
     }
 
 	setInsertMode(false);
-    set_prompt();
+    set_prompt("");
 
     if(!line.empty() && m_property != PROP_FILETARGET &&
         m_property != PROP_DIRECTORYTARGET)
@@ -350,6 +364,9 @@ string getTarget(const string& aTarget) {
 void WindowSearch::download(const std::string &path)
 {
     auto result = get_result();
+	if (!result)
+		return;
+
 	auto target = getTarget(path);
 
     try {
@@ -380,6 +397,9 @@ void WindowSearch::download(const std::string &path)
 void WindowSearch::download_directory(const std::string &path)
 {
     auto result = get_result();
+	if (!result)
+		return;
+
 	auto target = getTarget(path);
     try {
         if(result->getType() == SearchResult::TYPE_FILE)
@@ -403,6 +423,8 @@ void WindowSearch::download_directory(const std::string &path)
 std::string WindowSearch::get_infobox_line(unsigned int n)
 {
     auto result = get_result();
+	if (!result)
+		return "";
 
     std::stringstream ss;
     switch(n) {

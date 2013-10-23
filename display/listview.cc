@@ -175,7 +175,7 @@ void ListView::handle(wint_t key)
     if(m_insertMode) {
 		if (key == KEY_ESCAPE) {
 			setInsertMode(false);
-			set_prompt();
+			set_prompt("");
 			handleEscape();
 			events::emit("window updated", static_cast<display::Window*>(this));
 		} else if (m_input.pressed(key)) {

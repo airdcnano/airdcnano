@@ -90,7 +90,6 @@ private:
     /** Returns true if search result matches current filters. */
     bool matches(const HubEntry &entry);
 
-    utils::Mutex m_mutex;
 	void downloadFinished(bool cached, const std::string list) noexcept;
 };
 

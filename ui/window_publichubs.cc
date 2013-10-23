@@ -81,40 +81,17 @@ void WindowHubs::connect()
         return;
 
 	auto address = get_text(2, row);
-//#if 0
-    /*std::string address = get_text(2, row);
-    display::Manager::iterator it = display::Manager::get()->find(address);
-
-    if(it != display::Manager::get()->end()) {
-        if((*it)->get_type() == display::TYPE_HUBWINDOW) {
-            ui::WindowHub *hub = static_cast<ui::WindowHub*>(*it);
-            if(!hub->get_client()->isConnected())
-                hub->connect();
-        }
-    }
-    else {
-        ui::WindowHub *hub = new ui::WindowHub(address);
-        hub->connect(address, "", "", "");
-        display::Manager::get()->push_back(hub);
-    }*/
-
 	ui::WindowHub::openWindow(address, SETTING(DEFAULT_SP), true);
-   // display::Manager::get()->set_current(it);
-//#endif
 }
 
 void WindowHubs::download()
 {
-    utils::Lock l(m_mutex);
-
     FavoriteManager *man = FavoriteManager::getInstance();
     man->setHubList(m_hublist);
 }
 
 void WindowHubs::favorite()
 {
-    utils::Lock l(m_mutex);
-
     int row = get_selected_row();
     if(row == -1)
         return;
@@ -133,8 +110,6 @@ void WindowHubs::favorite()
 
 void WindowHubs::set_property(Property property)
 {
-    utils::Lock l(m_mutex);
-
     m_property = property;
     const char *properties [] = {
         "",
@@ -153,7 +128,8 @@ void WindowHubs::set_property(Property property)
 
 void WindowHubs::handle_line(const std::string &line)
 {
-    utils::Lock l(m_mutex);
+	if (!getInsertMode())
+		return;
 
     std::string param = line;
     switch(m_property) {
@@ -194,15 +170,12 @@ void WindowHubs::handle_line(const std::string &line)
 	setInsertMode(false);
     show_entries();
     m_property = PROP_NONE;
+	set_prompt("");
 }
 
 void WindowHubs::show_entries()
 {
-    //utils::Lock l(m_mutex);
-
     delete_all();
-   // utils::Lock lock(m_entryLock);
-
 	for (const auto& h: m_hubs) {
         if(matches(h)) {
             int row = insert_row();
@@ -241,39 +214,33 @@ bool WindowHubs::matches(const HubEntry &entry)
     return true;
 }
 
-void WindowHubs::on(DownloadStarting, const std::string &list)
-    noexcept
-{
-    //utils::Lock l(m_mutex);
-
-    std::ostringstream oss;
-    oss << "Public hubs: Downloading list " << m_hublist << "/"
-        << FavoriteManager::getInstance()->getPublicHubs().size()
-        << " - " << list;
-    set_title(oss.str());
-    events::emit("window updated", static_cast<display::Window*>(this));
+void WindowHubs::on(DownloadStarting, const std::string &list) noexcept {
+	callAsync([=] {
+		std::ostringstream oss;
+		oss << "Public hubs: Downloading list " << m_hublist << "/"
+			<< FavoriteManager::getInstance()->getPublicHubs().size()
+			<< " - " << list;
+		set_title(oss.str());
+		events::emit("window updated", static_cast<display::Window*>(this));
+	});
 }
 
-void WindowHubs::on(DownloadFailed, const std::string &list)
-    noexcept
-{
-    utils::Lock l(m_mutex);
-
-    set_title("Public hubs: Failed " + list);
-    events::emit("window updated", static_cast<display::Window*>(this));
+void WindowHubs::on(DownloadFailed, const std::string &list) noexcept {
+	callAsync([=] {
+		set_title("Public hubs: Failed " + list);
+		events::emit("window updated", static_cast<display::Window*>(this));
+	});
 }
 
 void WindowHubs::on(DownloadFinished, const std::string &list, bool) noexcept {
-	downloadFinished(false, list);
+	callAsync([=] { downloadFinished(false, list); });
 }
 
 void WindowHubs::on(LoadedFromCache, const string& l, const string& d) noexcept{
-	downloadFinished(true, l);
+	callAsync([=] { downloadFinished(true, l); });
 }
 
 void WindowHubs::downloadFinished(bool cached, const std::string list) noexcept{
-	utils::Lock l(m_mutex);
-
 	std::ostringstream oss;
 	oss << "Public hubs list " << m_hublist << "/"
 		<< FavoriteManager::getInstance()->getPublicHubs().size()
@@ -295,8 +262,6 @@ WindowHubs::~WindowHubs()
 
 std::string WindowHubs::get_infobox_line(unsigned int n)
 {
-    utils::Lock l(m_mutex);
-
     using std::bind;
     using std::placeholders::_1;
 

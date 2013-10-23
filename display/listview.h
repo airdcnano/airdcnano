@@ -118,7 +118,7 @@ public:
     void delete_all();
 
     /** Returns the index of the selected row. */
-    int get_selected_row() { return m_currentItem; }
+	int get_selected_row() { return m_currentItem >= 0 && m_rowCount > 0 ? m_currentItem : -1; }
 
     /** @throw std::out_of_range if column or row is invalid. */
     void set_text(int column, int row, const std::string &text);

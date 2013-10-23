@@ -166,15 +166,17 @@ namespace modules {
 					// list suggestions based on the command
 					auto word = args[0];
 					auto c = HelpHandler::getCommand(word.erase(0, 1));
-					if (c) {
+					if (c && c->completionF) {
 						//get the suggestions
 						c->completionF(args, wordPos, suggest, appendSpace);
 						defaultSug = c->defaultComp;
 					}
 				}
 
-				auto comp = input::Comparator(args[wordPos]);
-				c.reset(new Completion(defaultSug ? &comp : nullptr, move(suggest), appendSpace));
+				if (!suggest.empty()) {
+					auto comp = input::Comparator(args[wordPos]);
+					c.reset(new Completion(defaultSug ? &comp : nullptr, move(suggest), appendSpace));
+				}
 			} else {
 				StringList suggest;
 				cur->complete(args, wordPos, suggest, appendSpace);

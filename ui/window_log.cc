@@ -29,7 +29,7 @@
 
 namespace ui {
 
-WindowLog::WindowLog() : ScrolledWindow("log", display::TYPE_LOGWND)
+WindowLog::WindowLog() : ScrolledWindow("", display::TYPE_LOGWND)
 {
     set_title("Logger window");
     set_name("airdcnano");

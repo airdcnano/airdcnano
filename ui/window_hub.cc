@@ -45,6 +45,7 @@
 
 #include <boost/algorithm/cxx11/copy_if.hpp>
 #include <boost/range/adaptor/filtered.hpp>
+#include <boost/range/algorithm/count_if.hpp>
 
 namespace ui {
 
@@ -557,8 +558,7 @@ void WindowHub::print_names()
 
     int ops = std::count_if(m_users.begin(), m_users.end(), _identity(&Identity::isOp));
     int bots = std::count_if(m_users.begin(), m_users.end(), _identity(&Identity::isBot));
-    //int active = std::count_if(m_users.begin(), m_users.end(), _identity(&Identity::isTcp4Active(m_client)));
-	int active = 0;
+	int active = boost::count_if(m_users | map_values, [this](const OnlineUserPtr& ou) { return !ou->getIdentity().isBot() && ou->getIdentity().isTcpActive(m_client); });
     int hidden = std::count_if(m_users.begin(), m_users.end(), _identity(&Identity::isHidden));
 
     std::ostringstream oss;

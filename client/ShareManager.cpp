@@ -40,15 +40,9 @@
 
 #include "version.h"
 
-#include <boost/range/algorithm/search.hpp>
 #include <boost/range/adaptor/filtered.hpp>
-#include <boost/range/algorithm/count_if.hpp>
 #include <boost/range/algorithm/copy.hpp>
-#include <boost/ptr_container/ptr_vector.hpp>
-#include <boost/range/numeric.hpp>
-#include <boost/range/algorithm/min_element.hpp>
 #include <boost/algorithm/cxx11/all_of.hpp>
-#include <boost/algorithm/cxx11/any_of.hpp>
 
 #include "concurrency.h"
 
@@ -337,7 +331,9 @@ bool ShareManager::handleModifyInfo(DirModifyInfo& info, optional<StringList>& b
 	Directory::Ptr dir = nullptr;
 
 	// directories with subdirectories will always be refreshed
-	if (boost::algorithm::all_of(info.files | map_keys, [&info](const string& fileName) { return fileName.find(PATH_SEPARATOR, info.path.length() + 1) == string::npos; })) {
+	if (boost::algorithm::all_of(info.files | map_keys, [&info](const string& fileName) { 
+		return fileName.find(PATH_SEPARATOR, info.path.length() + 1) == string::npos; 
+	})) {
 		RLock l(cs);
 		dir = findDirectory(info.path, false, false, true);
 	}
@@ -1635,9 +1631,9 @@ void ShareManager::save(SimpleXML& aXml) {
 	}
 }
 
-void ShareManager::Directory::getStats(uint64_t& totalAge_, size_t& totalDirs_, int64_t& totalSize_, size_t& totalFiles_, size_t& lowerCaseFiles_, size_t& totalStrLen_) const noexcept{
+void ShareManager::Directory::countStats(uint64_t& totalAge_, size_t& totalDirs_, int64_t& totalSize_, size_t& totalFiles_, size_t& lowerCaseFiles_, size_t& totalStrLen_) const noexcept{
 	for(auto& d: directories) {
-		d->getStats(totalAge_, totalDirs_, totalSize_, totalFiles_, lowerCaseFiles_, totalStrLen_);
+		d->countStats(totalAge_, totalDirs_, totalSize_, totalFiles_, lowerCaseFiles_, totalStrLen_);
 	}
 
 	for(auto& f: files) {
@@ -1656,18 +1652,22 @@ void ShareManager::Directory::getStats(uint64_t& totalAge_, size_t& totalDirs_, 
 	totalFiles_ += files.size();
 }
 
-string ShareManager::getStats() const noexcept {
-	uint64_t totalAge=0;
-	size_t totalFiles=0, lowerCaseFiles=0, totalDirs=0, totalStrLen=0;
-	int64_t totalSize=0;
-	double roots = 0;
-
+void ShareManager::countStats(uint64_t& totalAge_, size_t& totalDirs_, int64_t& totalSize_, size_t& totalFiles_, size_t& lowerCaseFiles_, size_t& totalStrLen_, size_t& roots_) const noexcept{
 	RLock l(cs);
-	for(const auto& d: rootPaths | map_values | filtered(Directory::IsParent())) {
-		totalDirs++;
-		roots++;
-		d->getStats(totalAge, totalDirs, totalSize, totalFiles, lowerCaseFiles, totalStrLen);
+	for (const auto& d : rootPaths | map_values | filtered(Directory::IsParent())) {
+		totalDirs_++;
+		roots_++;
+		d->countStats(totalAge_, totalDirs_, totalSize_, totalFiles_, lowerCaseFiles_, totalStrLen_);
 	}
+}
+
+
+string ShareManager::printStats() const noexcept {
+	uint64_t totalAge=0;
+	size_t totalFiles=0, lowerCaseFiles=0, totalDirs=0, totalStrLen=0, roots=0;
+	int64_t totalSize=0;
+
+	countStats(totalAge, totalDirs, totalSize, totalFiles, lowerCaseFiles, totalStrLen, roots);
 
 	unordered_set<TTHValue*> uniqueTTHs;
 	for(auto tth: tthIndex | map_keys) {

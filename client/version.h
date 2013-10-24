@@ -16,7 +16,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#define APPNAME "AirDC++n"
+#define APPNAME "AirDC++"
 
 #define DCVERSIONSTRING "0.830"
 
@@ -35,6 +35,7 @@ namespace dcpp {
 	int getCommitNumber();
 	string getBuildNumberStr();
 	string getVersionString();
+	time_t getVersionDate();
 }
 #define VERSIONSTRING getVersionString()
 

@@ -58,11 +58,8 @@ public:
 	HelpHandler::CommandList commands = {
 		{ "clear", std::bind(&Window::handleClear, this), nullptr },
 		{ "window", std::bind(&Window::window_callback, this), COMPLETION(Window::handleSuggestWindow) },
-		{ "wc", std::bind(&Window::close, this), nullptr },
-		{ "favorites", [this] { handleOpenTab<ui::WindowFavorites>(display::TYPE_FAVORITES); }, nullptr },
-		{ "syslog", [this] { handleOpenTab<ui::WindowLog>(display::TYPE_LOGWND); }, nullptr },
-		{ "hubs", [this] { handleOpenTab<ui::WindowHubs>(display::TYPE_HUBLIST); }, nullptr },
-		{ "transfers", [this] { handleOpenTab<ui::WindowTransfers>(display::TYPE_TRANSFERS); }, nullptr }
+		{ "open", std::bind(&Window::handleOpen, this), COMPLETION(Window::handleSuggestOpen) },
+		{ "wc", std::bind(&Window::close, this), nullptr }
 	};
 
 	HelpHandler help;
@@ -81,6 +78,31 @@ public:
 			handleOpenTab<ui::WindowTransfers>(display::TYPE_TRANSFERS);
 		} else if (key == INPUT_CTRL('S')) {
 			handleOpenTab<ui::WindowLog>(display::TYPE_LOGWND);
+		}
+	}
+
+	void handleOpen() {
+		if (events::args() == 0) {
+			display::Manager::get()->cmdMessage("Usage: /open <hublist|transfers|syslog|favorites>");
+			return;
+		}
+
+		auto w = events::arg<std::string>(0);
+		if (w == "hublist") {
+			handleOpenTab<ui::WindowHubs>(display::TYPE_HUBLIST);
+		} else if (w == "favorites") {
+			handleOpenTab<ui::WindowFavorites>(display::TYPE_FAVORITES);
+		} else if (w == "transfers") {
+			handleOpenTab<ui::WindowTransfers>(display::TYPE_TRANSFERS);
+		} else if (w == "syslog") {
+			handleOpenTab<ui::WindowLog>(display::TYPE_LOGWND);
+		}
+	}
+
+	void handleSuggestOpen(const StringList& aArgs, int pos, StringList& suggest_, bool& appendSpace_) {
+		if (pos == 1) {
+			StringList ret{ "hublist", "transfers", "syslog", "favorites" };
+			suggest_.swap(ret);
 		}
 	}
 

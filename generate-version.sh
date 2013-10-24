@@ -16,7 +16,6 @@ set -- $git
 echo "#define GIT_TAG $1" > $tmpFile
 echo "#define GIT_COMMIT $2" >> $tmpFile
 
-echo $4
 if [ -z "$4" ]; then
    echo "#define GIT_HASH \"$3\"" >> $tmpFile
 else
@@ -25,6 +24,7 @@ else
 fi
 
 echo "#define GIT_COMMIT_COUNT `git rev-list HEAD --count`" >> $tmpFile
+echo "#define VERSION_DATE `git show --format=\"%at\" | head -n1`" >> $tmpFile
 
 if diff -q "$file" "$tmpFile" > /dev/null; then
     : # files are the same

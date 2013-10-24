@@ -54,12 +54,11 @@ static string getFile(const Transfer::Type& type, const string& fileName) {
 }
 
 
-WindowTransfers::WindowTransfers() : ListView(display::TYPE_TRANSFERS, "transfers")
+WindowTransfers::WindowTransfers() : ListView(display::TYPE_TRANSFERS, "transfers"), bytesConn(events::add_listener("bytes transferred", bind(&WindowTransfers::handleBytes, this)))
 {
     DownloadManager::getInstance()->addListener(this);
     ConnectionManager::getInstance()->addListener(this);
     UploadManager::getInstance()->addListener(this);
-    TimerManager::getInstance()->addListener(this);
 	updateTitle(0, 0);
     set_name("transfers");
 
@@ -246,24 +245,9 @@ void WindowTransfers::updateTitle(int64_t down, int64_t up) {
 	set_title(title);
 }
 
-void WindowTransfers::on(TimerManagerListener::Second, uint64_t aTick) noexcept {
+void WindowTransfers::handleBytes() noexcept {
     events::emit("window updated", static_cast<display::Window*>(this));
-
-	if (aTick == lastUpdate)	// FIXME: temp fix for new TimerManager
-		return;
-
-	int64_t totalDown = Socket::getTotalDown();
-	int64_t totalUp = Socket::getTotalUp();
-
-	int64_t diff = (int64_t) ((lastUpdate == 0) ? aTick - 1000 : aTick - lastUpdate);
-	int64_t updiff = totalUp - lastUp;
-	int64_t downdiff = totalDown - lastDown;
-
-	callAsync([=] { updateTitle(downdiff * 1000LL / diff, updiff * 1000LL / diff);  });
-
-	lastUpdate = aTick;
-	lastUp = totalUp;
-	lastDown = totalDown;
+	updateTitle(events::arg<int64_t>(0), events::arg<int64_t>(1));
 }
 
 // ConnectionManager
@@ -466,7 +450,7 @@ WindowTransfers::~WindowTransfers()
     DownloadManager::getInstance()->removeListener(this);
     ConnectionManager::getInstance()->removeListener(this);
     UploadManager::getInstance()->removeListener(this);
-    TimerManager::getInstance()->removeListener(this);
+	bytesConn.disconnect();
 }
 
 std::string WindowTransfers::get_infobox_line(unsigned int n)

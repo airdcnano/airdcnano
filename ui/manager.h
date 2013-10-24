@@ -73,9 +73,14 @@ public:
 private:
 	void on(ClientManagerListener::ClientCreated, Client* c) noexcept;
 	void on(DirectoryListingManagerListener::OpenListing, DirectoryListing* aList, const std::string& aDir, const std::string& aXML) noexcept;
+	void on(TimerManagerListener::Second, uint64_t) noexcept;
 
     utils::Mutex m_screenMutex;
     uint32_t m_lastDraw;
+
+	int64_t lastUp = 0;
+	int64_t lastDown = 0;
+	uint64_t lastUpdate = 0;
 };
 
 } // namespace ui

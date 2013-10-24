@@ -32,7 +32,6 @@
 #include <client/ConnectionManager.h>
 #include <client/ClientManager.h>
 #include <client/ConnectionManagerListener.h>
-#include <client/TimerManager.h>
 #include <client/Transfer.h>
 #include <client/User.h>
 #include <client/HintedUser.h>
@@ -81,8 +80,7 @@ class WindowTransfers:
     public display::ListView,
     public DownloadManagerListener,
     public ConnectionManagerListener,
-    public UploadManagerListener,
-    public TimerManagerListener
+    public UploadManagerListener
 {
 public:
     WindowTransfers();
@@ -101,8 +99,6 @@ public:
     void disconnect();
     /** Disconnects the selected download and removes it from the queue. */
     void remove_download();
-
-    void on(TimerManagerListener::Second, uint64_t) noexcept;
 
 	void on(ConnectionManagerListener::Added, const ConnectionQueueItem *item) noexcept;
 	void on(ConnectionManagerListener::Removed, const ConnectionQueueItem *item) noexcept;
@@ -204,9 +200,8 @@ private:
     std::map<std::string, TransferItem*> m_transfers;
 	void updateTitle(int64_t down, int64_t up);
 
-	int64_t lastUp = 0;
-	int64_t lastDown = 0;
-	uint64_t lastUpdate = 0;
+	void handleBytes() noexcept;
+	boost::signals2::connection bytesConn;
 };
 } // namespace ui
 

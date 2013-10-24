@@ -99,6 +99,7 @@ void Manager::create_windows()
 
 	ClientManager::getInstance()->addListener(this);
 	DirectoryListingManager::getInstance()->addListener(this);
+	TimerManager::getInstance()->addListener(this);
 
 	try {
 		ConnectivityManager::getInstance()->setup(true, true);
@@ -125,6 +126,7 @@ void Manager::init_statusbar()
 Manager::~Manager() {
 	ClientManager::getInstance()->removeListener(this);
 	DirectoryListingManager::getInstance()->removeListener(this);
+	TimerManager::getInstance()->removeListener(this);
 }
 
 void Manager::on(ClientManagerListener::ClientCreated, Client* c) noexcept {
@@ -147,6 +149,26 @@ void Manager::on(DirectoryListingManagerListener::OpenListing, DirectoryListing*
 		auto dl = new ui::WindowShareBrowser(aList, aDir, aXML);
 		mger->push_back(dl);
 	}
+}
+
+void Manager::on(TimerManagerListener::Second, uint64_t aTick) noexcept{
+	if (aTick == lastUpdate)	// FIXME: temp fix for new TimerManager
+		return;
+
+	int64_t totalDown = Socket::getTotalDown();
+	int64_t totalUp = Socket::getTotalUp();
+
+	int64_t diff = (int64_t) ((lastUpdate == 0) ? aTick - 1000 : aTick - lastUpdate);
+	int64_t updiff = totalUp - lastUp;
+	int64_t downdiff = totalDown - lastDown;
+
+	events::emit("bytes transferred", static_cast<int64_t>(downdiff * 1000LL / diff), static_cast<int64_t>(updiff * 1000LL / diff));
+
+	SettingsManager::getInstance()->set(SettingsManager::TOTAL_UPLOAD, SETTING(TOTAL_UPLOAD) + updiff);
+	SettingsManager::getInstance()->set(SettingsManager::TOTAL_DOWNLOAD, SETTING(TOTAL_DOWNLOAD) + downdiff);
+	lastUpdate = aTick;
+	lastUp = totalUp;
+	lastDown = totalDown;
 }
 
 } // namespace ui

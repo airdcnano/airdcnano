@@ -368,6 +368,7 @@ static NamedSettingItem settings [] = {
 	{ "max_compression", SettingsManager::MAX_COMPRESSION, ResourceManager::SETTINGS_MAX_COMPRESS },
 	{ "tls_mode", SettingsManager::TLS_MODE, ResourceManager::TRANSFER_ENCRYPTION },
 	{ "bloom_mode", SettingsManager::BLOOM_MODE, ResourceManager::BLOOM_MODE },
+	{ "accept_failovers_fav", SettingsManager::ACCEPT_FAILOVERS, ResourceManager::ACCEPT_FAILOVERS_GLOBAL },
 };
 
 
@@ -376,7 +377,8 @@ class DcSet {
 public:
 	HelpHandler::CommandList commands = {
 		{ "connectioninfo", std::bind(&DcSet::connection, this), nullptr },
-		{ "dcset", std::bind(&DcSet::set, this), COMPLETION(DcSet::handleSuggest) },
+		{ "dcset", std::bind(&DcSet::handleDcset, this), COMPLETION(DcSet::handleSuggest) },
+		{ "dcreset", std::bind(&DcSet::handleDcreset, this), COMPLETION(DcSet::handleSuggest) },
 		{ "nick", std::bind(&DcSet::set_nick, this), nullptr }
 	};
 
@@ -441,9 +443,26 @@ public:
         return -1;
     }
 
+	void handleDcreset() {
+		core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
+		parser.parse();
+
+		if (parser.args() != 1) {
+			display::Manager::get()->cmdMessage("Usage: /dcset <name> [value]");
+			return;
+		}
+
+		auto var = parser.arg(0);
+		auto p = find_setting(var);
+		if (p > 0) {
+			auto old = settings[p].currentToString();
+			settings[p].unset();
+			display::Manager::get()->cmdMessage(settings[p].name + " reset to the default value \"" + settings[p].currentToString() + "\" (old: \"" + old + "\")");
+		}
+	}
+
     /** "command dcset" event handler. */
-    void set()
-    {
+    void handleDcset() {
         //bool set = events::args() > 1;
 		core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
 		parser.parse();
@@ -458,8 +477,7 @@ public:
 			}
 
 			display::Manager::get()->cmdMessage("");
-			display::Manager::get()->cmdMessage("Usage: /dcset [name] [value]");
-
+			display::Manager::get()->cmdMessage("Usage: /dcset <name> [value]");
 		} else {
 			auto var = parser.arg(0);
 			auto p = find_setting(var);
@@ -467,16 +485,15 @@ public:
 				SettingHolder h([this](const std::string& e) { display::Manager::get()->cmdMessage("Failed to set the port: " + e); });
 				auto old = settings[p].currentToString();
 				if (parser.args() == 1) {
-					settings[p].unset();
-					display::Manager::get()->cmdMessage(settings[p].name + " reset to the default value \"" + settings[p].currentToString() + "\" (old: \"" + old + "\")");
+					display::Manager::get()->cmdMessage("The current value of \"" + settings[p].name + "\" is \"" + settings[p].currentToString() + "\"");
 				} else {
 					auto val = parser.arg(1);
 					settings[p].setCurValue(val);
 					display::Manager::get()->cmdMessage(settings[p].name + " set to \"" + settings[p].currentToString() + "\" (old: \"" + old + "\")");
-				}
 
-				if (settings[p].key == SettingsManager::NICK) {
-					events::emit("nick changed");
+					if (settings[p].key == SettingsManager::NICK) {
+						events::emit("nick changed");
+					}
 				}
 			} else {
 				display::Manager::get()->cmdMessage("Setting " + var + " not found");

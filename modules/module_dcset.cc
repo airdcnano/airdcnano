@@ -448,7 +448,7 @@ public:
 		parser.parse();
 
 		if (parser.args() != 1) {
-			display::Manager::get()->cmdMessage("Usage: /dcset <name> [value]");
+			display::Manager::get()->cmdMessage("Usage: /dcreset <name>");
 			return;
 		}
 
@@ -457,7 +457,7 @@ public:
 		if (p > 0) {
 			auto old = settings[p].currentToString();
 			settings[p].unset();
-			display::Manager::get()->cmdMessage(settings[p].name + " reset to the default value \"" + settings[p].currentToString() + "\" (old: \"" + old + "\")");
+			display::Manager::get()->cmdMessage("\"" + settings[p].name + "\" was reset to the default value \"" + settings[p].currentToString() + "\" (old: \"" + old + "\")");
 		}
 	}
 
@@ -489,7 +489,7 @@ public:
 				} else {
 					auto val = parser.arg(1);
 					settings[p].setCurValue(val);
-					display::Manager::get()->cmdMessage(settings[p].name + " set to \"" + settings[p].currentToString() + "\" (old: \"" + old + "\")");
+					display::Manager::get()->cmdMessage("\"" + settings[p].name + "\" was set to \"" + settings[p].currentToString() + "\" (old: \"" + old + "\")");
 
 					if (settings[p].key == SettingsManager::NICK) {
 						events::emit("nick changed");

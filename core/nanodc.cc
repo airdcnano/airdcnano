@@ -47,7 +47,8 @@ Nanodc::Nanodc(int argc, char **argv):
     m_argv(argv),
     m_crash(false)
 {
-    m_pidfile = Util::getPath(Util::PATH_USER_CONFIG) + ".pid";
+	Util::initialize();
+    m_pidfile = Util::getPath(Util::PATH_USER_CONFIG) + "airdcnano.pid";
     add_signal_handlers();
     setlocale(LC_ALL, "");
 }
@@ -146,8 +147,7 @@ bool Nanodc::check_pidfile()
             int ch = getchar();
             if(ch == 'R' || ch == 'r') {
                 std::remove(m_pidfile.c_str());
-            }
-            else {
+            } else {
                 retval = false;
             }
         }

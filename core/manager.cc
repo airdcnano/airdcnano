@@ -197,7 +197,6 @@ private:
 void Manager::start_client()
 {
     //core::Log::get()->log("start_client: " + utils::to_string(utils::gettid()));
-    Util::initialize();
     const char *charset;
     bool utf8 = g_get_charset(&charset);
     if(utf8) {

@@ -365,14 +365,15 @@ void Socket::connect(const string& aAddr, const string& aPort, const string& loc
 
 				check([&] { return ::connect(sock, ai->ai_addr, ai->ai_addrlen); }, true);
 				setIp(resolveName(ai->ai_addr, ai->ai_addrlen));
-				return;
 			} catch (const SocketException& e) {
 				lastError = e.getError();
 			}
 		}
 	}
 
-	throw SocketException(lastError);
+	// IP should be set if at least one connection attempt succeed
+	if (ip.empty())
+		throw SocketException(lastError);
 }
 
 namespace {

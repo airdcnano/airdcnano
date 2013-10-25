@@ -276,6 +276,7 @@ void Manager::start_client()
 	SettingsManager::getInstance()->setDefault(SettingsManager::SHOW_TRANSFERVIEW, true);
 	SettingsManager::getInstance()->setDefault(SettingsManager::OPEN_FAVORITE_HUBS, true);
 	SettingsManager::getInstance()->setDefault(SettingsManager::OPEN_PUBLIC, true);
+	SettingsManager::getInstance()->setDefault(SettingsManager::SHOW_LAST_LINES_LOG, 5);
 
     events::emit("command motd", std::string());
 

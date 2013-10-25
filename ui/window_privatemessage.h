@@ -71,6 +71,7 @@ private:
 	bool online = true;
 	void addStatusMessage(const string& aMsg);
 	void updateTitles();
+	void readLog();
 };
 
 } // namespace ui

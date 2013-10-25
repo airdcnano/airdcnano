@@ -27,8 +27,11 @@
 #include <ui/window_privatemessage.h>
 
 #include <client/ClientManager.h>
+#include <client/File.h>
+#include <client/LogManager.h>
 #include <client/QueueManager.h>
 #include <client/QueueItemBase.h>
+#include <client/StringTokenizer.h>
 
 namespace ui {
 
@@ -71,6 +74,8 @@ m_user(user), ScrolledWindow(user.user->getCID().toBase32(), display::TYPE_PRIVM
     m_bindings[2] = std::bind(&WindowPrivateMessage::get_list, this);
 	online = user.user->isOnline();
 	ClientManager::getInstance()->addListener(this);
+
+	readLog();
 }
 
 void WindowPrivateMessage::updateTitles() {
@@ -104,6 +109,41 @@ void WindowPrivateMessage::fillLogParams(ParamMap& params) const {
 	params["userCID"] = [&cid] { return cid.toBase32(); };
 	params["userNI"] = [&] { return ClientManager::getInstance()->getNick(m_user.user, hint); };
 	params["myCID"] = [] { return ClientManager::getInstance()->getMe()->getCID().toBase32(); };
+}
+
+void WindowPrivateMessage::readLog() {
+	if (SETTING(SHOW_LAST_LINES_LOG) == 0) return;
+
+	ParamMap params;
+	fillLogParams(params);
+	auto path = LogManager::getInstance()->getPath(m_user.user, params);
+
+	try {
+		File f(path, File::READ, File::OPEN);
+
+		int64_t size = f.getSize();
+
+		if (size > 32 * 1024) {
+			f.setPos(size - 32 * 1024);
+		}
+		string buf = f.read(32 * 1024);
+		StringList lines;
+
+		if (Util::strnicmp(buf.c_str(), "\xef\xbb\xbf", 3) == 0)
+			lines = StringTokenizer<string>(buf.substr(3), "\r\n").getTokens();
+		else
+			lines = StringTokenizer<string>(buf, "\r\n").getTokens();
+
+		int linesCount = lines.size();
+
+		int i = linesCount > (SETTING(SHOW_LAST_LINES_LOG) + 1) ? linesCount - SETTING(SHOW_LAST_LINES_LOG) : 0;
+
+		for (; i < linesCount; ++i) {
+			add_line(display::LineEntry(lines[i], 0, time(0), display::LineEntry::MESSAGE));
+		}
+		f.close();
+	} catch (const FileException&) {
+	}
 }
 
 WindowPrivateMessage::~WindowPrivateMessage()

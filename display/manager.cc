@@ -180,8 +180,9 @@ void Manager::remove(display::Window *window)
     m_mutex.unlock();
     events::emit("window closed", window);
 
-    if(*m_current == window)
-        set_current(--m_current);
+	if (*m_current == window) {
+		prev();
+	}
 }
 
 void Manager::next() {

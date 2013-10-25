@@ -110,6 +110,7 @@ void Nanodc::add_signal_handlers()
     utils::SignalHandler::add_handler(SIGABRT, handler);
     utils::SignalHandler::add_handler(SIGSEGV, handler);
     utils::SignalHandler::add_handler(SIGTERM, handler);
+	utils::SignalHandler::add_handler(SIGPIPE, handler);
 }
 
 bool Nanodc::check_root()

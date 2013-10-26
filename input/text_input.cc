@@ -45,7 +45,7 @@ TextInput::TextInput():
 
 void TextInput::update_config()
 {
-    m_utf8 = core::Settings::get()->find_bool("utf8_input", false);
+
 }
 
 size_t TextInput::length() const

@@ -59,7 +59,7 @@ void StatusClock::update()
 void StatusClock::update_config()
 {
     utils::Lock l(m_mutex);
-    m_timeformat = core::Settings::get()->find("clock_format", "%H:%M:%S");
+	m_timeformat = core::Settings::get()->find_str("clock_format", "%H:%M:%S");
 }
 
 StatusClock::~StatusClock()

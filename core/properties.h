@@ -78,7 +78,7 @@ public:
     void set_vector_separator(const char* separator) { m_vector_separator = separator; }
 
     /** Returns the value of the key. */
-    std::string find(const std::string &key, std::string def="") const;
+	std::string find_str(const std::string &key, std::string def = "") const;
 
     /** Find an integer value. */
     int find_int(const std::string &key, int def=0) const;

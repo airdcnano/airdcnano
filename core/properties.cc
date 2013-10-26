@@ -46,17 +46,17 @@ void Properties::load(std::istream &in)
 
     m_properties.clear();
     for(std::string line; std::getline(in, line);) {
-        std::string::size_type comment = line.find('#');
-        std::string::size_type space = line.find_last_not_of(" \t\n");
+		auto comment = line.find('#');
+		auto space = line.find_last_not_of(" \t\n");
 
         if(comment < space)
             continue;
 
         // key = value
-        std::string::size_type keyend = line.find_first_of(" =");
+		auto keyend = line.find_first_of(" =");
         key = line.substr(0, keyend);
 
-        std::string::size_type valuestart = line.find_first_not_of(" =", keyend);
+		auto valuestart = line.find_first_not_of(" =", keyend);
         if(valuestart == std::string::npos)
             continue;
 
@@ -85,10 +85,10 @@ void Properties::save()
     if(!newfile || !oldfile)
         return;
 
-    HashMap temp = m_properties;
+	auto temp = m_properties;
     for(std::string line; std::getline(oldfile, line);) {
-        std::string::size_type comment = line.find('#');
-        std::string::size_type space = line.find_last_not_of(" \t\n");
+		auto comment = line.find('#');
+		auto space = line.find_last_not_of(" \t\n");
 
         if(comment < space || line.size() == 0) {
             newfile << line << std::endl;
@@ -96,10 +96,10 @@ void Properties::save()
         }
 
         // key = value
-        std::string::size_type keyend = line.find_first_of(" =");
+		auto keyend = line.find_first_of(" =");
         key = line.substr(0, keyend);
 
-        std::string::size_type valuestart = line.find_first_not_of(" =", keyend);
+		auto valuestart = line.find_first_not_of(" =", keyend);
         if(valuestart == std::string::npos)
             continue;
 
@@ -108,8 +108,8 @@ void Properties::save()
     }
     oldfile.close();
 
-    for(HashMap::const_iterator i=temp.begin(); i!=temp.end(); ++i) {
-        newfile << i->first << " = " << i->second 
+	for (const auto& i: temp) {
+        newfile << i.first << " = " << i.second 
                 << std::endl << std::endl;
     }
 
@@ -117,10 +117,10 @@ void Properties::save()
     std::remove(oldfilename.c_str());
 }
 
-std::string Properties::find(const std::string &key, std::string def)
+std::string Properties::find_str(const std::string &key, std::string def)
     const
 {
-    HashMap::const_iterator it = m_properties.find(key);
+    auto it = m_properties.find(key);
     return (it == m_properties.end() ? def : it->second);
 }
 
@@ -129,7 +129,7 @@ int Properties::find_int(const std::string &key, int def)
 {
     if(!exists(key))
         return def;
-    return utils::to<int>(find(key));
+	return utils::to<int>(find_str(key));
 }
 
 bool Properties::find_bool(const std::string &key, bool def)
@@ -137,14 +137,14 @@ bool Properties::find_bool(const std::string &key, bool def)
 {
     if(!exists(key))
         return def;
-    return find(key) == "true" ? true : false;
+	return find_str(key) == "true" ? true : false;
 }
 
 std::vector<std::string> Properties::find_vector(const std::string &key)
     const
 {
     std::vector<std::string> result;
-    strings::split(find(key), m_vector_separator, std::back_inserter(result));
+	strings::split(find_str(key), m_vector_separator, std::back_inserter(result));
     return result;
 }
 

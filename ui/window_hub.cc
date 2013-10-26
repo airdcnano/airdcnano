@@ -143,14 +143,12 @@ void WindowHub::update_config()
     this->ScrolledWindow::update_config();
 
     core::Settings *settings = core::Settings::get();
-    m_showNicks = settings->find_vector("show_joins_nicks");
     m_ignoreNicks = settings->find_vector("ignore_nicks");
     m_highlights = settings->find_vector("hilight_words");
+	m_blockedWords = settings->find_vector("block_messages");
 
     m_showNickList = settings->find_bool("show_nicklist", false);
     m_resolveIps = settings->find_bool("resolve_ips", false);
-    m_utf8 = settings->find_bool("utf8_input", false);
-    m_nmdcCharset = settings->find("nmdc_charset", "ISO-8859-1");
 }
 
 void WindowHub::handle_line(const std::string &line)
@@ -184,16 +182,15 @@ void WindowHub::on(TimerManagerListener::Second, uint64_t)
 }
 
 void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
-	bool myPM = aMessage.from->getUser() == ClientManager::getInstance()->getMe();
+	bool myMessage = aMessage.from->getUser() == ClientManager::getInstance()->getMe();
 
 	auto text(strings::escape(aMessage.text));
 	auto nick = aMessage.from->getIdentity().getNick();
 
 	// don't show the message if the nick is ignored
-	int matches = std::count_if(m_ignoreNicks.begin(), m_ignoreNicks.end(),
-		std::bind1st(std::equal_to<std::string>(), nick));
-	if (matches)
+	if (!myMessage && filter_messages(nick, aMessage.text)) {
 		return;
+	}
 
 	if (m_client->get(HubSettings::LogMainChat)) {
 		ParamMap params;
@@ -206,7 +203,7 @@ void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
 
 	auto flag = display::LineEntry::MESSAGE;
 
-	if (myPM) {
+	if (myMessage) {
 		/* bold my own nick */
 		nick = "%21" + nick + "%21";
 	} else if (utils::find_in_string(text, m_highlights.begin(), m_highlights.end())) {
@@ -256,8 +253,7 @@ void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
 	auto it = dm->find(display::TYPE_PRIVMSG, user->getUser()->getCID().toBase32());
 	if (it == dm->end()) {
 		/* don't filter if i'm the sender */
-		if (!myPM && !filter_messages(nick, text)) {
-			core::Log::get()->log("MY PM");
+		if (!myPM && filter_messages(nick, text)) {
 			return;
 		}
 
@@ -592,22 +588,13 @@ void WindowHub::updateTitle() {
 
 bool WindowHub::filter_messages(const std::string &nick, const std::string &msg)
 {
-    core::Settings *settings = core::Settings::get();
-    core::StringVector blocked;
-
-    if(!settings->exists("block_messages")) {
-        // block urls by default
-        core::Settings::get()->set("block_messages", "http://;www.");
-    }
-    blocked = core::Settings::get()->find_vector("block_messages");
-
-    if (utils::find_in_string(msg, blocked.begin(), blocked.end()) ||
+	if (utils::find_in_string(msg, m_blockedWords.begin(), m_blockedWords.end()) ||
         utils::find_in_string(nick, m_ignoreNicks.begin(), m_ignoreNicks.end()))
     {
-        core::Log::get()->log("%21Ignore:%21 from: " + nick + ", msg: " + msg, core::MT_DEBUG);
-        return false;
+		//core::Log::get()->log("%21Ignore:%21 from: " + nick + ", msg: " + msg + " " + Util::listToString(m_blockedWords) + Util::listToString(m_ignoreNicks));
+        return true;
     }
-    return true;
+    return false;
 }
 
 std::string WindowHub::get_nick() const

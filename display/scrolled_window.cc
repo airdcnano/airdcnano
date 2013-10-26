@@ -62,7 +62,7 @@ void ScrolledWindow::clear() {
 void ScrolledWindow::update_config()
 {
     m_lastlogSize = core::Settings::get()->find_int("lastlog_size", 200);
-    m_timestamp = core::Settings::get()->find("timestamp_format", "[%H:%M:%S] ");
+    m_timestamp = core::Settings::get()->find_str("timestamp_format", "[%H:%M:%S] ");
 }
 
 void ScrolledWindow::handle(wint_t key) {

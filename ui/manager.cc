@@ -111,7 +111,7 @@ void Manager::create_windows()
 	if (!Util::hasParam("-no-autoconnect"))
 		FavoriteManager::getInstance()->autoConnect();
 
-	core::Log::get()->log("Client loaded");
+	//core::Log::get()->log("Client loaded");
 }
 
 void Manager::init_statusbar()

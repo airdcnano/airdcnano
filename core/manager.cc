@@ -197,15 +197,6 @@ private:
 void Manager::start_client()
 {
     //core::Log::get()->log("start_client: " + utils::to_string(utils::gettid()));
-    const char *charset;
-    bool utf8 = g_get_charset(&charset);
-    if(utf8) {
-        if(!core::Settings::get()->exists("utf8_input"))
-            core::Settings::get()->set("utf8_input", true);
-        if(!core::Settings::get()->exists("nmdc_charset"))
-            core::Settings::get()->set("nmdc_charset", "ISO-8859-15");
-    }
-
     if(!core::Settings::get()->exists("command_char"))
         core::Settings::get()->set("command_char", "/");
 
@@ -256,7 +247,7 @@ void Manager::start_client()
 				p.show("Enter your upload speed (Mbit/s)", Prompter::TYPE_DOUBLE, make_pair(0.1, static_cast<double>(10000)));
 				SettingsManager::getInstance()->set(SettingsManager::UPLOAD_SPEED, Util::toString(p.getDouble()));
 
-				p.show("We are all done here. Type /help to see all settings after the client has been loaded. For help and more information, visit www.airdcpp.net", Prompter::TYPE_ANY);
+				p.show("We are all done here. Type /help to see all settings after the client has been loaded.", Prompter::TYPE_ANY);
 			},
 			[&](double percent) {
 				pu->updateStatus(percent);

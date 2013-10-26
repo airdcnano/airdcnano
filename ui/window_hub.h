@@ -123,10 +123,9 @@ private:
     core::StringVector m_showNicks;
     core::StringVector m_ignoreNicks;
     core::StringVector m_highlights;
+	core::StringVector m_blockedWords;
     bool m_showNickList;
     bool m_resolveIps;
-    bool m_utf8;
-    std::string m_nmdcCharset;
 
 	void print_help();
 	void handleNames();

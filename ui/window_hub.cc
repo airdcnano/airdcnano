@@ -559,7 +559,7 @@ void WindowHub::print_names()
 
     std::ostringstream oss;
     oss << m_users.size() << " users " << ops << "/" << bots << "/" 
-        << m_users.size()-active-bots << "/" << hidden << " ops/bots/passive/hidden";
+        << m_users.size()-active-bots-hidden << "/" << hidden << " ops/bots/passive/hidden";
     add_line(display::LineEntry(oss.str()));
 }
 

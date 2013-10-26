@@ -554,12 +554,12 @@ void WindowHub::print_names()
 
     int ops = std::count_if(m_users.begin(), m_users.end(), _identity(&Identity::isOp));
     int bots = std::count_if(m_users.begin(), m_users.end(), _identity(&Identity::isBot));
-	int active = boost::count_if(m_users | map_values, [this](const OnlineUserPtr& ou) { return !ou->getIdentity().isBot() && ou->getIdentity().isTcpActive(m_client); });
+	int active = boost::count_if(m_users | map_values, [this](const OnlineUserPtr& ou) { return ou->getIdentity().isTcpActive(m_client); });
     int hidden = std::count_if(m_users.begin(), m_users.end(), _identity(&Identity::isHidden));
 
     std::ostringstream oss;
     oss << m_users.size() << " users " << ops << "/" << bots << "/" 
-        << m_users.size()-active << "/" << hidden << " ops/bots/passive/hidden";
+        << m_users.size()-active-bots << "/" << hidden << " ops/bots/passive/hidden";
     add_line(display::LineEntry(oss.str()));
 }
 

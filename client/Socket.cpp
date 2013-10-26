@@ -366,6 +366,7 @@ void Socket::connect(const string& aAddr, const string& aPort, const string& loc
 				check([&] { return ::connect(sock, ai->ai_addr, ai->ai_addrlen); }, true);
 				setIp(resolveName(ai->ai_addr, ai->ai_addrlen));
 			} catch (const SocketException& e) {
+				ai->ai_family == AF_INET ? sock4.reset() : sock6.reset();
 				lastError = e.getError();
 			}
 		}

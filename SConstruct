@@ -165,6 +165,9 @@ if not conf.CheckLibWithHeader('leveldb', 'leveldb/db.h', 'cpp'):
 	print '\tleveldb not found.'
 	print '\tNote: You might have the lib but not the headers'
 	Exit(1)
+	
+if conf.CheckCXXHeader('leveldb/filter_policy.h'):
+	conf.env.Append(CPPDEFINES = 'HAVE_LEVELDB_BLOOM')
 
 if not conf.CheckLibWithHeader('GeoIP', 'GeoIP.h', 'c'):
 	print '\tGeoIP not found.'

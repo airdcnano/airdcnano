@@ -190,7 +190,7 @@ struct NamedSettingItem : public SettingItem {
 
 			SettingsManager::getInstance()->set(static_cast<SettingsManager::IntSetting>(key), static_cast<int>(Util::toInt(aValue)*multiplier));
 		} else if (key >= SettingsManager::BOOL_FIRST && key < SettingsManager::BOOL_LAST) {
-			bool val = Util::stricmp(aValue, "true") == 1 || aValue == "1" || Util::stricmp(aValue, "enabled") == 1 || Util::stricmp(aValue, "yes") == 1;
+			bool val = Util::stricmp(aValue, "true") == 0 || aValue == "1" || Util::stricmp(aValue, "enabled") == 0 || Util::stricmp(aValue, "yes") == 0;
 			SettingsManager::getInstance()->set(static_cast<SettingsManager::BoolSetting>(key), val);
 		} else {
 			dcassert(0);

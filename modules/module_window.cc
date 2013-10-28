@@ -185,7 +185,7 @@ public:
 			for (auto i = mger->begin(); i != mger->end(); ++i, ++pos) {
 				mger->cmdMessage(Util::toString(pos) + ": " + (*i)->get_name());
 			}
-		} else if (!command.empty() && (Util::toInt(command) >= 0 && Util::toInt(command) <= static_cast<int>(mger->size()))) {
+		} else if (!command.empty() && (Util::toInt(command) > 0 && Util::toInt(command) <= static_cast<int>(mger->size()))) {
 			auto pos = Util::toInt(command) - 1;
 			if (pos <= static_cast<int>(mger->size())) {
 				auto newCurrent = mger->begin() + pos;

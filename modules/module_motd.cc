@@ -65,8 +65,7 @@ public:
 		log("Average file age: " + Util::formatTime(GET_TIME() - (totalFiles > 0 ? (totalAge / totalFiles) : 0), false, true) + "");
 		log("");
 		log("Homepage http://www.airdcpp.net");
-		log("User guide http://www.airdcpp.net/...");
-		log("Patches? Grab the code from https://github.com/airdcnano");
+		log("User guide http://www.airdcpp.net/nano-guide");
 		log("");
 	}
 };

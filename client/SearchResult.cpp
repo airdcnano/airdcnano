@@ -97,11 +97,7 @@ string SearchResult::getSlotString() const {
 }
 
 int64_t SearchResult::getConnectionInt() const {
-	return isNMDC() ? Util::toInt64(connection)*1024*1024/8 : Util::toInt64(connection);
-}
-
-string SearchResult::getConnectionStr() const {
-	return isNMDC() ? connection : Util::formatBytes(connection) + "/s";
+	return isNMDC() ? Util::toDouble(connection)*1024.0*1024.0/8.0 : Util::toInt64(connection);
 }
 
 int64_t SearchResult::getSpeedPerSlot() const {

@@ -57,7 +57,7 @@ public:
 		};
 
 		log("");
-		log(APPNAME " " + shortVersionString + " (" + Util::formatTime("%c", getVersionDate()) + ")");
+		log(shortVersionString + " (" + Util::formatTime("%c", getVersionDate()) + ")");
 		log("Running on " + Util::getOsVersion());
 		log("");
 		log("Total transferred (up/down): " + Util::formatBytes(SETTING(TOTAL_UPLOAD)) + " / " + Util::formatBytes(SETTING(TOTAL_DOWNLOAD)));

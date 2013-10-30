@@ -96,7 +96,7 @@ void Nanodc::printHelp() {
 }
 
 void Nanodc::printVersion() {
-	std::cout << "Version: " + shortVersionString << std::endl;
+	std::cout << shortVersionString << std::endl;
 }
 
 void Nanodc::add_signal_handlers()

@@ -96,7 +96,7 @@ void Manager::emit(const std::string &event, boost::any a1,
     if(!a7.empty())
         args.push_back(a7);
 
-	tasks.push(new Callback({ m_events[event], move(args) }));
+	tasks.push(new Callback({ m_events[event], std::move(args) }));
 	s.signal();
 }
 

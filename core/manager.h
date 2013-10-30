@@ -44,6 +44,8 @@ public:
 
     /** Calls shutdown(). */
     ~Manager();
+
+	bool isInitialized() const { return initialized; }
 private:
     /** Creates the user interface. */
     void init_ui();

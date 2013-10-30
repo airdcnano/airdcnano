@@ -195,6 +195,7 @@ void ScrolledWindow::redraw()
     /* Find out the first message to print */
 	int countedHeight = 0;
 	int first = m_lines.size();
+
 	for (const auto& line : m_lines | reversed) {
 		if (countedHeight == window_height) {
 			first--;
@@ -228,7 +229,7 @@ void ScrolledWindow::redraw()
         const auto& message = it->str();
 
         std::string::size_type i = 0;
-        while(i < message.length()) {
+		while (i < message.length() && height < window_height) {
             auto prevEnd = i;
             if(i == 0) {
                 i = Window::find_line_end(message, i, window_width);

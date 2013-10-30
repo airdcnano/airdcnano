@@ -105,7 +105,7 @@ unsigned int Window::calculate_height(const gchar *message_start,
 
     while(i <= message_end)
     {
-        i = find_line_end(i, message_end, screen_width - (i == 0 ? 0 : indent));
+		i = find_line_end(i, message_end, screen_width - (i == message_start ? 0 : indent));
         lines++;
 
         /* Move to the beginning of the next line. find_line_end returns the
@@ -164,9 +164,9 @@ const gchar *Window::find_line_end(const gchar *line_start,
                 i += 2;
                 current_word_length++;
                 j--;                    // "%%" is displayed as "%"
-            }
-            else
-                i += 3;
+			} else {
+				i += 3;
+			}
             continue;
         }
         if(j < 2) // Must be done here - otherwise formatting will be damaged.

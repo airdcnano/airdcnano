@@ -50,7 +50,7 @@ void WindowLog::onClientCreated() {
 	LogManager::getInstance()->addListener(this);
 
 	for (const auto& m: oldMessages) {
-		add_line(display::LineEntry(m.first));
+		add_line(display::LineEntry(m.first, 0, m.second.time, m.second.severity == LogManager::LOG_ERROR ? display::LineEntry::ACTIVITY_ERROR : display::LineEntry::ACTIVITY));
 	}
 }
 

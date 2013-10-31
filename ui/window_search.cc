@@ -220,7 +220,6 @@ void WindowSearch::handle_line(const std::string &line)
 				}
 
 				auto size = Util::toInt64(line)*multiplier;
-				core::Log::get()->log(Util::toString(size));
 				if (m_property == PROP_MINSIZE) {
 					curSearch->gt = size;
 					//curSearch->lt = std::numeric_limits<int64_t>::max();
@@ -429,7 +428,7 @@ std::string WindowSearch::get_infobox_line(unsigned int n)
 			ss << "%21Size:%21 " << std::left << std::setw(9)
 				<< Util::formatBytes(result->getSize())
 				<< " %21Slots:%21 " << result->getFreeSlots() << "/" << result->getSlots()
-				<< " %21TTH:%21 " << result->getTTH().toBase32();
+				<< " %21TTH:%21 " << (result->getType() == SearchResult::TYPE_FILE ? result->getTTH().toBase32() : "-");
             break;
         case 3:
 			ss << "%21Hub:%21 " << std::left << std::setw(18) 

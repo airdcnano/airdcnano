@@ -78,10 +78,11 @@ private:
         SERVER_PASSWORD,
         SERVER_AUTOCONNECT
     };
-    FavoriteHubEntryPtr m_editFav;
-    int m_editState;
-    int m_confirmRemove;
-	FavoriteHubEntryPtr m_newFav;
+
+    FavoriteHubEntryPtr m_editFav = nullptr;
+    int m_editState = EDIT_NONE;
+    int m_confirmRemove = -1;
+	FavoriteHubEntryPtr m_newFav = nullptr;
 
 	void updateTitle();
 };

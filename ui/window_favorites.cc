@@ -37,8 +37,6 @@
 namespace ui {
 
 WindowFavorites::WindowFavorites():
-    m_editState(EDIT_NONE),
-    m_confirmRemove(-1),
 	ListView(display::TYPE_FAVORITES, "favorites", true)
 {
 	updateTitle();

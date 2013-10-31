@@ -98,19 +98,6 @@ private:
 	void handleShowJoins();
 	void handleMsg();
 
-    Client *m_client;
-    bool m_joined;
-    typedef std::unordered_map<std::string, const OnlineUserPtr> Users;
-    typedef Users::const_iterator UserIter;
-    Users m_users;
-    UserIter m_currentUser;
-    core::StringVector m_showNicks;
-    core::StringVector m_ignoreNicks;
-    core::StringVector m_highlights;
-	core::StringVector m_blockedWords;
-    bool m_showNickList;
-    bool m_resolveIps;
-
 	void print_help();
 	void handleNames();
 	void updateTitle();
@@ -119,9 +106,20 @@ private:
 	void handleUserRemoved(const OnlineUserPtr& aUser);
 	void handlePassword();
 	void handleConnected();
+	void handleFailed(const std::string& aMsg);
+
+	typedef std::unordered_map<std::string, const OnlineUserPtr> Users;
+	Users m_users;
+	core::StringVector m_showNicks;
+	core::StringVector m_ignoreNicks;
+	core::StringVector m_highlights;
+	core::StringVector m_blockedWords;
 
 	boost::signals2::connection passwordConn;
-	void handleFailed(const std::string& aMsg);
+	bool m_joined = false;
+	bool m_showNickList = false;
+	bool m_resolveIps = false;
+	Client *m_client = nullptr;
 };
 
 } // namespace ui

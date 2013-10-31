@@ -49,12 +49,9 @@
 
 namespace ui {
 
-	using boost::adaptors::filtered;
+using boost::adaptors::filtered;
 
 WindowHub::WindowHub(const std::string &address):
-    m_client(nullptr),
-    m_joined(false),
-    m_currentUser(m_users.end()),
 	ScrolledWindow(address, display::TYPE_HUBWINDOW),
 	commands({
 		{ "fav", boost::bind(&WindowHub::handleFav, this), nullptr },
@@ -163,9 +160,9 @@ void WindowHub::handle_line(const std::string &line)
 }
 
 void WindowHub::onJoinedTimer() {
-    // group users in 2 seconds
+    // group users in 1,5 seconds
+	m_joined = true;
 	callAsync([this] {
-		m_joined = true;
 		if (m_client->isConnected()) {
 			add_line(display::LineEntry("Joined to the hub"));
 			if (m_showNickList)
@@ -617,9 +614,6 @@ WindowHub::~WindowHub()
     m_users.clear();
 
 	passwordConn.disconnect();
-
-	//events::remove_listener("command reconnect", std::bind(&WindowHub::reconnect, this));
-	//events::remove_listener("hub created", std::bind(&WindowHub::handleConnect, this));
 }
 
 } // namespace ui

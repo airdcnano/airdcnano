@@ -191,7 +191,7 @@ private:
 
 	void starting(UpdateInfo* ui, const Transfer* t);
 
-    std::map<std::string, TransferItem*> m_transfers;
+    std::unordered_map<std::string, TransferItem*> m_transfers;
 	void updateTitle(int64_t down, int64_t up);
 
 	void handleBytes() noexcept;

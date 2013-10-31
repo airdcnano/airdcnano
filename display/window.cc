@@ -59,6 +59,15 @@ Window::Window(const std::string& aID, Type aType, bool aAllowCommands) :
     resize();
 }
 
+static const char *default_prompt = "[airdcnano]";
+void Window::set_prompt() {
+	m_prompt = default_prompt; 
+}
+
+void Window::set_prompt(const std::string &prompt) {
+	m_prompt = prompt; 
+}
+
 void Window::resize()
 {
     int w = Screen::get_width();
@@ -197,7 +206,7 @@ const gchar *Window::find_line_end(const gchar *line_start,
 }
 
 void Window::setInsertMode(bool enable) {
-	m_insertMode = false;
+	m_insertMode = enable;
 }
 
 void Window::callAsync(std::function<void()> aF) {

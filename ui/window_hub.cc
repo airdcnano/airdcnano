@@ -187,8 +187,11 @@ void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
 	auto text(strings::escape(aMessage.text));
 	auto nick = aMessage.from->getIdentity().getNick();
 
+	bool op = aMessage.from->getIdentity().isOp();
+	bool bot = aMessage.from->getIdentity().isBot();
+
 	// don't show the message if the nick is ignored
-	if (!myMessage && filter_messages(nick, aMessage.text)) {
+	if (!myMessage && (!op || m_client->isOp()) && !bot && filter_messages(nick, aMessage.text)) {
 		return;
 	}
 
@@ -211,8 +214,6 @@ void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
 		flag = display::LineEntry::HIGHLIGHT;
 	}
 
-	bool op = aMessage.from->getIdentity().isOp();
-	bool bot = aMessage.from->getIdentity().isBot();
 	char status = (op ? '@' : (bot ? '$' : ' '));
 
 	std::ostringstream displaySender;

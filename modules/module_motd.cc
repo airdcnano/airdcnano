@@ -62,7 +62,7 @@ public:
 		log("");
 		log("Total transferred (up/down): " + Util::formatBytes(SETTING(TOTAL_UPLOAD)) + " / " + Util::formatBytes(SETTING(TOTAL_DOWNLOAD)));
 		log("Shared: " + Util::formatBytes(totalSize) + " (" + Util::toString(totalFiles) + " files in " + Util::toString(totalDirs) + " directories)");
-		log("Average file age: " + Util::formatTime(GET_TIME() - (totalFiles > 0 ? (totalAge / totalFiles) : 0), false, true) + "");
+		log("Average file age: " + totalFiles == 0 ? "-" : Util::formatTime(GET_TIME() - (totalAge / totalFiles), false, true) + "");
 		log("");
 		log("Homepage http://www.airdcpp.net");
 		log("User guide http://www.airdcpp.net/nano-guide");

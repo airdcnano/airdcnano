@@ -26,6 +26,7 @@
 
 #include <vector>
 #include <client/stdinc.h>
+#include <client/AdcSearch.h>
 #include <client/DCPlusPlus.h>
 #include <client/SearchManager.h>
 #include <client/SearchManagerListener.h>
@@ -72,7 +73,7 @@ public:
     SearchResultPtr get_result();
     HintedUser get_user() { return get_result()->getUser(); }
 
-    void toggle_slots() { m_freeSlots = !m_freeSlots; create_list(); }
+	void toggle_slots();
 
     enum Property {
         PROP_NONE,
@@ -93,19 +94,12 @@ public:
 	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_);
 	void handleEscape();
 private:
-    bool m_shutdown;
-    Property m_property;
-    int64_t m_lastSearch;
-    std::string m_search;
-	SearchResultList m_results;
-    utils::Mutex m_resultLock;
+    bool m_shutdown = false;
+    Property m_property = PROP_NONE;
+    int64_t m_lastSearch = 0;
 
-    // search result filters
-    std::vector<std::string> m_searchWords;
-    int64_t m_minSize;
-    int64_t m_maxSize;
-    std::vector<std::string> m_extensions;
-    bool m_freeSlots;
+    std::string m_searchStr;
+	SearchResultList m_results;
 
     /** Returns true if search result matches current filters. */
     bool matches(const SearchResultPtr& result);
@@ -114,6 +108,13 @@ private:
 	void handleGetList();
 	void handleMatchQueue();
 	std::string token;
+
+	// search result filters
+	bool m_freeSlots = false;
+	unique_ptr<AdcSearch> curSearch;
+	bool filtering = false;
+
+	void updateTitle();
 };
 
 } // namespace ui

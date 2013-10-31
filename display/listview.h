@@ -161,6 +161,7 @@ public:
 	void setInsertMode(bool enable);
 	void handleMove();
 	virtual void onListMove(int prevPos, int newPos) {}
+	void set_prompt_timed(const std::string &prompt, time_t aSeconds = 2);
 protected:
 	bool moving = false;
     int m_rowCount;

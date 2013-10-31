@@ -30,18 +30,12 @@
 #include <utils/strings.h>
 #include <client/DirectoryListingManager.h>
 #include <input/completion.h>
+#include <client/StringTokenizer.h>
 
 namespace ui {
 
-WindowSearch::WindowSearch(const std::string &str):
-    m_shutdown(false),
-    m_property(PROP_NONE),
-    m_lastSearch(0),
-    m_search(str),
-    m_minSize(0),
-    m_maxSize(0),
-    m_freeSlots(false),
-	ListView(display::TYPE_SEARCHWINDOW, str)
+WindowSearch::WindowSearch(const std::string &aStr):
+	ListView(display::TYPE_SEARCHWINDOW, aStr)
 {
     SearchManager::getInstance()->addListener(this);
 
@@ -56,8 +50,8 @@ WindowSearch::WindowSearch(const std::string &str):
     insert_column(new display::Column("File name", 50, 200, 200));
     resize();
 
-    if(!m_search.empty())
-        search(m_search);
+	if (!aStr.empty())
+		search(aStr);
 
     // download
     m_bindings['d'] = std::bind(&WindowSearch::download, this, SETTING(DOWNLOAD_DIRECTORY));
@@ -72,7 +66,7 @@ WindowSearch::WindowSearch(const std::string &str):
     m_bindings['S'] = std::bind(&WindowSearch::set_property, this, PROP_DIRECTORYTARGET);
 
     // browse
-	m_bindings['b'] = std::bind(&WindowSearch::handleGetList, this);
+	//m_bindings['b'] = std::bind(&WindowSearch::handleGetList, this);
     // match queue
 	m_bindings['M'] = std::bind(&WindowSearch::handleMatchQueue, this);
     // search
@@ -85,6 +79,12 @@ WindowSearch::WindowSearch(const std::string &str):
     m_bindings['f'] = std::bind(&WindowSearch::set_property, this, PROP_SEARCHFILTER);
     m_bindings['/'] = m_bindings['f'];
     m_bindings['c'] = std::bind(&WindowSearch::free_results, this);
+}
+
+void WindowSearch::toggle_slots() {
+	m_freeSlots = !m_freeSlots; 
+	create_list();
+	set_prompt_timed("Free slots only: " + string(m_freeSlots ? "enabled" : "disabled"));
 }
 
 void WindowSearch::handleGetList() {
@@ -156,29 +156,30 @@ void WindowSearch::search(const std::string &str)
     }
     */
 
-    if(str.length() < MIN_SEARCH  && m_search.length() < MIN_SEARCH) {
+	if (str.length() < MIN_SEARCH  && m_searchStr.length() < MIN_SEARCH) {
         core::Log::get()->log("Too short search");
         return;
     }
 
+	auto type = str.size() == 39 && Encoder::isBase32(str.c_str()) ? SearchManager::TYPE_TTH : SearchManager::TYPE_ANY;
+
     // new search
-    if(!str.empty()) {
-        m_searchWords.clear();
-        m_search = Text::toLower(str);
-		m_searchWords = AdcSearch::parseSearchString(m_search);
-
-        utils::Lock lock(m_resultLock);
-        m_results.clear();
-    }
-
-    set_title("Search window: " + m_search);
-    set_name("Search:" + m_search);
+	auto newSearch = AdcSearch::getSearch(str, Util::emptyString, 0, type, SearchManager::SIZE_DONTCARE, StringList(), AdcSearch::MATCH_FULL_PATH, false);
+	if (!newSearch) {
+		return;
+	}
+	
+	m_searchStr = str;
+	m_results.clear();
+	curSearch.reset(newSearch);
+	filtering = false;
 
 	SettingsManager::getInstance()->addToHistory(str, SettingsManager::HISTORY_SEARCH);
-
     m_lastSearch = GET_TICK();
 	token = Util::toString(Util::rand());
-	SearchManager::getInstance()->search(m_search, 0, SearchManager::TYPE_ANY, SearchManager::SIZE_DONTCARE, token, Search::MANUAL);
+
+	SearchManager::getInstance()->search(str, 0, type, SearchManager::SIZE_DONTCARE, token, Search::MANUAL);
+	updateTitle();
 }
 
 void WindowSearch::handle_line(const std::string &line)
@@ -189,58 +190,58 @@ void WindowSearch::handle_line(const std::string &line)
     if(!line.empty()) {
         if(m_property == PROP_FILETARGET) {
             download(line);
-        }
-        else if(m_property == PROP_DIRECTORYTARGET) {
+        } else if(m_property == PROP_DIRECTORYTARGET) {
             download_directory(line);
-        }
-        else if(m_property == PROP_SEARCHFILTER) {
-            if(line.length() >= MIN_SEARCH) {
-                m_search = utils::tolower(line);
-                m_searchWords.clear();
-                strings::split(m_search, " ", std::back_inserter(m_searchWords));
-            }
-            else {
-                m_property = PROP_NONE;
-                return;
-            }
-        }
-        else if(m_property == PROP_MINSIZE || m_property == PROP_MAXSIZE) {
-            std::istringstream oss(line);
-            int64_t size;
-            oss >> size;
-            int c = oss.get();
+		} else if (curSearch) {
+			filtering = true;
+			if (m_property == PROP_SEARCHFILTER) {
+				if (line.length() >= MIN_SEARCH) {
+					curSearch.reset(new AdcSearch(line, Util::emptyString, StringList(), AdcSearch::MATCH_NAME));
+				} else {
+					m_property = PROP_NONE;
+					return;
+				}
+			} else if (m_property == PROP_MINSIZE || m_property == PROP_MAXSIZE) {
+				size_t end;
+				int multiplier;
+				auto hasType = [&, this](string&& id) {
+					end = Util::findSubString(line, id, line.size() - id.size());
+					return end != string::npos;
+				};
 
-            switch(c) {
-                case 'k':
-                    size *= 1024;
-                    break;
-                case 'G':
-                    size *= 1024*1024*1024;
-                    break;
-                case 'M':
-                default:
-                    size *= 1024*1024;
-                    break;
-            }
-            if(m_property == PROP_MINSIZE)
-                m_minSize = size;
-            else
-                m_maxSize = size;
-        }
-        else if(m_property == PROP_EXTENSION) {
-            m_extensions.clear();
-            strings::split(utils::tolower(line), ",", std::back_inserter(m_extensions));
-        }
-    }
+				if (hasType("g")) {
+					multiplier = 1024 * 1024 * 1024;
+				} else if (hasType("m")) {
+					multiplier = 1024 * 1024;
+				} else if (hasType("k")) {
+					multiplier = 1024;
+				} else {
+					multiplier = 1024 * 1024;
+				}
+
+				auto size = Util::toInt64(line)*multiplier;
+				core::Log::get()->log(Util::toString(size));
+				if (m_property == PROP_MINSIZE) {
+					curSearch->gt = size;
+					//curSearch->lt = std::numeric_limits<int64_t>::max();
+				} else {
+					curSearch->lt = size;
+					//curSearch->gt = std::numeric_limits<int64_t>::min();
+				}
+			} else if (m_property == PROP_EXTENSION) {
+				curSearch->ext = StringTokenizer<string>(Text::toLower(line), ',').getTokens();
+			}
+
+			create_list();
+		}
+	} else if (m_property != PROP_FILETARGET && m_property != PROP_DIRECTORYTARGET && filtering) {
+		curSearch.reset(new AdcSearch(m_searchStr, Util::emptyString, StringList(), AdcSearch::MATCH_NAME));
+		filtering = false;
+		create_list();
+	}
 
 	setInsertMode(false);
     set_prompt("");
-
-    if(!line.empty() && m_property != PROP_FILETARGET &&
-        m_property != PROP_DIRECTORYTARGET)
-    {
-        create_list();
-    }
     m_property = PROP_NONE;
 }
 
@@ -264,101 +265,89 @@ void WindowSearch::create_list()
 {
     delete_all();
 
-    m_resultLock.lock();
-    //std::for_each(m_results.begin(), m_results.end(),
-    //    std::bind(&WindowSearch::add_result, this,
-   //         std::placeholders::_1));
-    m_resultLock.unlock();
+	for (const auto& sr: m_results) {
+		if (matches(sr)) {
+			add_result(sr);
+		}
+	}
 
-    std::ostringstream oss;
-    oss << "Search: " << m_search << " with " << get_size()
-        << "/" << m_results.size() << " results";
-    set_title(oss.str());
-
-    set_name("Search:" + m_search);
+	updateTitle();
 }
 
-void WindowSearch::on(SearchManagerListener::SR, const SearchResultPtr& result)
+void WindowSearch::updateTitle() {
+	auto display = curSearch && curSearch->root ? m_searchStr + " (TTH)" : m_searchStr;
+	if (m_results.size() > 0) {
+		std::ostringstream oss;
+		oss << "Search: " << display << " with " << get_size()
+			<< "/" << m_results.size() << " results";
+		set_title(oss.str());
+	} else {
+		set_title("Search window: " + display);
+	}
+
+	set_name("Search:" + display);
+}
+
+void WindowSearch::on(SearchManagerListener::SR, const SearchResultPtr& aSR)
     noexcept
 {
-    try {
-        m_resultLock.lock();
-        m_results.push_back(result);
-        m_resultLock.unlock();
+	if (!matches(aSR)) {
+		return;
+	}
 
-        add_result(result);
-
-        std::ostringstream oss;
-        oss << "Search: " << m_search << " with " << get_size()
-            << "/" << m_results.size() << " results";
-        set_title(oss.str());
-    } catch(const Exception &e) {
-        core::Log::get()->log("WindowSearch::on(): Exception " + e.getError());
-    }
-    catch(std::exception &e) {
-        try {
-            core::Log::get()->log(std::string("WindowSearch::on(): std::exception ") + e.what());
-        } catch(std::exception &e) {
-            core::Log::get()->log("[wtf]?");
-        }
-    }
+	callAsync([=] {
+		m_results.push_back(aSR);
+		add_result(aSR);
+		updateTitle();
+	});
 }
 
 void WindowSearch::add_result(const SearchResultPtr& result)
 {
-    if(matches(result)) {
-        int row = insert_row();
-        set_text(0, row, result->getUser().user->getCID().toBase32() + "-" + result->getTTH().toBase32());
-		set_text(1, row, ClientManager::getInstance()->getFormatedNicks(result->getUser()));
-        set_text(2, row, utils::to_string(result->getFreeSlots())
-            + "/" + utils::to_string(result->getSlots()));
-        set_text(3, row, Util::formatBytes(result->getSize()));
-		set_text(4, row, Util::getDateTime(result->getDate()));
-		set_text(5, row, strings::escape(result->getFileName()));
-    }
+    int row = insert_row();
+    set_text(0, row, result->getUser().user->getCID().toBase32() + "-" + result->getTTH().toBase32());
+	set_text(1, row, ClientManager::getInstance()->getFormatedNicks(result->getUser()));
+    set_text(2, row, utils::to_string(result->getFreeSlots())
+        + "/" + utils::to_string(result->getSlots()));
+    set_text(3, row, Util::formatBytes(result->getSize()));
+	set_text(4, row, Util::getDateTime(result->getDate()));
+	set_text(5, row, strings::escape(result->getFileName()));
 }
 
-bool WindowSearch::matches(const SearchResultPtr& result)
+bool WindowSearch::matches(const SearchResultPtr& aResult)
 {
-	if (!result->getUser().user->isNMDC()) {
-		return result->getToken() == token;
+	if (!curSearch) {
+		return false;
 	}
 
-    auto filename = utils::tolower(result->getFileName());
+	if (m_freeSlots && aResult->getFreeSlots() == 0) {
+		return false;
+	}
 
-    if(!utils::find_in_string(filename, m_searchWords.begin(), m_searchWords.end())) {
-        return false;
-    }
-    if(result->getSize() < m_minSize) {
-        return false;
-    }
-    if(m_maxSize && result->getSize() > m_maxSize) {
-        return false;
-    }
+	if (!filtering && !aResult->getUser().user->isNMDC()) {
+		// ADC
+		return aResult->getToken() == token;
+	}
 
-    if(m_freeSlots && result->getFreeSlots() < 1) {
-        return false;
-    }
+	// NMDC / filtering
+	if (aResult->getType() == SearchResult::TYPE_DIRECTORY) {
+		if (!curSearch->matchesDirectory(aResult->getPath())) {
+			return false;
+		}
+	} else {
+		if (!(curSearch->root ? *curSearch->root == aResult->getTTH() : curSearch->matchesFileLower(Text::toLower(aResult->getPath()), aResult->getSize(), aResult->getDate()))) {
+			return false;
+		}
+	}
 
-    int matches = 0;
-    for(unsigned int i=0; i<m_extensions.size(); ++i) {
-        auto extension = m_extensions.at(i);
-        if(filename.find_last_of(extension) == filename.length()-1) {
-            matches++;
-        }
-    }
-
-    if(matches || m_extensions.empty())
-        return true;
-
-    return false;
+	return true;
 }
 
 void WindowSearch::free_results()
 {
     delete_all();
-    utils::Lock lock(m_resultLock);
     m_results.clear();
+	updateTitle();
 }
 
 string getTarget(const string& aTarget) {
@@ -437,9 +426,10 @@ std::string WindowSearch::get_infobox_line(unsigned int n)
                 << " %21IP:%21 " << result->getIP();
             break;
         case 2:
-            ss << "%21Size:%21 " << std::left << std::setw(9) 
-                << Util::formatBytes(result->getSize())
-                << " %21Slots:%21 " << result->getFreeSlots() << "/" << result->getSlots();
+			ss << "%21Size:%21 " << std::left << std::setw(9)
+				<< Util::formatBytes(result->getSize())
+				<< " %21Slots:%21 " << result->getFreeSlots() << "/" << result->getSlots()
+				<< " %21TTH:%21 " << result->getTTH().toBase32();
             break;
         case 3:
 			ss << "%21Hub:%21 " << std::left << std::setw(18) 
@@ -458,7 +448,6 @@ std::string WindowSearch::get_infobox_line(unsigned int n)
 WindowSearch::~WindowSearch()
 {
     SearchManager::getInstance()->removeListener(this);
-    utils::Lock lock(m_resultLock);
 }
 
 } // namespace ui

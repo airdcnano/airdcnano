@@ -29,10 +29,11 @@
 #include <functional>
 #include <display/curses_window.h>
 #include <display/input_window.h>
-#include <client/GetSet.h>
 #include <core/events.h>
 
-static const char *default_prompt = "[airdcnano]";
+#include <client/stdinc.h>
+#include <client/GetSet.h>
+#include <client/DelayedEvents.h>
 
 namespace display {
 
@@ -105,8 +106,8 @@ public:
 
     const std::string& get_prompt() { return m_prompt; }
 
-    void set_prompt() { m_prompt = default_prompt; }
-    void set_prompt(const std::string &prompt) { m_prompt = prompt; }
+	void set_prompt();
+	void set_prompt(const std::string &prompt);
 
     void set_draw_title(bool draw) { m_drawTitle = draw; }
 
@@ -155,6 +156,7 @@ protected:
 	virtual void setInsertMode(bool enable);
 	virtual void handleEscape() { }
 	bool getInsertMode() const { return m_insertMode; }
+	std::unique_ptr<dcpp::DelayedEvents<int>> timedEvents;
 private:
 	friend class ListView;
     /* find_line_end implementation. Subject to change, so clients should

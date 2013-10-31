@@ -31,6 +31,7 @@
 #include <utils/strings.h>
 #include <utils/algorithm.h>
 #include <core/events.h>
+#include <core/manager.h>
 
 #include <client/stdinc.h>
 #include <client/Exception.h>
@@ -47,6 +48,10 @@ ListView::ListView(display::Type aType, const std::string& aID, bool allowMove) 
     m_infoboxHeight(4),
 	Window(aID, aType, false)
 {
+	if (core::Manager::get()->isInitialized()) {
+		timedEvents.reset(new dcpp::DelayedEvents<int>());
+	}
+
     m_insertMode = false;
 	m_prompt = "";
     m_bindings[KEY_UP] = std::bind(&ListView::scroll_list, this, -1);
@@ -76,8 +81,20 @@ void ListView::handleMove() {
 
 void ListView::setInsertMode(bool enable) {
 	moving = false;
+	if (enable && timedEvents)
+		timedEvents->clear();
+
 	m_insertMode = enable;
 	m_input.clear_text();
+}
+
+void ListView::set_prompt_timed(const std::string &prompt, time_t aSeconds /*3*/) {
+	set_prompt(prompt);
+	timedEvents->addEvent(0, [this] {
+		callAsync([this] {
+			set_prompt("");
+		});
+	}, aSeconds * 1000);
 }
 
 void ListView::resize()

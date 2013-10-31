@@ -258,7 +258,7 @@ void WindowFavorites::handle_line(const std::string &line)
 			auto addresses = m_newFav->getServerStr();
 			size_t pos = addresses.find(";");
 			if (!favman->isUnique(pos != string::npos ? addresses.substr(0, pos) : addresses, m_editFav ? m_editFav->getToken() : 0)) {
-				core::Log::get()->log("Duplicate favorite hub");
+				set_prompt_timed("Duplicate favorite hub");
 				return;
 			}
 

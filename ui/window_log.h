@@ -28,6 +28,7 @@
 #include <utils/instance.h>
 #include <core/log.h>
 #include <display/scrolled_window.h>
+
 #include <client/stdinc.h>
 #include <client/LogManagerListener.h>
 

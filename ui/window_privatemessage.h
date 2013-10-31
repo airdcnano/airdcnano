@@ -26,9 +26,9 @@
 
 #include <client/stdinc.h>
 #include <client/forward.h>
-#include "../client/ClientManagerListener.h"
-
+#include <client/ClientManagerListener.h>
 #include <client/HintedUser.h>
+
 #include <display/scrolled_window.h>
 
 using namespace dcpp;

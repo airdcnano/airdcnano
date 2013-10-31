@@ -25,7 +25,6 @@
 #include <iomanip>
 #include <functional>
 #include <utils/utils.h>
-#include <core/log.h>
 #include <core/events.h>
 #include <ui/window_favorites.h>
 #include <ui/window_hub.h>

@@ -24,16 +24,13 @@
 #ifndef _WINDOWSEARCH_H_
 #define _WINDOWSEARCH_H_
 
-#include <vector>
 #include <client/stdinc.h>
-#include <client/AdcSearch.h>
-#include <client/DCPlusPlus.h>
-#include <client/SearchManager.h>
 #include <client/SearchManagerListener.h>
-#include <client/QueueManager.h>
-#include <core/log.h>
-#include <utils/mutex.h>
-#include <utils/lock.h>
+
+#include <client/AdcSearch.h>
+#include <client/HintedUser.h>
+#include <client/SearchResult.h>
+
 #include <display/listview.h>
 
 using namespace dcpp;

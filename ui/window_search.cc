@@ -28,9 +28,11 @@
 #include <ui/window_search.h>
 #include <utils/utils.h>
 #include <utils/strings.h>
-#include <client/DirectoryListingManager.h>
 #include <input/completion.h>
+
+#include <client/DirectoryListingManager.h>
 #include <client/StringTokenizer.h>
+#include <client/QueueManager.h>
 
 namespace ui {
 
@@ -47,7 +49,7 @@ WindowSearch::WindowSearch(const std::string &aStr):
     insert_column(new display::Column("Slots", 6, 7, 8));
     insert_column(new display::Column("Size", 11, 11, 15));
 	insert_column(new display::Column("Date", 11, 11, 11));
-    insert_column(new display::Column("File name", 50, 200, 200));
+    insert_column(new display::Column("File name", 50, 200, 300));
     resize();
 
 	if (!aStr.empty())
@@ -157,7 +159,8 @@ void WindowSearch::search(const std::string &str)
     */
 
 	if (str.length() < MIN_SEARCH  && m_searchStr.length() < MIN_SEARCH) {
-        core::Log::get()->log("Too short search");
+        //core::Log::get()->log("Too short search");
+		set_prompt_timed("Too short search", 3);
         return;
     }
 
@@ -378,7 +381,7 @@ void WindowSearch::download(const std::string& aPath)
 		if (!aPath.empty())
 			SettingsManager::getInstance()->addToHistory(target, SettingsManager::HISTORY_DIR);
     } catch(const Exception &e) {
-        core::Log::get()->log("Error downloading the file: " + e.getError());
+		set_prompt_timed("Error downloading the file: " + e.getError());
     }
 }
 
@@ -404,7 +407,7 @@ void WindowSearch::download_directory(const std::string& aPath)
     }
     catch(Exception &e)
     {
-        core::Log::get()->log("Error downloading the directory: " + e.getError());
+		set_prompt_timed("Error downloading the directory: " + e.getError());
     }
 
 	if (!aPath.empty())

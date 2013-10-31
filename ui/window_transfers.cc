@@ -25,16 +25,16 @@
 #include <display/screen.h>
 
 #include <client/ConnectionManager.h>
+#include <client/DownloadManager.h>
 #include <client/FavoriteManager.h>
 #include <client/GeoManager.h>
 #include <client/QueueManager.h>
 #include <client/Socket.h>
+#include <client/UploadManager.h>
 #include <client/Util.h>
 
 #include <core/events.h>
 #include <utils/utils.h>
-#include <utils/lock.h>
-#include <core/log.h>
 
 namespace ui {
 

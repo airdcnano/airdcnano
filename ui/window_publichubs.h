@@ -27,11 +27,7 @@
 
 #include <vector>
 #include <client/stdinc.h>
-#include <client/DCPlusPlus.h>
 #include <client/FavoriteManager.h>
-#include <core/log.h>
-#include <utils/mutex.h>
-#include <utils/lock.h>
 #include <display/listview.h>
 
 namespace ui {

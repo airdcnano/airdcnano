@@ -25,23 +25,17 @@
 #define _WINDOWTRANSFERS_H_
 
 #include <client/stdinc.h>
+
+#include <client/DownloadManagerListener.h>
+#include <client/UploadManagerListener.h>
+#include <client/ConnectionManagerListener.h>
+
 #include <client/Download.h>
 #include <client/Upload.h>
-#include <client/DownloadManager.h>
-#include <client/UploadManager.h>
-#include <client/ConnectionManager.h>
-#include <client/ClientManager.h>
-#include <client/ConnectionManagerListener.h>
 #include <client/Transfer.h>
-#include <client/User.h>
 #include <client/HintedUser.h>
 
-#include <core/log.h>
 #include <display/listview.h>
-#include <utils/mutex.h>
-#include <vector>
-#include <string>
-#include <map>
 
 using namespace dcpp;
 

@@ -30,15 +30,10 @@
 #include <client/Client.h>
 #include <client/ClientManager.h>
 #include <client/OnlineUser.h>
-#include <client/TimerManager.h>
 
 #include <boost/signals2.hpp>
 
 #include <display/scrolled_window.h>
-#include <utils/mutex.h>
-#include <map>
-#include <string>
-
 #include <input/help_handler.h>
 
 using namespace dcpp;
@@ -47,8 +42,7 @@ namespace ui {
 
 class WindowHub:
     public display::ScrolledWindow,
-    public ClientListener,
-    public TimerManagerListener
+    public ClientListener
 {
 private:
 	unique_ptr<HelpHandler> help;
@@ -71,16 +65,7 @@ public:
     const OnlineUserPtr get_user(const std::string &nick);
     ~WindowHub();
 
-    void on(TimerManagerListener::Second, uint64_t) noexcept;
-
     // ClientListener stuff..
-	//void on(ClientListener::Redirect, const Client*, const string&) noexcept;
-	//void on(ClientListener::Failed, const string&, const string&) noexcept;
-	//void on(ClientListener::GetPassword, const Client*) noexcept;
-	//void on(ClientListener::HubUpdated, const Client*) noexcept;
-	//void on(ClientListener::Message, const Client*, const ChatMessage&) noexcept;
-	//void on(ClientListener::StatusMessage, const Client*, const string&, int = ClientListener::FLAG_NORMAL) noexcept;
-	//void on(ClientListener::NickTaken, const Client*) noexcept;
 	void on(ClientListener::HubTopic, const Client*, const string&) noexcept;
 	void on(ClientListener::AddLine, const Client*, const string&) noexcept;
 	void on(ClientListener::SetActive, const Client*) noexcept{}
@@ -105,6 +90,7 @@ public:
 	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_);
 	void handleCreated() noexcept;
 private:
+	void onJoinedTimer();
 	void handleFav() noexcept;
 	void onChatMessage(const ChatMessage&) noexcept;
 	void onPrivateMessage(const ChatMessage&) noexcept;
@@ -113,9 +99,7 @@ private:
 	void handleMsg();
 
     Client *m_client;
-    uint64_t m_lastJoin = 0;
     bool m_joined;
-    bool m_timer;
     typedef std::unordered_map<std::string, const OnlineUserPtr> Users;
     typedef Users::const_iterator UserIter;
     Users m_users;

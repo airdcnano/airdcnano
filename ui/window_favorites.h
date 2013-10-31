@@ -25,11 +25,9 @@
 #define _WINDOWFAVORITES_H_
 
 #include <client/stdinc.h>
-#include <client/DCPlusPlus.h>
 #include <client/FavoriteManager.h>
+
 #include <display/listview.h>
-#include <vector>
-#include <map>
 
 using namespace dcpp;
 

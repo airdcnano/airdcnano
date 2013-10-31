@@ -98,9 +98,8 @@ void WindowHubs::favorite()
 
     std::string address = get_text(2, row);
     if(FavoriteManager::getInstance()->getFavoriteHubEntry(address)) {
-        core::Log::get()->log("Hub already exists as a favorite");
-    }
-    else {
+        set_prompt_timed("Hub already exists as a favorite");
+    }  else {
         FavoriteHubEntryPtr entry;
         entry->setServerStr(address);
         FavoriteManager::getInstance()->addFavorite(entry);

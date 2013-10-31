@@ -53,9 +53,7 @@ namespace ui {
 
 WindowHub::WindowHub(const std::string &address):
     m_client(nullptr),
-    m_lastJoin(0),
     m_joined(false),
-    m_timer(false),
     m_currentUser(m_users.end()),
 	ScrolledWindow(address, display::TYPE_HUBWINDOW),
 	commands({
@@ -66,6 +64,7 @@ WindowHub::WindowHub(const std::string &address):
 		{ "showjoins", boost::bind(&WindowHub::handleShowJoins, this), nullptr }
 	})
 {
+	timedEvents.reset(new DelayedEvents<int>());
 	help.reset(new HelpHandler(&commands, "Hub-specific", this));
     set_title(address);
     set_name(address);
@@ -163,20 +162,14 @@ void WindowHub::handle_line(const std::string &line)
 	}
 }
 
-void WindowHub::on(TimerManagerListener::Second, uint64_t)
-    noexcept
-{
+void WindowHub::onJoinedTimer() {
     // group users in 2 seconds
 	callAsync([this] {
-		if (m_lastJoin && !m_joined && m_lastJoin + 2000 < TimerManager::getInstance()->getTick()) {
-			m_joined = true;
-			TimerManager::getInstance()->removeListener(this);
-			m_timer = false;
-			if (m_client->isConnected()) {
-				add_line(display::LineEntry("Joined to the hub"));
-				if (m_showNickList)
-					print_names();
-			}
+		m_joined = true;
+		if (m_client->isConnected()) {
+			add_line(display::LineEntry("Joined to the hub"));
+			if (m_showNickList)
+				print_names();
 		}
 	});
 }
@@ -327,9 +320,8 @@ void WindowHub::handleUserUpdated(const OnlineUserPtr& aUser) {
 	if (aUser->isHidden())
 		return;
 
-	if (!m_joined && !m_timer && !aUser->getIdentity().isBot()) {
-		TimerManager::getInstance()->addListener(this);
-		m_timer = true;
+	if (!m_joined && !aUser->getIdentity().isBot()) {
+		timedEvents->addEvent(0, [this] { onJoinedTimer(); }, 1500);
 	}
 
 	auto user = HintedUser(aUser->getUser(), aUser->getHubUrl());
@@ -360,7 +352,6 @@ void WindowHub::handleUserUpdated(const OnlineUserPtr& aUser) {
 			add_line(display::LineEntry(oss.str()));
 	}
 
-	m_lastJoin = GET_TICK();
 	m_users.emplace(nick, aUser);
 }
 
@@ -405,20 +396,14 @@ void WindowHub::handleUserRemoved(const OnlineUserPtr& aUser) {
 		add_line(display::LineEntry(oss.str()));
 	}
 
-	if (!m_joined) {
+	/*if (!m_joined) {
 		m_joined = true;
-		if (m_timer) {
-			TimerManager::getInstance()->removeListener(this);
-			m_timer = false;
-		}
 		if (m_client->isConnected()) {
-			add_line(display::LineEntry("Joined to the hub"));
-			if (m_showNickList)
-				print_names();
+			onJoinedTimer();
 		} else {
 			core::Log::get()->log(m_client->getAddress() + " is not connected");
 		}
-	}
+	}*/
 }
 
 void WindowHub::on(ClientListener::UserRemoved, const Client*, const OnlineUserPtr& aUser)
@@ -472,11 +457,7 @@ void WindowHub::handleFailed(const std::string& aMsg) {
 	updateTitle();
 	add_line(display::LineEntry(aMsg));
 	m_joined = false;
-	if (m_timer) {
-		TimerManager::getInstance()->removeListener(this);
-		m_timer = false;
-	}
-	m_lastJoin = 0;
+	timedEvents->clear();
 	m_users.clear();
 }
 
@@ -629,9 +610,6 @@ void WindowHub::complete(const std::vector<std::string>& aArgs, int pos, std::ve
 
 WindowHub::~WindowHub()
 {
-    if(m_timer)
-        TimerManager::getInstance()->removeListener(this);
-
     if(m_client) {
         m_client->removeListener(this);
         ClientManager::getInstance()->putClient(m_client);

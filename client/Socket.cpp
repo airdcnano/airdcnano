@@ -344,12 +344,12 @@ string Socket::listen(const string& port) {
 }
 
 void Socket::connect(const string& aAddr, const string& aPort, const string& localPort) {
-	string lastError;
 	disconnect();
 
 	// We try to connect to both IPv4 and IPv6 if available
 	auto addr = resolveAddr(aAddr, aPort);
 
+	string lastError;
 	for(auto ai = addr.get(); ai; ai = ai->ai_next) {
 		if((ai->ai_family == AF_INET && !sock4.valid()) ||
 			(ai->ai_family == AF_INET6 && !sock6.valid() && !v4only))

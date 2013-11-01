@@ -1225,6 +1225,10 @@ void ShareManager::removeTempShare(const string& aKey, const TTHValue& tth) {
 		}
 	}
 }
+void ShareManager::clearTempShares() {
+	WLock l(cs);
+	tempShares.clear();
+}
 
 void ShareManager::getRealPaths(const string& aPath, StringList& ret, ProfileToken aProfile) const throw(ShareException) {
 	if (aPath.empty())
@@ -3584,7 +3588,7 @@ void ShareManager::search(SearchResultList& results, AdcSearch& srch, StringList
 	if (srch.itemType == AdcSearch::TYPE_DIRECTORY && srch.matchType == AdcSearch::MATCH_EXACT) {
 		const auto i = dirNameMap.equal_range(const_cast<string*>(&srch.includeX.front().getPattern()));
 		for(const auto& d: i | map_values) {
-			string path = d->getADCPath(aProfile);
+			auto path = d->getADCPath(aProfile);
 			if (d->hasProfile(aProfile) && AirUtil::isParentOrExact(aDir, path) && srch.matchesDate(d->getLastWrite()) && addDirResult(path, results, aProfile, srch)) {
 				return;
 			}
@@ -3593,18 +3597,17 @@ void ShareManager::search(SearchResultList& results, AdcSearch& srch, StringList
 		return;
 	}
 
+	// get the roots
+	Directory::List roots;
 	if (aDir.empty() || aDir == "/") {
-		for(auto j = rootPaths.begin(); (j != rootPaths.end()) && (results.size() < maxResults); ++j) {
-			if(j->second->getProfileDir()->hasRootProfile(aProfile))
-				j->second->search(results, srch, maxResults, aProfile);
-		}
+		copy(rootPaths | map_values | filtered(Directory::HasRootProfile(aProfile)), back_inserter(roots));
 	} else {
-		Directory::List result;
-		findVirtuals<ProfileToken>(aDir, aProfile, result);
-		for(auto j = result.begin(); (j != result.end()) && (results.size() < maxResults); ++j) {
-			if ((*j)->hasProfile(aProfile))
-				(*j)->search(results, srch, maxResults, aProfile);
-		}
+		findVirtuals<ProfileToken>(aDir, aProfile, roots);
+	}
+
+	// go them through recursively
+	for (auto d = roots.begin(); (d != roots.end()) && (results.size() < maxResults); ++d) {
+		(*d)->search(results, srch, maxResults, aProfile);
 	}
 }
 

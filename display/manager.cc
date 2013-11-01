@@ -198,7 +198,7 @@ void Manager::prev() {
 Windows::iterator Manager::find(display::Type aType, const std::string& aID)
 {
     utils::Lock lock(m_mutex);
-	return std::find_if(m_windows->begin(), m_windows->end(), [&](const display::Window* aWindow) { return aWindow->getID() == aID && aWindow->get_type() == aType; });
+	return std::find_if(m_windows->begin(), m_windows->end(), [&](const display::Window* aWindow) { return (aID.empty() || aWindow->getID() == aID) && aWindow->get_type() == aType; });
 }
 
 void Manager::window_closed()

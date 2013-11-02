@@ -22,11 +22,16 @@
  */
 
 #include <sstream>
+
 #include <core/settings.h>
 #include <core/events.h>
-#include <display/manager.h>
-#include <utils/utils.h>
 #include <core/log.h>
+
+#include <display/manager.h>
+
+#include <utils/ncurses.h>
+#include <utils/utils.h>
+
 #include <input/text_input.h>
 #include <input/manager.h>
 

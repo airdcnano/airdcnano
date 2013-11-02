@@ -27,7 +27,9 @@
 #include <iterator>
 #include <core/properties.h>
 #include <utils/utils.h>
-#include <utils/strings.h>
+
+#include <client/stdinc.h>
+#include <client/StringTokenizer.h>
 
 namespace core {
 
@@ -143,9 +145,7 @@ bool Properties::find_bool(const std::string &key, bool def)
 std::vector<std::string> Properties::find_vector(const std::string &key)
     const
 {
-    std::vector<std::string> result;
-	strings::split(find_str(key), m_vector_separator, std::back_inserter(result));
-    return result;
+	return dcpp::StringTokenizer<std::string>(find_str(key), m_vector_separator).getTokens();
 }
 
 void Properties::set(const std::string &key, const std::string &value)

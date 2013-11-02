@@ -26,9 +26,10 @@
 
 #include <map>
 #include <string>
-#include <ncursesw/ncurses.h>
 #include <input/text_input.h>
 #include <input/completion.h>
+
+#include <utils/ncurses.h>
 #include <utils/instance.h>
 
 #define KEY_ESCAPE (KEY_MAX+1)

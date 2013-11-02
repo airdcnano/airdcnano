@@ -29,7 +29,6 @@
 #include <display/screen.h>
 #include <input/manager.h>
 #include <utils/utils.h>
-#include <utils/strings.h>
 #include <core/log.h>
 #include <client/Text.h>
 

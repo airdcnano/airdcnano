@@ -25,10 +25,11 @@
 #include <fstream>
 #include <memory>
 #include <signal.h>
-#include <ncursesw/ncurses.h>
 #include <pthread.h>
 #include <sys/stat.h>
 #include <functional>
+
+#include <utils/ncurses.h>
 #include <utils/stacktrace.h>
 #include <utils/utils.h>
 #include <utils/signal_handler.h>

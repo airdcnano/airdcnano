@@ -30,7 +30,7 @@
 #include <ui/window_hub.h>
 #include <ui/window_publichubs.h>
 #include <utils/utils.h>
-#include <utils/strings.h>
+#include <client/StringTokenizer.h>
 
 namespace ui {
 
@@ -133,8 +133,7 @@ void WindowHubs::handle_line(const std::string &line)
     std::string param = line;
     switch(m_property) {
         case PROP_DESCRIPTION:
-            m_words.clear();
-            strings::split(utils::tolower(param), " ", std::back_inserter(m_words));
+			m_words = dcpp::StringTokenizer<string>(Text::toLower(param), " ").getTokens();
             break;
         case PROP_ADDRESS:
             m_addressFilter = utils::tolower(param);

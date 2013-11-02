@@ -24,11 +24,10 @@
 #include <limits> // std::numeric_limits
 #include <numeric> // std::accumulate
 #include <functional>
+
 #include <display/listview.h>
 #include <input/manager.h>
-#include <utils/lock.h>
 #include <core/log.h>
-#include <utils/strings.h>
 #include <utils/algorithm.h>
 #include <core/events.h>
 #include <core/manager.h>
@@ -274,7 +273,7 @@ void ListView::redraw()
             const auto& text = c->get_text(range.first);
             auto width = c->get_real_width();
 
-			print(static_cast<int>(strings::length(text)) >= width ? text.substr(0, width - 1) : text, x, y);
+			print(static_cast<int>(utils::length(text)) >= width ? text.substr(0, width - 1) : text, x, y);
             x += width;
 
             if(m_currentItem == static_cast<int>(range.first))

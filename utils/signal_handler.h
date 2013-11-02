@@ -27,6 +27,7 @@
 #include <sys/signal.h>
 #include <functional>
 #include <map>
+#include <string>
 
 namespace utils {
 

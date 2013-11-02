@@ -31,7 +31,6 @@
 #include <utils/utils.h>
 #include <core/log.h>
 #include <core/events.h>
-#include <utils/strings.h>
 
 #include <ui/window_hub.h>
 #include <ui/window_privatemessage.h>
@@ -155,7 +154,7 @@ void Manager::resize()
 }
 
 void Manager::cmdMessage(const std::string& aLine) {
-	auto msg = strings::escape(aLine);
+	auto msg = utils::escape(aLine);
 	auto it = get_current();
 	if ((*it)->get_type() == display::TYPE_HUBWINDOW) {
 		static_cast<ui::WindowHub*>(*it)->add_line(display::LineEntry(msg));

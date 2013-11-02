@@ -40,30 +40,49 @@ namespace utils {
 
 static std::string empty_string;
 
-/*class rot13_traits:
-    public std::char_traits<char>
-{
-public:
-    static char *copy(char *s1, const char *s2, std::size_t n)
-    {
-        while(n--) {
-            if(std::isalpha(*s2)) {
-                if(toupper(*s2) < ('A' + 13)) 
-                    *s1 = *s2+13;
-                else
-                    *s1 = *s2-13;
-            }
-            else {
-                *s1 = *s2;
-            }
-            *s1++;
-            *s2++;
-        }
-        return s1-n;
-    }
-};*/
+/** Returns the length of formatted string without color codes. */
+template <typename String>
+static size_t length(String str) {
+	size_t l = 0;
+	for (size_t i = 0; i < str.length(); ++i) {
+		if (str.at(i) == '%') {
+			if (i + 1 < str.length() && str.at(i + 1) != '%')
+				i += 2;
+			continue;
+		}
+		l++;
+	}
+	return l;
+}
 
-//typedef std::basic_string<char, rot13_traits> rot13_string;
+template <typename String>
+static String escape(String str) {
+	String escaped;
+	typename String::size_type i;
+	for (i = 0; i < str.length(); ++i) {
+		if (str[i] == '%')
+			escaped.append(1, '%');
+		escaped.append(1, str[i]);
+	}
+	return escaped;
+}
+
+template <typename String>
+static String remove_formatting(String str) {
+	String lusikka;
+	lusikka.reserve(str.length());
+
+	typename String::size_type i;
+	for (i = 0; i < str.length(); ++i) {
+		if (str[i] == '%') {
+			if (i + 1 < str.length() && str.at(i + 1) != '%')
+				i += 2;
+			continue;
+		}
+		lusikka.append(1, str[i]);
+	}
+	return lusikka;
+}
 
 /** Sleep 
     @param usec Microseconds to sleep */

@@ -25,7 +25,6 @@
 #include <display/scrolled_window.h>
 #include <input/manager.h>
 #include <utils/utils.h>
-#include <utils/strings.h>
 #include <utils/lock.h>
 #include <display/manager.h>
 #include <client/stdinc.h>

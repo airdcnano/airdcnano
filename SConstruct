@@ -265,7 +265,6 @@ if not 'install' in COMMAND_LINE_TARGETS:
 
 	env.MergeFlags(BUILD_FLAGS['common'])
 	env.MergeFlags(BUILD_FLAGS[env['mode']])
-	env.ParseConfig('pkg-config --libs libglade-2.0')
 	env.ParseConfig('pkg-config --libs gthread-2.0')
 
 	env.Append(LIBPATH = env['build_path'] + CORE_PACKAGE)

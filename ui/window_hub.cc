@@ -23,15 +23,12 @@
 
 #include <iomanip>
 #include <functional>
+
 #include <display/manager.h>
 #include <ui/window_hub.h>
 #include <ui/window_privatemessage.h>
-#include <utils/strings.h>
 #include <core/log.h>
 #include <utils/utils.h>
-#include <utils/lock.h>
-#include <utils/strings.h>
-#include <client/HubEntry.h>
 #include <input/completion.h>
 #include <input/manager.h>
 
@@ -40,6 +37,7 @@
 
 #include <client/LogManager.h>
 #include <client/FavoriteManager.h>
+#include <client/HubEntry.h>
 #include <client/ShareManager.h>
 #include <client/StringTokenizer.h>
 
@@ -174,7 +172,7 @@ void WindowHub::onJoinedTimer() {
 void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
 	bool myMessage = aMessage.from->getUser() == ClientManager::getInstance()->getMe();
 
-	auto text(strings::escape(aMessage.text));
+	auto text(utils::escape(aMessage.text));
 	auto nick = aMessage.from->getIdentity().getNick();
 
 	bool op = aMessage.from->getIdentity().isOp();
@@ -232,7 +230,7 @@ void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
 	bool myPM = aMessage.replyTo->getUser() == ClientManager::getInstance()->getMe();
 
 	auto nick = aMessage.from->getIdentity().getNick();
-	auto text = strings::escape(aMessage.text);
+	auto text = utils::escape(aMessage.text);
 
 	auto dm = display::Manager::get();
 	ui::WindowPrivateMessage *pm;
@@ -309,7 +307,7 @@ void WindowHub::on(ClientListener::StatusMessage, const Client*, const string& l
 		LOG(LogManager::STATUS, params);
 	}
 
-	auto tmp = strings::escape(line);
+	auto tmp = utils::escape(line);
 	callAsync([=] { add_line(display::LineEntry(tmp)); });
 }
 
@@ -522,7 +520,7 @@ void WindowHub::print_names()
     for(auto i=m_users.begin(); i != m_users.end();) {
         std::ostringstream oss;
         for(int j=0; j<4 && i != m_users.end(); ++j, ++i) {
-            int length = strings::length(i->first) - 18;
+            int length = utils::length(i->first) - 18;
             oss << "%21%08[%21%08" << i->first
                 << std::string(std::max(0, length), ' ')
                 << "%21%08]%21%08 ";

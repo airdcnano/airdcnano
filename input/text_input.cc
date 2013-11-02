@@ -22,10 +22,12 @@
  */
 
 #include <glib.h>
-#include <ncursesw/ncurses.h>
 #include <core/settings.h>
 #include <core/log.h>
+
+#include <utils/ncurses.h>
 #include <utils/utils.h>
+
 #include <functional>
 #include <input/text_input.h>
 

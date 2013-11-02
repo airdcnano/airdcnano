@@ -26,8 +26,9 @@
 #include <iomanip>
 #include <functional>
 #include <ui/window_search.h>
+
 #include <utils/utils.h>
-#include <utils/strings.h>
+#include <utils/ncurses.h>
 #include <input/completion.h>
 
 #include <client/DirectoryListingManager.h>
@@ -313,7 +314,7 @@ void WindowSearch::add_result(const SearchResultPtr& result)
         + "/" + utils::to_string(result->getSlots()));
     set_text(3, row, Util::formatBytes(result->getSize()));
 	set_text(4, row, Util::getDateTime(result->getDate()));
-	set_text(5, row, strings::escape(result->getFileName()));
+	set_text(5, row, utils::escape(result->getFileName()));
 }
 
 bool WindowSearch::matches(const SearchResultPtr& aResult)
@@ -440,7 +441,7 @@ std::string WindowSearch::get_infobox_line(unsigned int n)
             break;
         case 4:
         {
-			ss << strings::escape(Util::toAdcFile(result->getPath()));
+			ss << utils::escape(Util::toAdcFile(result->getPath()));
             break;
         }
     }

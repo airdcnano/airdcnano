@@ -1,15 +1,15 @@
 #!/bin/sh
 
 #check if we have a repository
-git ls-remote > /dev/null
+git ls-remote > /dev/null 2>&1
 if [ $? -ne 0 ];then
-   echo 'Not using a git version'
+   echo 'Not using a Git version'
    exit 0
 fi
 
 file=./client/version.inc
 tmpFile="$file.tmp"
-git=`git describe --abbrev=4 --dirty=-d`
+git=`git describe --long --abbrev=4 --dirty=-d`
 IFS='-'
 
 set -- $git

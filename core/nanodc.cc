@@ -175,7 +175,6 @@ void Nanodc::handle_crash(int sig)
     std::cerr << utils::SignalHandler::to_string(sig) << std::endl;
     std::cerr << "pid: " << getpid() <<
         ", tid: " << utils::gettid() << std::endl;
-
 #if USE_STACKTRACE
     cow::StackTrace trace;
     trace.generate_frames();
@@ -185,6 +184,11 @@ void Nanodc::handle_crash(int sig)
 	auto stackPath = Util::getPath(Util::PATH_USER_CONFIG) + "exceptioninfo.txt";
 	std::ofstream f;
 	f.open(stackPath.c_str());
+
+	f << "Time: " + Util::getTimeString() << std::endl;
+	f << "OS version: " + Util::getOsVersion() << std::endl;
+	f << "Client version: " + shortVersionString << std::endl << std::endl;
+
 	std::copy(trace.begin(), trace.end(),
 		std::ostream_iterator<cow::StackFrame>(f, "\n"));
 	f.close();

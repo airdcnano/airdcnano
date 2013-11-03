@@ -230,6 +230,8 @@ if not 'install' in COMMAND_LINE_TARGETS:
 		print '\tminiupnpc not found.'
 		print '\tNote: You might have the lib but not the headers'
 		Exit(1)
+	if not conf.CheckLibWithHeader('miniupnpc', 'miniupnpc/miniupnpc.h', 'c', 'upnpDiscover(0, "", 0, 0, 0, 0);'):
+		conf.env.Append(CPPDEFINES = 'HAVE_OLD_MINIUPNPC')
 
 	# This needs to be before ssl check on *BSD systems
 	if not conf.CheckLib('crypto'):

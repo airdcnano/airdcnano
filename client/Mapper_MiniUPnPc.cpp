@@ -96,7 +96,11 @@ bool Mapper_MiniUPnPc::init() {
 	if(!url.empty())
 		return true;
 
+#ifdef NO_UPNP_V6
+	UPNPDev* devices = upnpDiscover(2000, localIp.empty() ? nullptr : localIp.c_str(), 0, 0);
+#else
 	UPNPDev* devices = upnpDiscover(2000, localIp.empty() ? nullptr : localIp.c_str(), 0, 0, v6, 0);
+#endif
 	if(!devices)
 		return false;
 

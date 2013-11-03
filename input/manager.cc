@@ -21,6 +21,8 @@
  *  
  */
 
+#define _XOPEN_SOURCE_EXTENDED
+
 #include <sstream>
 
 #include <core/settings.h>

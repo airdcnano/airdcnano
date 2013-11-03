@@ -62,6 +62,10 @@ void Manager::push_back(display::Window *window)
     m_mutex.lock();
     m_windows->push_back(window);
     m_mutex.unlock();
+	if (m_windows->size() == 1) {
+		m_current = m_windows->begin();
+	}
+
     window->resize();
 }
 

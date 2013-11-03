@@ -6,12 +6,12 @@ import string
 EnsureSConsVersion(0, 98, 1)
 
 BUILD_PATH = '#/build/'
-CORE_PACKAGE = 'libairdcpp'
+#CORE_PACKAGE = 'libairdcpp'
 PACKAGE = 'airdcnano'
 
 BUILD_FLAGS = {
 	'common'  : ['-I#', '-D_GNU_SOURCE', '-D_LARGEFILE_SOURCE', '-D_FILE_OFFSET_BITS=64', '-D_REENTRANT', '-D__cdecl=""', '-std=c++11', '-Wfatal-errors', '-fexceptions', '-Wno-reorder', '-Wno-overloaded-virtual'],
-	'debug'   : ['-g', '-ggdb', '-Wall', '-D_DEBUG'], 
+	'debug'   : ['-g', '-ggdb', '-D_DEBUG'], 
 	'release' : ['-O3', '-fomit-frame-pointer', '-DNDEBUG'],
 	'beta' : ['-g', '-DNDEBUG']
 }
@@ -62,8 +62,6 @@ vars.AddVariables(
 	('FAKE_ROOT', 'Make scons install the program under a fake root', '')
 )
 
-Execute('sh generate-version.sh') 
-
 
 # ----------------------------------------------------------------------
 # Initialization
@@ -83,6 +81,9 @@ env['build_path'] = BUILD_PATH + env['mode'] + '/'
 
 if os.environ.has_key('CXX'):
 	env['CXX'] = os.environ['CXX']
+elif os.name == 'mac':
+	print 'CXX env variable is not set, attempting to use clang'
+	env['CXX'] = 'clang'
 else:
 	print 'CXX env variable is not set, attempting to use g++'
 	env['CXX'] = 'g++'
@@ -122,7 +123,7 @@ conf = env.Configure(
 # ----------------------------------------------------------------------
 
 if not 'install' in COMMAND_LINE_TARGETS:
-
+	Execute('sh generate-version.sh') 
 	if env['CXX'] == 'clang':
 		if not conf.CheckCXXVersion(env['CXX'], 3, 3):
 			 print 'Compiler version check failed. Supported compilers: clang 3.3 or later, g++ 4.7 or later'
@@ -147,9 +148,9 @@ if not 'install' in COMMAND_LINE_TARGETS:
 
 	if conf.CheckLibWithHeader('ncursesw', 'ncursesw/ncurses.h', 'c'):
 		env.Prepend(CXXFLAGS = ['-DHAVE_NCURSESW_NCURSES_H'])
-	elif conf.CheckLibWithHeader('ncurses', 'ncurses/ncurses.h', 'c'): 
+	elif conf.CheckLibWithHeader('ncursesw', 'ncurses/ncurses.h', 'c'): 
 		env.Prepend(CXXFLAGS = ['-DHAVE_NCURSES_NCURSES_H'])
-	elif not conf.CheckLibWithHeader('ncurses', 'ncurses.h', 'c'): 
+	elif not conf.CheckLibWithHeader('ncursesw', 'ncurses.h', 'c'): 
 		print 'Did not find the ncursesw library'
 		print 'Can\'t live without it, exiting'
 		print 'Note: You might have the lib but not the headers (install dev-package)'
@@ -240,6 +241,14 @@ if not 'install' in COMMAND_LINE_TARGETS:
 		print '\tOpenSSL library (libssl) not found'
 		print '\tNote: You might have the lib but not the headers'
 		Exit(1)
+		
+	if not conf.CheckHeader('iconv.h'):
+		Exit(1)
+	elif conf.CheckLibWithHeader('iconv', 'iconv.h', 'c', 'iconv(0, (const char **)0, 0, (char**)0, 0);'):
+		if os.name == 'mac' or os.sys.platform == 'darwin':
+			conf.env.Append(CPPDEFINES = ('ICONV_CONST', ''))
+		else:
+			conf.env.Append(CPPDEFINES = ('ICONV_CONST', 'const'))
 
 	if not conf.CheckLib('stdc++'):
 		print '\tstdc++ library not found'
@@ -267,17 +276,14 @@ if not 'install' in COMMAND_LINE_TARGETS:
 	env.MergeFlags(BUILD_FLAGS[env['mode']])
 	env.ParseConfig('pkg-config --libs gthread-2.0')
 
-	env.Append(LIBPATH = env['build_path'] + CORE_PACKAGE)
+	#env.Append(LIBPATH = env['build_path'] + CORE_PACKAGE)
 	#env.Prepend(LIBS = 'airdcpp')
 
 	if os.sys.platform == 'linux2':
 		env.Append(LINKFLAGS = '-Wl,--as-needed')
 
-	if os.name == 'mac' or os.sys.platform == 'darwin':
-		conf.env.Append(CPPDEFINES = ('ICONV_CONST', ''))
-
 	if os.sys.platform == 'sunos5':
-		conf.env.Append(CPPDEFINES = ('ICONV_CONST', 'const'))
+	#	conf.env.Append(CPPDEFINES = ('ICONV_CONST', 'const'))
 		env.Append(LIBS = ['socket', 'nsl'])
 
 	if env.get('profile'):

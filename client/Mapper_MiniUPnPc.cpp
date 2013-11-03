@@ -130,7 +130,13 @@ bool Mapper_MiniUPnPc::init() {
 
 		url = urls.controlURL;
 		service = data.first.servicetype;
+
+#ifdef _WIN32
 		device = data.CIF.friendlyName;
+#else
+		// Doesn't work on Linux
+		device = "Generic";
+#endif
 	}
 
 	if(ret) {

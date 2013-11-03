@@ -59,6 +59,7 @@ public:
 		log("");
 		log(shortVersionString + " (" + Util::formatTime("%c", getVersionDate()) + ")");
 		log("Running on " + Util::getOsVersion());
+		log("AirDC++ core: 2.70a (Git)");
 		log("");
 		log("Total transferred (up/down): " + Util::formatBytes(SETTING(TOTAL_UPLOAD)) + " / " + Util::formatBytes(SETTING(TOTAL_DOWNLOAD)));
 		log("Shared: " + Util::formatBytes(totalSize) + " (" + Util::toString(totalFiles) + " files in " + Util::toString(totalDirs) + " directories)");

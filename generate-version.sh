@@ -9,20 +9,8 @@ fi
 
 file=./client/version.inc
 tmpFile="$file.tmp"
-git=`git describe --long --abbrev=4 --dirty=-d`
-IFS='-'
 
-set -- $git
-echo "#define GIT_TAG \"$1\"" > $tmpFile
-echo "#define GIT_COMMIT \"$2\"" >> $tmpFile
-
-if [ -z "$4" ]; then
-   echo "#define GIT_HASH \"$3\"" >> $tmpFile
-else
-   echo 'Local modifications found'
-   echo "#define GIT_HASH \"$3-$4\"" >> $tmpFile
-fi
-
+echo "#define GIT_TAG \"`git describe --abbrev=4 --dirty=-d`\"" >> $tmpFile
 echo "#define GIT_COMMIT_COUNT `git rev-list HEAD --count`" >> $tmpFile
 echo "#define VERSION_DATE `git show --format=\"%at\" | head -n1`" >> $tmpFile
 echo "#define APPNAME_INC \"AirDC++n\"" >> $tmpFile

@@ -44,7 +44,6 @@ void StatusWindowList::window_closed()
     auto window = events::arg<display::Window*>(0);
     if(m_list.find(window) != m_list.end()) {
 		m_list.erase(window);
-		update();
     }
 }
 

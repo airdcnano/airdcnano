@@ -104,6 +104,7 @@ public:
 
 	display::InputWindow m_inputWindow; //!< The input window
 private:
+	void set_current_impl(Windows::iterator newCur, Window* oldCur);
     /** Event handler for "window closed". Frees the memory used by the window. */
     void window_closed();
 

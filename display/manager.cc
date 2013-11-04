@@ -79,21 +79,24 @@ size_t Manager::size() const {
 
 void Manager::set_current(Windows::iterator current)
 {
-    if(current == m_current)
-        return;
+	if (current == m_current) {
+		return;
+	}
 
-    display::Window *old = *m_current;
+	set_current_impl(current, *m_current);
+}
 
-    (*m_current)->set_state(STATE_NO_ACTIVITY);
-    (*m_current)->erase();
-    m_current = current;
-    (*m_current)->set_state(STATE_IS_ACTIVE);
-    (*m_current)->refresh();
+void Manager::set_current_impl(Windows::iterator newCur, Window* oldCur) {
+	(*m_current)->set_state(STATE_NO_ACTIVITY);
+	(*m_current)->erase();
+	m_current = newCur;
+	(*m_current)->set_state(STATE_IS_ACTIVE);
+	(*m_current)->refresh();
 	(*m_current)->redraw();
 
-    events::emit("window status updated", *current, STATE_IS_ACTIVE);
-    events::emit("window updated", *current);
-    events::emit("window changed", old, *current);
+	events::emit("window status updated", *newCur, STATE_IS_ACTIVE);
+	events::emit("window updated", *newCur);
+	events::emit("window changed", oldCur, *newCur);
 }
 
 void Manager::handle_key()
@@ -171,17 +174,18 @@ void Manager::remove(display::Window *window)
 {
     /* it would crash if all windows were closed */
     if(m_windows->at(0) == window) {
-        core::Log::get()->log("Don't close log window", core::MT_DEBUG);
+        //core::Log::get()->log("Don't close log window", core::MT_DEBUG);
         return;
     }
 
-    auto it = std::remove(m_windows->begin(), m_windows->end(), window);
-    m_windows->erase(it, m_windows->end());
-    events::emit("window closed", window);
+	auto cur = *m_current;
+	auto newWin = m_windows->erase(std::find(m_windows->begin(), m_windows->end(), window));
 
-	if (*m_current == window) {
-		prev();
+	if (cur == window) {
+		set_current_impl(newWin == m_windows->end() ? m_windows->end()-1 : newWin, window);
 	}
+
+	events::emit("window closed", window);
 }
 
 void Manager::next() {

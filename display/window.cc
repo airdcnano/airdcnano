@@ -218,7 +218,6 @@ void Window::handleAsync() {
 
 Window::~Window()
 {
-	asyncConn.disconnect();
 }
 
 } // namespace display

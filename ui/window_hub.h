@@ -115,7 +115,7 @@ private:
 	core::StringVector m_highlights;
 	core::StringVector m_blockedWords;
 
-	boost::signals2::connection passwordConn;
+	boost::signals2::scoped_connection passwordConn;
 	bool m_joined = false;
 	bool m_showNickList = false;
 	bool m_resolveIps = false;

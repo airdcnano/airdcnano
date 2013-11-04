@@ -29,24 +29,31 @@
 
 namespace display {
 
-std::string StatusItem::get_text() const {
-	utils::Lock l(m_mutex);
+const std::string& StatusItem::get_text() const {
 	return m_text;
 }
 
-std::string StatusItem::get_name() const {
-	utils::Lock l(m_mutex);
-	return m_name;
+const std::string& StatusItem::get_name() const {
+	return m_id;
 }
 
-void StatusItem::set_name(std::string name) {
-	utils::Lock l(m_mutex);
-	m_name = name;
+void StatusItem::callAsync(std::function<void()> aF) {
+	events::emit("asyncbar" + m_id, aF);
 }
 
-void StatusItem::set_text(std::string text) {
-	utils::Lock l(m_mutex);
-	m_text = text;
+void StatusItem::handleAsync() {
+	events::arg<std::function<void()>>(0)();
+}
+
+StatusItem::StatusItem(const std::string& aID) : m_id(aID),
+asyncConn(events::add_listener("asyncbar" + aID, std::bind(&StatusItem::handleAsync, this)))
+{
+
+}
+
+
+ProgressUpdater::ProgressUpdater(const std::string& aID) : StatusItem(aID) {
+
 }
 
 void ProgressUpdater::updateStatus(double percent) {
@@ -64,7 +71,7 @@ void ProgressUpdater::updateStatus(double percent) {
 	<< std::setprecision(1)
 	<< percent * 100 << "%%";*/
 
-	set_text(dcpp::Util::toString(percent));
+	m_text = dcpp::Util::toString(percent);
 }
 
 ProgressUpdater::~ProgressUpdater() {

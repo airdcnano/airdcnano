@@ -46,8 +46,6 @@ public:
 private:
     std::string m_timeformat;
     std::string m_prevTime;
-
-    utils::Mutex m_mutex;
 };
 
 } // namespace ui

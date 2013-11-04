@@ -29,9 +29,8 @@
 
 namespace ui {
 
-StatusClock::StatusClock()
+StatusClock::StatusClock() : StatusItem("clock")
 {
-    set_name("clock");
     update_config();
     core::Settings::get()->add_listener(
             std::bind(&StatusClock::update_config, this));
@@ -52,13 +51,11 @@ void StatusClock::on(TimerManagerListener::Second, uint64_t)
 
 void StatusClock::update()
 {
-    utils::Lock l(m_mutex);
-    set_text(utils::time_to_string(m_timeformat));
+	callAsync([this] { m_text = utils::time_to_string(m_timeformat); });
 }
 
 void StatusClock::update_config()
 {
-    utils::Lock l(m_mutex);
 	m_timeformat = core::Settings::get()->find_str("clock_format", "%H:%M:%S");
 }
 

@@ -47,7 +47,7 @@ public:
     void on(Second, uint64_t) noexcept;
     ~StatusHash();
 private:
-    int64_t m_startBytes;
+    int64_t m_startBytes = 0;
 };
 
 } // namespace ui

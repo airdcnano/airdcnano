@@ -610,8 +610,6 @@ WindowHub::~WindowHub()
         ClientManager::getInstance()->putClient(m_client);
     }
     m_users.clear();
-
-	passwordConn.disconnect();
 }
 
 } // namespace ui

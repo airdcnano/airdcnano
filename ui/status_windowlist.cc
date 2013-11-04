@@ -30,9 +30,8 @@
 
 namespace ui {
 
-StatusWindowList::StatusWindowList()
+StatusWindowList::StatusWindowList() : StatusItem("windows")
 {
-    set_name("windows");
     events::add_listener("window status updated",
             std::bind(&StatusWindowList::window_status_updated, this));
 
@@ -42,11 +41,10 @@ StatusWindowList::StatusWindowList()
 
 void StatusWindowList::window_closed()
 {
-    display::Window *window = events::arg<display::Window*>(0);
+    auto window = events::arg<display::Window*>(0);
     if(m_list.find(window) != m_list.end()) {
 		m_list.erase(window);
-		//if(m_list.erase(window) != 1)
-		//	throw std::logic_error("m_list.erase(window) != 1");
+		update();
     }
 }
 
@@ -60,8 +58,6 @@ void StatusWindowList::window_status_updated()
             m_list.find(window) != m_list.end())
     {
 		m_list.erase(window);
-        //if(m_list.erase(window) != 1)
-        //    throw std::logic_error("m_list.erase(window) != 1");
     } else {
         m_list[window] = state;
     }
@@ -94,10 +90,14 @@ void StatusWindowList::update()
         activity << "%11,%11";
     }
 
-    set_text(activity.str());
-    if(get_text().length() >= 7)
-        set_text(get_text().substr(0, get_text().length()-7));
-    set_text("%15" + get_text() + "%15");
+    m_text = activity.str();
+	if (m_text.empty())
+		return;
+
+	if (m_text.length() >= 7)
+		m_text = m_text.substr(0, m_text.length() - 7);
+
+	m_text = "%15" + m_text + "%15";
 }
 
 } // namespace ui

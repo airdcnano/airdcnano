@@ -42,7 +42,6 @@ StatusBar::StatusBar():
 }
 
 void StatusBar::add_item(display::StatusItem *item, int pos) {
-    utils::Lock l(m_mutex);
     auto it = std::find_if(m_items.begin(), m_items.end(),
         std::bind(
             std::bind2nd(std::equal_to<std::string>(), item->get_name()),
@@ -59,7 +58,6 @@ void StatusBar::add_item(display::StatusItem *item, int pos) {
 }
 
 StatusItem* StatusBar::remove_item(const std::string &name) {
-    utils::Lock l(m_mutex);
 	auto it = std::find_if(m_items.begin(), m_items.end(), [&](const StatusItem* si) { return si->get_name() == name; });
 
    // if(it == m_items.end())
@@ -74,8 +72,6 @@ void StatusBar::free_item(const std::string &name) {
 }
 
 void StatusBar::update_item(const std::string &name) {
-    utils::Lock l(m_mutex);
-
 	auto it = std::find_if(m_items.begin(), m_items.end(), [&](const StatusItem* si) { return si->get_name() == name; });
     //if(it == m_items.end())
     //    return;
@@ -86,15 +82,16 @@ void StatusBar::update_item(const std::string &name) {
 
 void StatusBar::redraw()
 {
-    utils::Lock l(m_mutex);
     erase();
     set_background(10);
 
     // [item] [another item] [third item]...
     std::ostringstream oss;
     for(unsigned int i=0; i<m_items.size(); ++i) {
-        oss << "%11[%11%15"
-            << m_items.at(i)->get_text() << "%15%11]%11 ";
+		auto text = m_items.at(i)->get_text();
+		if (!text.empty()) {
+			oss << "%11[%11%15" << text << "%15%11]%11 ";
+		}
     }
 
     print(oss.str(), 0, 0);

@@ -203,7 +203,7 @@ void Manager::start_client()
     core::Log::get()->log("Starting the client...");
 
 	try {
-		auto pu = unique_ptr<display::ProgressUpdater>(new display::ProgressUpdater);
+		display::ProgressUpdater pu("loader");
 		startup(
 			[&](const string& aMsg) { core::Log::get()->log("Loading " + aMsg + "..."); },
 			[](const string& aMsg, bool isQuestion, bool isError) {
@@ -250,7 +250,7 @@ void Manager::start_client()
 				p.show("We are all done here. Type /help to see all settings after the client has been loaded.", Prompter::TYPE_ANY);
 			},
 			[&](double percent) {
-				pu->updateStatus(percent);
+				pu.updateStatus(percent);
 			}
 			);
 	} catch (...) {

@@ -27,41 +27,44 @@
 #include <string>
 #include <utils/mutex.h>
 
+#include <boost/signals2.hpp>
+
 namespace display {
 
 /** Represents a single field in a status bar. */
-class StatusItem
+class StatusItem : boost::noncopyable
 {
 public:
     /** Constructor. */
-    StatusItem(): m_visible(true) { }
+	StatusItem(const std::string& aID);
 
     /** Update the content of the item. */
     virtual void update() = 0;
 
     /** Get the content of the item. */
-    virtual std::string get_text() const;
+	const std::string& get_text() const;
 
     /** Get the name of the item.  */
-    virtual std::string get_name() const;
+    const std::string& get_name() const;
 
     /** Destructor. */
     virtual ~StatusItem() { }
 
+	void callAsync(std::function<void()> aF);
 protected:
-    virtual void set_text(std::string name);
-    virtual void set_name(std::string name);
+    bool m_visible = true; //!< Is this item visible
 
-    bool m_visible; //!< Is this item visible
+    const std::string m_id; //!< The name of this status item
+    std::string m_text; //!< The content of this item
 
 private:
-    std::string m_name; //!< The name of this status item
-    std::string m_text; //!< The content of this item
-    mutable utils::Mutex m_mutex; 
+	void handleAsync();
+	boost::signals2::scoped_connection asyncConn;
 };
 
 class ProgressUpdater : public StatusItem {
 public:
+	ProgressUpdater(const std::string& aID);
 	void update() { }
 	void updateStatus(double percent);
 

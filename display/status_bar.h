@@ -80,7 +80,6 @@ public:
 private:
     std::string m_statusline;
     StatusItems m_items;
-    mutable utils::Mutex m_mutex;
 };
 
 } // namespace display

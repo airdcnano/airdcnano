@@ -61,7 +61,7 @@ enum Type {
 
 /** Window. */
 class Window:
-    public display::CursesWindow
+	public display::CursesWindow, boost::noncopyable
 {
 public:
     /** Constructor. */
@@ -170,7 +170,7 @@ private:
 
 	bool m_insertMode;
 
-	boost::signals2::connection asyncConn;
+	boost::signals2::scoped_connection asyncConn;
 };
 
 } // namespace display

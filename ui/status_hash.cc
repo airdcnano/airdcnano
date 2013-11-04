@@ -27,9 +27,9 @@
 namespace ui {
 
 StatusHash::StatusHash():
-    m_startBytes(0)
+m_startBytes(0), StatusItem("hash")
 {
-    set_name("hash");
+	m_visible = false;
     TimerManager::getInstance()->addListener(this);
 }
 
@@ -47,33 +47,30 @@ void StatusHash::on(Second, uint64_t)
 	int hashers = 0;
 
 	HashManager::getInstance()->getStats(file, bytes, files, speed, hashers);
+	if (bytes == 0) {
+		if (m_visible) {
+			m_visible = false;
+			callAsync([=] { display::StatusBar::get()->remove_item(get_name()); });
+		}
 
-    if(bytes == 0) {
-        if(m_visible)
-            display::StatusBar::get()->remove_item(get_name());
-        m_visible = false;
+		m_startBytes = 0;
+		return;
+	} else if (!m_visible) {
+		m_startBytes = bytes;
+		m_visible = true;
+		callAsync([=] { display::StatusBar::get()->add_item(this, 1); });
+	}
 
-        m_startBytes = 0;
-    }
-    else {
-        if(!m_startBytes || m_startBytes < bytes) {
-            HashManager::getInstance()->getStats(file, m_startBytes, files, speed, hashers);
-            return;
-        }
+	callAsync([=] {
+		double percent = static_cast<double>(m_startBytes - bytes) / static_cast<double>(m_startBytes);
 
-        double percent = static_cast<double>(m_startBytes-bytes)/static_cast<double>(m_startBytes);
+		std::ostringstream oss;
+		oss << std::setiosflags(ios::fixed)
+			<< std::setprecision(1)
+			<< percent * 100 << "%%";
 
-        std::ostringstream oss;
-        oss << std::setiosflags(ios::fixed)
-            << std::setprecision(1)
-            << percent*100 << "%%";
-
-        set_text(oss.str());
-        if(!m_visible) {
-            display::StatusBar::get()->add_item(this, 1);
-            m_visible = true;
-        }
-    }
+		m_text = oss.str();
+	});
 }
 
 StatusHash::~StatusHash()

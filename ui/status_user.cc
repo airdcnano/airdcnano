@@ -27,9 +27,8 @@
 
 namespace ui {
 
-StatusUser::StatusUser()
+StatusUser::StatusUser() : StatusItem("user")
 {
-    set_name("user");
     events::add_listener("window changed",
             std::bind(&StatusUser::update, this));
 	events::add_listener("nick changed",
@@ -42,13 +41,13 @@ void StatusUser::update()
     display::Window *window = *display::Manager::get()->get_current();
     switch(window->get_type()) {
         case display::TYPE_HUBWINDOW:
-            set_text(static_cast<ui::WindowHub*>(window)->get_nick());
+			m_text = static_cast<ui::WindowHub*>(window)->get_nick();
             break;
         case display::TYPE_PRIVMSG:
-            set_text(static_cast<ui::WindowPrivateMessage*>(window)->get_nick());
+            m_text = static_cast<ui::WindowPrivateMessage*>(window)->get_nick();
             break;
         default:
-            set_text(SETTING(NICK));
+			m_text = SETTING(NICK);
     }
 }
 

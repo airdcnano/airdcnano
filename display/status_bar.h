@@ -29,11 +29,11 @@
 #include <client/stdinc.h>
 #include <client/DCPlusPlus.h>
 #include <client/TimerManager.h>
+
 #include <display/curses_window.h>
 #include <display/manager.h>
 #include <display/status_item.h>
 #include <utils/instance.h>
-#include <utils/mutex.h>
 
 namespace display {
 

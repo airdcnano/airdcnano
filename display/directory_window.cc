@@ -25,7 +25,6 @@
 #include <functional>
 #include <display/directory_window.h>
 #include <input/manager.h>
-#include <utils/lock.h>
 #include <core/log.h>
 #include <utils/algorithm.h>
 

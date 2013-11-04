@@ -24,7 +24,6 @@
 #include <ui/window_log.h>
 #include <core/log.h>
 #include <utils/utils.h>
-#include <utils/lock.h>
 #include <iostream>
 
 namespace core {

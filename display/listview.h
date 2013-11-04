@@ -28,7 +28,6 @@
 #include <stdexcept>
 #include <vector>
 #include <utils/utils.h>
-#include <utils/mutex.h>
 #include <display/window.h>
 #include <display/item.h>
 

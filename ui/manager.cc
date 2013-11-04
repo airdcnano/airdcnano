@@ -70,13 +70,10 @@ Manager::Manager():
 
 void Manager::redraw_screen()
 {
-    m_screenMutex.lock();
-
     if(m_lastDraw+20 < utils::get_millisecs()) {
         display::Manager::get()->redraw();
         m_lastDraw = utils::get_millisecs();
     }
-    m_screenMutex.unlock();
 }
 
 void Manager::init()

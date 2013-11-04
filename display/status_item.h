@@ -25,7 +25,6 @@
 #define _STATUSITEM_H_
 
 #include <string>
-#include <utils/mutex.h>
 
 #include <boost/signals2.hpp>
 

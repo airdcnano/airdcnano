@@ -27,7 +27,6 @@
 #include <core/settings.h>
 #include <core/log.h>
 #include <utils/utils.h>
-#include <utils/lock.h>
 #include <display/status_bar.h>
 #include <display/screen.h>
 

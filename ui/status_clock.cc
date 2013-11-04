@@ -25,7 +25,6 @@
 #include <core/settings.h>
 #include <ui/status_clock.h>
 #include <utils/utils.h>
-#include <utils/lock.h>
 
 namespace ui {
 

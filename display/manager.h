@@ -28,8 +28,6 @@
 #include <display/window.h>
 #include <display/input_window.h>
 #include <utils/instance.h>
-#include <utils/mutex.h>
-#include <utils/lock.h>
 
 #include <client/stdinc.h>
 #include <client/DCPlusPlus.h>

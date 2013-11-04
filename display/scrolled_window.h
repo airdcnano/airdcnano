@@ -28,7 +28,6 @@
 #include <vector>
 #include <core/settings.h>
 #include <display/window.h>
-#include <utils/mutex.h>
 
 #include <client/stdinc.h>
 #include <client/TimerManager.h>
@@ -90,8 +89,6 @@ private:
     void set_activity(display::LineEntry::Type type);
     display::LineEntry koskenkorva_viina(const display::LineEntry &line);
 
-    utils::Mutex m_messageLock;
-    utils::Mutex m_lineLock;
     std::vector<display::LineEntry> m_lines;
     int m_scrollPosition; //!< Number of the first line to show on the screen
     unsigned int m_lastlogSize;

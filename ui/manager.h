@@ -28,8 +28,6 @@
 #include <display/window.h>
 #include <display/input_window.h>
 #include <utils/instance.h>
-#include <utils/mutex.h>
-#include <utils/lock.h>
 
 #include <client/stdinc.h>
 #include <client/DCPlusPlus.h>
@@ -75,7 +73,6 @@ private:
 	void on(DirectoryListingManagerListener::OpenListing, DirectoryListing* aList, const std::string& aDir, const std::string& aXML) noexcept;
 	void on(TimerManagerListener::Second, uint64_t) noexcept;
 
-    utils::Mutex m_screenMutex;
     uint32_t m_lastDraw;
 
 	int64_t lastUp = 0;

@@ -27,7 +27,6 @@
 #include <display/status_item.h>
 #include <client/stdinc.h>
 #include <client/TimerManager.h>
-#include <utils/mutex.h>
 
 using namespace dcpp;
 

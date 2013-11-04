@@ -23,7 +23,6 @@
 
 #include <display/status_item.h>
 #include <display/status_bar.h>
-#include <utils/lock.h>
 
 #include <client/Util.h>
 

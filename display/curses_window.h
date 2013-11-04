@@ -27,7 +27,6 @@
 #include <utils/ncurses.h>
 
 #include <string>
-#include <utils/lock.h>
 
 namespace display {
 

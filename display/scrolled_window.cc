@@ -25,7 +25,6 @@
 #include <display/scrolled_window.h>
 #include <input/manager.h>
 #include <utils/utils.h>
-#include <utils/lock.h>
 #include <display/manager.h>
 #include <client/stdinc.h>
 #include <core/log.h>
@@ -52,10 +51,8 @@ ScrolledWindow::ScrolledWindow(const std::string& aID, display::Type aType) :
 }
 
 void ScrolledWindow::clear() {
-	m_lineLock.lock();
 	m_lines.clear();
 	m_scrollPosition = -1;
-	m_lineLock.unlock();
 }
 
 void ScrolledWindow::update_config()
@@ -79,14 +76,11 @@ void ScrolledWindow::handle(wint_t key) {
 void ScrolledWindow::add_line(const display::LineEntry &line_,
         bool redraw_screen /* = true */)
 {
-    m_lineLock.lock();
     if(m_lines.size() >= m_lastlogSize)
         m_lines.erase(m_lines.begin());
 
     display::LineEntry line = koskenkorva_viina(line_);
 	m_lines.push_back(line);
-
-    m_lineLock.unlock();
 
     if(redraw_screen && m_state == STATE_IS_ACTIVE) {
         events::emit("window updated", this);

@@ -28,8 +28,6 @@
 #include <string>
 
 #include <utils/ncurses.h>
-#include <utils/mutex.h>
-#include <utils/lock.h>
 
 namespace display {
 

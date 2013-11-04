@@ -31,7 +31,6 @@
 #include <boost/signals2.hpp>
 #include <boost/any.hpp>
 #include <utils/instance.h>
-#include <utils/mutex.h>
 #include <string>
 
 #include <client/concurrency.h>

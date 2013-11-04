@@ -27,7 +27,6 @@
 #include <string>
 #include <vector>
 #include <utils/instance.h>
-#include <utils/mutex.h>
 #include <functional>
 #include <fstream>
 

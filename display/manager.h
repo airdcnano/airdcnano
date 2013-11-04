@@ -97,7 +97,6 @@ public:
 
     /** Destructor. Frees memory used by windows. */
     ~Manager();
-    utils::Mutex m_mutex; //!< Window lock
 
 	size_t size() const;
 	//const std::string& getInputStr() const;

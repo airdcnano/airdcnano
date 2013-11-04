@@ -59,9 +59,7 @@ Manager::Manager():
 
 void Manager::push_back(display::Window *window)
 {
-    m_mutex.lock();
     m_windows->push_back(window);
-    m_mutex.unlock();
 	if (m_windows->size() == 1) {
 		m_current = m_windows->begin();
 	}
@@ -177,10 +175,8 @@ void Manager::remove(display::Window *window)
         return;
     }
 
-    m_mutex.lock();
     auto it = std::remove(m_windows->begin(), m_windows->end(), window);
     m_windows->erase(it, m_windows->end());
-    m_mutex.unlock();
     events::emit("window closed", window);
 
 	if (*m_current == window) {
@@ -200,7 +196,6 @@ void Manager::prev() {
 
 Windows::iterator Manager::find(display::Type aType, const std::string& aID)
 {
-    utils::Lock lock(m_mutex);
 	return std::find_if(m_windows->begin(), m_windows->end(), [&](const display::Window* aWindow) { return (aID.empty() || aWindow->getID() == aID) && aWindow->get_type() == aType; });
 }
 
@@ -212,11 +207,9 @@ void Manager::window_closed()
 
 Manager::~Manager()
 {
-    m_mutex.lock();
     std::for_each(m_windows->begin(), m_windows->end(),
             utils::delete_functor<Window>());
     m_windows->clear();
-    m_mutex.unlock();
 
     display::InputWindow::destroy();
     display::StatusBar::destroy();

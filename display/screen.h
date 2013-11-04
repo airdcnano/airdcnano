@@ -51,20 +51,13 @@ public:
     static bool is_resized();
 
     /** Copy the buffer to the screen. */
-    static void do_update() { utils::Lock lock(m_mutex); doupdate(); }
-
-    /** Locks the screen mutex. */
-    static void lock() { m_mutex.lock(); }
-
-    /** Unlocks the screen mutex. */
-    static void unlock() { m_mutex.unlock(); }
+    static void do_update() { doupdate(); }
 private:
 	static std::pair<unsigned int, unsigned int> get_xymax() { int x, y; getmaxyx(stdscr, y, x); return{ x, y }; }
 
     Screen(); //!< Forbidden
     Screen(const Screen &); //!< Forbidden
     Screen& operator=(const Screen &); //!< Forbidden
-    static utils::Mutex m_mutex; //!< The screen lock
 };
 
 } // namespace display

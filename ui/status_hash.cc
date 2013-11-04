@@ -48,6 +48,7 @@ void StatusHash::on(Second, uint64_t)
 
 	HashManager::getInstance()->getStats(file, bytes, files, speed, hashers);
 	if (bytes == 0) {
+		// nothing to hash
 		if (m_visible) {
 			m_visible = false;
 			callAsync([=] { display::StatusBar::get()->remove_item(get_name()); });
@@ -56,11 +57,13 @@ void StatusHash::on(Second, uint64_t)
 		m_startBytes = 0;
 		return;
 	} else if (!m_visible) {
+		// just started
 		m_startBytes = bytes;
 		m_visible = true;
 		callAsync([=] { display::StatusBar::get()->add_item(this, 1); });
 	}
 
+	// update the progress
 	callAsync([=] {
 		double percent = static_cast<double>(m_startBytes - bytes) / static_cast<double>(m_startBytes);
 

@@ -26,8 +26,6 @@
 
 namespace display {
 
-utils::Mutex Screen::m_mutex;
-
 void Screen::initialize()
     throw (std::runtime_error)
 {

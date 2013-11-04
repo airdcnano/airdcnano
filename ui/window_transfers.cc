@@ -72,7 +72,7 @@ WindowTransfers::WindowTransfers() : ListView(display::TYPE_TRANSFERS, "transfer
 
     m_bindings['m'] = std::bind(&WindowTransfers::msg, this);
     m_bindings['F'] = std::bind(&WindowTransfers::force, this);
-    m_bindings['f'] = std::bind(&WindowTransfers::add_favorite, this);
+    //m_bindings['f'] = std::bind(&WindowTransfers::add_favorite, this);
     m_bindings['r'] = std::bind(&WindowTransfers::remove_source, this);
     m_bindings['c'] = std::bind(&WindowTransfers::disconnect, this);
     m_bindings['R'] = std::bind(&WindowTransfers::remove_download, this);

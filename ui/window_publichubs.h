@@ -70,7 +70,6 @@ private:
 
     std::vector<HubEntry> m_hubs;
     int m_hublist;
-    utils::Mutex m_entryLock;
 
     // hub filters
     std::vector<std::string> m_words;

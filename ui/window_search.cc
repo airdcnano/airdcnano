@@ -32,8 +32,9 @@
 #include <input/completion.h>
 
 #include <client/DirectoryListingManager.h>
-#include <client/StringTokenizer.h>
+#include <client/GeoManager.h>
 #include <client/QueueManager.h>
+#include <client/StringTokenizer.h>
 
 namespace ui {
 
@@ -423,11 +424,19 @@ std::string WindowSearch::get_infobox_line(unsigned int n)
 
     std::stringstream ss;
     switch(n) {
-        case 1:
-            ss << "%21User:%21 " << std::left << std::setw(18) 
+		case 1:
+		{
+			auto ip = result->getIP();
+			const auto& country = GeoManager::getInstance()->getCountry(ip);
+			if (!country.empty()) {
+				ip = country + " (" + ip + ")";
+			}
+
+			ss << "%21User:%21 " << std::left << std::setw(18)
 				<< ClientManager::getInstance()->getFormatedNicks(result->getUser())
-                << " %21IP:%21 " << result->getIP();
-            break;
+				<< " %21IP:%21 " << ip;
+			break;
+		}
         case 2:
 			ss << "%21Size:%21 " << std::left << std::setw(9)
 				<< Util::formatBytes(result->getSize())

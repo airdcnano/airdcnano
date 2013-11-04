@@ -66,6 +66,8 @@ HelpHandler::~HelpHandler() {
 		for (auto& c : conns) {
 			c.disconnect();
 		}
+
+		list.erase(find(list.begin(), list.end(), this));
 	}
 }
  

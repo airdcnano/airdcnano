@@ -96,7 +96,7 @@ void WindowHubs::favorite()
     if(row == -1)
         return;
 
-    std::string address = get_text(2, row);
+    auto address = get_text(2, row);
     if(FavoriteManager::getInstance()->getFavoriteHubEntry(address)) {
         set_prompt_timed("Hub already exists as a favorite");
     }  else {
@@ -130,7 +130,7 @@ void WindowHubs::handle_line(const std::string &line)
 	if (!getInsertMode())
 		return;
 
-    std::string param = line;
+    const auto& param = line;
     switch(m_property) {
         case PROP_DESCRIPTION:
 			m_words = dcpp::StringTokenizer<string>(Text::toLower(param), " ").getTokens();
@@ -245,9 +245,7 @@ void WindowHubs::downloadFinished(bool cached, const std::string list) noexcept{
 		<< " - " << list;
 	set_title(oss.str());
 
-	m_entryLock.lock();
 	m_hubs = FavoriteManager::getInstance()->getPublicHubs();
-	m_entryLock.unlock();
 
 	show_entries();
 }
@@ -263,7 +261,7 @@ std::string WindowHubs::get_infobox_line(unsigned int n)
     using std::bind;
     using std::placeholders::_1;
 
-    std::vector<HubEntry>::iterator it = std::find_if(m_hubs.begin(), m_hubs.end(),
+    auto it = std::find_if(m_hubs.begin(), m_hubs.end(),
         bind(std::equal_to<std::string>(),
             bind(&HubEntry::getServer, _1),
             get_text(2, get_selected_row())));
@@ -289,7 +287,7 @@ std::string WindowHubs::get_infobox_line(unsigned int n)
                 << " %21Rating:%21 " << entry.getRating();
             break;
         case 4:
-            oss << "%21Shared:%21 " << std::left << std::setw(10) << Util::formatBytes(entry.getShared())
+            oss << "%21Shared:%21 " << std::left << std::setw(11) << Util::formatBytes(entry.getShared())
                 << "%21Min slots:%21 " << entry.getMinSlots();
             break;
     }

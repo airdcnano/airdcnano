@@ -55,17 +55,15 @@ private:
     HintedUser m_user;
     bool m_isDownload;
 
-    std::string m_file;
-    std::string m_path;
     std::string m_target;
 	std::string m_token;
     //int m_progress;
     //char m_status;
-    int64_t m_left;
-    int64_t m_size;
-    int64_t m_speed;
-    int64_t m_started;
-    int64_t m_bytes;
+    int64_t m_left = -1;
+    int64_t m_size = -1;
+    int64_t m_speed = 0;
+    int64_t m_started = 0;
+    int64_t m_bytes = -1;
 	std::string m_ip;
 	bool transferFailed = false;
 };

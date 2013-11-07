@@ -256,7 +256,7 @@ void WindowTransfers::on(ConnectionManagerListener::Added, const ConnectionQueue
 {
 	auto ui = new UpdateInfo(aCqi->getToken(), aCqi->getDownload());
 	if (ui->download) {
-		string aTarget, bundleToken; int64_t aSize; int aFlags;
+		/*string aTarget, bundleToken; int64_t aSize; int aFlags;
 		if (QueueManager::getInstance()->getQueueInfo(aCqi->getHintedUser(), aTarget, aSize, aFlags, bundleToken)) {
 			auto type = Transfer::TYPE_FILE;
 			if (aFlags & QueueItem::FLAG_USER_LIST)
@@ -268,7 +268,7 @@ void WindowTransfers::on(ConnectionManagerListener::Added, const ConnectionQueue
 			ui->setTarget(aTarget);
 			ui->setSize(aSize);
 			//ui->setBundle(bundleToken);
-		}
+		}*/
 	}
 
 	ui->setUser(aCqi->getHintedUser());
@@ -377,7 +377,6 @@ void WindowTransfers::on(DownloadManagerListener::Failed, const Download* aDownl
 	//ui->setStatus(ItemInfo::STATUS_WAITING);
 	ui->setPos(-1);
 	ui->setSize(aDownload->getSize());
-	ui->setTarget(aDownload->getPath());
 	ui->setType(aDownload->getType());
 	//ui->setBundle(aDownload->getBundle() ? aDownload->getBundle()->getToken() : Util::emptyString);
 
@@ -475,7 +474,7 @@ std::string WindowTransfers::get_infobox_line(unsigned int n)
             break;
         }
         case 2:
-            oss << item->m_path << item->m_file;
+            oss << item->m_target;
             break;
         case 3:
         {

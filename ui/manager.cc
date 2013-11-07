@@ -121,6 +121,8 @@ void Manager::init_statusbar()
 }
 
 Manager::~Manager() {
+	ConnectivityManager::getInstance()->disconnect();
+
 	ClientManager::getInstance()->removeListener(this);
 	DirectoryListingManager::getInstance()->removeListener(this);
 	TimerManager::getInstance()->removeListener(this);

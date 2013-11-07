@@ -86,8 +86,11 @@ void StatusBar::redraw()
 
     // [item] [another item] [third item]...
     std::ostringstream oss;
-    for(unsigned int i=0; i<m_items.size(); ++i) {
-		const auto& text = m_items.at(i)->get_text();
+    for(const auto& i: m_items) {
+		if (!i->is_visible())
+			continue;
+
+		const auto& text = i->get_text();
 		if (!text.empty()) {
 			oss << "%11[%11%15" << text << "%15%11]%11 ";
 		}

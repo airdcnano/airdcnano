@@ -377,6 +377,7 @@ void WindowTransfers::on(DownloadManagerListener::Failed, const Download* aDownl
 	//ui->setStatus(ItemInfo::STATUS_WAITING);
 	ui->setPos(-1);
 	ui->setSize(aDownload->getSize());
+	ui->setTarget(aDownload->getPath());
 	ui->setType(aDownload->getType());
 	//ui->setBundle(aDownload->getBundle() ? aDownload->getBundle()->getToken() : Util::emptyString);
 
@@ -534,7 +535,8 @@ void WindowTransfers::handleUpdateInfo(UpdateInfo* ui, bool added) {
 	}
 	if (updateMask & UpdateInfo::MASK_FILE) {
 		item->m_target = ui->target;
-		set_text(5, row, getFile(ui->type, Util::getFileName(ui->target)));
+		if (!item->transferFailed)
+			set_text(5, row, getFile(ui->type, Util::getFileName(ui->target)));
 	}
 	if (updateMask & UpdateInfo::MASK_TIMELEFT) {
 		item->m_left = ui->timeLeft;

@@ -335,6 +335,7 @@ int Manager::run()
 
 void Manager::shutdown()
 {
+	ui::Manager::destroy();
     display::Manager::destroy();
     input::Manager::destroy();
     core::Log::destroy();

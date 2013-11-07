@@ -50,6 +50,7 @@ public:
     virtual ~StatusItem() { }
 
 	void callAsync(std::function<void()> aF);
+	bool is_visible() const { return m_visible; }
 protected:
     bool m_visible = true; //!< Is this item visible
 

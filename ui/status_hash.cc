@@ -24,6 +24,8 @@
 #include <iomanip>
 #include <ui/status_hash.h>
 
+#include <core/log.h>
+
 namespace ui {
 
 StatusHash::StatusHash():
@@ -41,31 +43,28 @@ void StatusHash::on(Second, uint64_t)
     noexcept
 {
     std::string file;
-    int64_t bytes = 0;
+    int64_t bytesLeft = 0;
     size_t files = 0;
 	int64_t speed = 0;
 	int hashers = 0;
 
-	HashManager::getInstance()->getStats(file, bytes, files, speed, hashers);
-	if (bytes == 0) {
-		// nothing to hash
+	HashManager::getInstance()->getStats(file, bytesLeft, files, speed, hashers);
+	if (bytesLeft == 0) {
 		if (m_visible) {
+			// nothing to hash
 			m_visible = false;
-			callAsync([=] { display::StatusBar::get()->remove_item(get_name()); });
+			m_startBytes = 0;
 		}
-
-		m_startBytes = 0;
 		return;
-	} else if (!m_visible) {
+	} else if (!m_visible || bytesLeft > m_startBytes) {
 		// just started
-		m_startBytes = bytes;
+		m_startBytes = bytesLeft;
 		m_visible = true;
-		callAsync([=] { display::StatusBar::get()->add_item(this, 1); });
 	}
 
 	// update the progress
 	callAsync([=] {
-		double percent = static_cast<double>(m_startBytes - bytes) / static_cast<double>(m_startBytes);
+		double percent = m_startBytes > 0 ? static_cast<double>(m_startBytes - bytesLeft) / static_cast<double>(m_startBytes) : 0.0;
 
 		std::ostringstream oss;
 		oss << std::setiosflags(ios::fixed)

@@ -1465,19 +1465,13 @@ void AdcHub::infoImpl() {
 	addParam(lastInfoMap, c, "AW", AirUtil::getAway() ? "1" : Util::emptyString);
 	addParam(lastInfoMap, c, "LC", Localization::getCurrentLocale());
 
-	int limit = ThrottleManager::getInstance()->getDownLimit();
-	if (limit > 0) {
-		addParam(lastInfoMap, c, "DS", Util::toString(limit * 1000));
-	} else {
-		addParam(lastInfoMap, c, "DS", Util::toString((long)(Util::toDouble(SETTING(DOWNLOAD_SPEED))*1000*1000/8)));
-	}
+	int64_t limit = ThrottleManager::getInstance()->getDownLimit() * 1000;
+	int64_t connSpeed = (Util::toDouble(SETTING(DOWNLOAD_SPEED)) * 1000.0 * 1000.0) / 8.0;
+	addParam(lastInfoMap, c, "DS", Util::toString(limit > 0 ? min(limit, connSpeed) : connSpeed));
 
-	limit = ThrottleManager::getInstance()->getUpLimit();
-	if (limit > 0) {
-		addParam(lastInfoMap, c, "US", Util::toString(limit * 1000));
-	} else {
-		addParam(lastInfoMap, c, "US", Util::toString((long)(Util::toDouble(SETTING(UPLOAD_SPEED))*1000*1000/8)));
-	}
+	limit = ThrottleManager::getInstance()->getUpLimit() * 1000.0;
+	connSpeed = (Util::toDouble(SETTING(UPLOAD_SPEED)) * 1000.0 * 1000.0) / 8.0;
+	addParam(lastInfoMap, c, "US", Util::toString(limit > 0 ? min(limit, connSpeed) : connSpeed));
 
 	if(CryptoManager::getInstance()->TLSOk()) {
 		auto &kp = CryptoManager::getInstance()->getKeyprint();

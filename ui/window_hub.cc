@@ -554,7 +554,7 @@ void WindowHub::handleConnected() {
 void WindowHub::updateTitle() {
 	std::string title;
 	if (m_client->isConnected()) {
-		title = m_client->getHubName() + " - " + m_client->getHubDescription() + " (" + m_client->getHubUrl() + ")";
+		title = m_client->getHubName() + (!m_client->getHubDescription().empty() ? " - " + m_client->getHubDescription() : "") + " (" + m_client->getHubUrl() + ")";
 	} else {
 		title = m_client->getAddress() + " (offline)";
 	}

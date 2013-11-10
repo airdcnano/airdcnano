@@ -861,7 +861,7 @@ void AdcHub::sendHBRI(const string& aIP, const string& aPort, const string& aTok
 	AdcCommand hbriCmd(AdcCommand::CMD_TCP, AdcCommand::TYPE_HUB);
 
 	StringMap dummyMap;
-	appendConnectivity(state == STATE_NORMAL ? dummyMap : lastInfoMap, hbriCmd, !v6, v6);
+	appendConnectivity(dummyMap, hbriCmd, !v6, v6);
 	hbriCmd.addParam("TO", aToken);
 
 	bool secure = Util::strnicmp("adcs://", getHubUrl().c_str(), 7) == 0;
@@ -924,7 +924,7 @@ void AdcHub::sendHBRI(const string& aIP, const string& aPort, const string& aTok
 					fire(ClientListener::StatusMessage(), this, STRING(VALIDATION_SUCCEED));
 					return;
 				} else {
-					throw(response.getParam(1));
+					throw Exception(response.getParam(1));
 				}
 			}
 		}
@@ -1583,11 +1583,9 @@ void AdcHub::on(Connected c) noexcept {
 	if(SETTING(BLOOM_MODE) == SettingsManager::BLOOM_ENABLED) {
 		cmd.addParam(BLO0_SUPPORT);
 	}
-	cmd.addParam(ZLIF_SUPPORT);
 
-	bool usingV6 = sock->isV6Valid();
-	if ((get(HubSettings::Connection) != SettingsManager::INCOMING_DISABLED || !usingV6) && (get(HubSettings::Connection6) != SettingsManager::INCOMING_DISABLED || usingV6))
-		cmd.addParam(HBRI_SUPPORT);
+	cmd.addParam(ZLIF_SUPPORT);
+	cmd.addParam(HBRI_SUPPORT);
 
 	send(cmd);
 }

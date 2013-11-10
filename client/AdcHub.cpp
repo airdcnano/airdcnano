@@ -837,6 +837,7 @@ void AdcHub::handle(AdcCommand::TCP, AdcCommand& c) noexcept {
 
 
 	fire(ClientListener::StatusMessage(), this, STRING_F(HBRI_VALIDATING_X, (v6 ? "IPv6" : "IPv4")));
+
 	hbriThread = std::async(std::launch::async, [=] {
 		sendHBRI(hubUrl, port, token, v6);
 		callAsync([this] { 
@@ -907,25 +908,23 @@ void AdcHub::sendHBRI(const string& aIP, const string& aPort, const string& aTok
 				string l = string ((char*)&buf[0], read);
 				COMMAND_DEBUG(l, DebugManager::TYPE_HUB, DebugManager::INCOMING, hbri->getIp() + ":" + aPort);
 
-				try {
-					AdcCommand response(l);
-					if(response.getParameters().size() < 2)
-						throw Exception();
-
-					if(response.getParam(0).size() != 1) {
-						throw Exception();
-					}
-
-					int severity = Util::toInt(response.getParam(0).substr(0, 1));
-					if (severity == AdcCommand::SUCCESS) {
-						fire(ClientListener::StatusMessage(), this, STRING(VALIDATION_SUCCEED));
-						return;
-					} else {
-						throw(response.getParam(1));
-					}
-				} catch (...) { 
+				AdcCommand response(l);
+				if (response.getParameters().size() < 2) {
 					fire(ClientListener::StatusMessage(), this, STRING(INVALID_HUB_RESPONSE));
 					return;
+				}
+
+				int severity = Util::toInt(response.getParam(0).substr(0, 1));
+				if (response.getParam(0).size() != 3) {
+					fire(ClientListener::StatusMessage(), this, STRING(INVALID_HUB_RESPONSE));
+					return;
+				}
+
+				if (severity == AdcCommand::SUCCESS) {
+					fire(ClientListener::StatusMessage(), this, STRING(VALIDATION_SUCCEED));
+					return;
+				} else {
+					throw(response.getParam(1));
 				}
 			}
 		}

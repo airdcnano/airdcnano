@@ -11,6 +11,7 @@ modules_files = [
 	'module_share.cc',
 	'module_suggest.cc',
 	'module_motd.cc',
+	'module_cdmdebug.cc',
 ]
 
 Import('env')

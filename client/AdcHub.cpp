@@ -837,8 +837,7 @@ void AdcHub::handle(AdcCommand::TCP, AdcCommand& c) noexcept {
 
 
 	fire(ClientListener::StatusMessage(), this, STRING_F(HBRI_VALIDATING_X, (v6 ? "IPv6" : "IPv4")));
-
-	hbriThread = std::async([=] {
+	hbriThread = std::async(std::launch::async, [=] {
 		sendHBRI(hubUrl, port, token, v6);
 		callAsync([this] { 
 			hbriThread.get();

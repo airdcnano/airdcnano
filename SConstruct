@@ -218,10 +218,8 @@ if not 'install' in COMMAND_LINE_TARGETS:
 		print '\tNote: You might have the lib but not the headers'
 		Exit(1)
 
-	if not conf.CheckLibWithHeader('tbb', 'tbb/tbb.h', 'cpp'):
-		print '\tTBB not found.'
-		print '\tNote: You might have the lib but not the headers'
-		Exit(1)
+	if conf.CheckLibWithHeader('tbb', 'tbb/tbb.h', 'cpp'):
+		conf.env.Append(CPPDEFINES = 'HAVE_INTEL_TBB')
 
 	if conf.CheckLibWithHeader('natpmp', 'natpmp.h', 'c'):
 		conf.env.Append(CPPDEFINES = 'HAVE_NATPMP_H')

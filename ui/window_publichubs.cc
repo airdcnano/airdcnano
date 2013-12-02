@@ -45,7 +45,6 @@ WindowHubs::WindowHubs():
 {
     FavoriteManager::getInstance()->addListener(this);
 
-    set_title("Public hubs (press d to download the list)");
     set_name("hublist");
 
     insert_column(new display::Column("Users", 6, 6, 6));
@@ -64,6 +63,8 @@ WindowHubs::WindowHubs():
     m_bindings['u'] = std::bind(&WindowHubs::set_property, this, PROP_USERS);
     m_bindings['n'] = std::bind(&WindowHubs::set_property, this, PROP_MINSHARE);
     m_bindings['m'] = std::bind(&WindowHubs::set_property, this, PROP_MAXSHARE);
+
+	FavoriteManager::getInstance()->refresh(false);
 }
 
 void WindowHubs::complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_) {
@@ -86,8 +87,7 @@ void WindowHubs::connect()
 
 void WindowHubs::download()
 {
-    FavoriteManager *man = FavoriteManager::getInstance();
-    man->setHubList(m_hublist);
+	FavoriteManager::getInstance()->refresh(true);
 }
 
 void WindowHubs::favorite()
@@ -138,9 +138,13 @@ void WindowHubs::handle_line(const std::string &line)
         case PROP_ADDRESS:
             m_addressFilter = utils::tolower(param);
             break;
-        case PROP_HUBLIST:
-            m_hublist = utils::to<int>(param);
-            break;
+		case PROP_HUBLIST:
+		{
+			m_hublist = utils::to<int>(param);
+			FavoriteManager *man = FavoriteManager::getInstance();
+			man->setHubList(m_hublist);
+			break;
+		}
         case PROP_USERS:
             m_minUsers = utils::to<int64_t>(param);
             break;
@@ -184,7 +188,8 @@ void WindowHubs::show_entries()
         }
     }
 
-    set_title("Public hubs: Showing " + utils::to_string(get_size()) + " of " + utils::to_string(m_hubs.size()) + " hubs");
+    set_title("Public hubs: Showing " + utils::to_string(get_size()) + " of " + utils::to_string(m_hubs.size()) + " hubs" + 
+		(!m_cachedDate.empty() ? " (updated on " + m_cachedDate + ")" : ""));
 
     events::emit("window updated", static_cast<display::Window*>(this));
 }
@@ -235,18 +240,12 @@ void WindowHubs::on(DownloadFinished, const std::string &list, bool) noexcept {
 }
 
 void WindowHubs::on(LoadedFromCache, const string& l, const string& d) noexcept{
+	m_cachedDate = d;
 	callAsync([=] { downloadFinished(true, l); });
 }
 
-void WindowHubs::downloadFinished(bool cached, const std::string list) noexcept{
-	std::ostringstream oss;
-	oss << "Public hubs list " << m_hublist << "/"
-		<< FavoriteManager::getInstance()->getPublicHubs().size()
-		<< " - " << list;
-	set_title(oss.str());
-
+void WindowHubs::downloadFinished(bool /*cached*/, const std::string list) noexcept{
 	m_hubs = FavoriteManager::getInstance()->getPublicHubs();
-
 	show_entries();
 }
 

@@ -86,6 +86,7 @@ private:
     bool matches(const HubEntry &entry);
 
 	void downloadFinished(bool cached, const std::string list) noexcept;
+	string m_cachedDate;
 };
 
 } // namespace ui

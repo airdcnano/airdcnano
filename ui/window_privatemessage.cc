@@ -105,7 +105,7 @@ void WindowPrivateMessage::fillLogParams(ParamMap& params) const {
 	const CID& cid = m_user.user->getCID();
 	const string& hint = m_user.hint;
 	params["hubNI"] = [&] { return Util::listToString(ClientManager::getInstance()->getHubNames(cid)); };
-	params["hubURL"] = [&] { return Util::cleanPathChars(hint); };
+	params["hubURL"] = [&] { return Util::validateFileName(hint); };
 	params["userCID"] = [&cid] { return cid.toBase32(); };
 	params["userNI"] = [&] { return ClientManager::getInstance()->getNick(m_user.user, hint); };
 	params["myCID"] = [] { return ClientManager::getInstance()->getMe()->getCID().toBase32(); };

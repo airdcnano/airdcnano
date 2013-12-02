@@ -187,7 +187,7 @@ void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
 		ParamMap params;
 		params["message"] = aMessage.format();
 		m_client->getHubIdentity().getParams(params, "hub", false);
-		params["hubURL"] = Util::cleanPathChars(m_client->getHubUrl());
+		params["hubURL"] = Util::validateFileName(m_client->getHubUrl());
 		m_client->getMyIdentity().getParams(params, "my", true);
 		LOG(LogManager::CHAT, params);
 	}

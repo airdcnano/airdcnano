@@ -48,7 +48,7 @@ const ResourceManager::Strings SettingsManager::incomingStrings[INCOMING_LAST] {
 const ResourceManager::Strings SettingsManager::outgoingStrings[OUTGOING_LAST] { ResourceManager::SETTINGS_DIRECT, ResourceManager::SETTINGS_SOCKS5 };
 const ResourceManager::Strings SettingsManager::monitoringStrings[MONITORING_LAST] { ResourceManager::DISABLED, ResourceManager::INCOMING_ONLY, ResourceManager::ALL_DIRS };
 const ResourceManager::Strings SettingsManager::dropStrings[QUEUE_LAST] { ResourceManager::FILE, ResourceManager::BUNDLE, ResourceManager::ALL };
-const ResourceManager::Strings SettingsManager::updateStrings[UPDATE_LAST] { ResourceManager::CHANNEL_STABLE, ResourceManager::CHANNEL_BETA, ResourceManager::CHANNEL_NIGHTLY };
+const ResourceManager::Strings SettingsManager::updateStrings[VERSION_LAST] { ResourceManager::CHANNEL_STABLE, ResourceManager::CHANNEL_BETA, ResourceManager::CHANNEL_NIGHTLY };
 
 const ProfileSettingItem SettingsManager::profileSettings[SettingsManager::PROFILE_LAST][10] = {
 
@@ -64,7 +64,7 @@ const ProfileSettingItem SettingsManager::profileSettings[SettingsManager::PROFI
 	{ SettingsManager::SEARCH_TIME, 10, ResourceManager::MINIMUM_SEARCH_INTERVAL },
 	//{ SettingsManager::AUTO_SEARCH_LIMIT, 5 },
 	{ SettingsManager::AUTO_FOLLOW, true, ResourceManager::SETTINGS_AUTO_FOLLOW },
-	{ SettingsManager::TOOLBAR_ORDER, (string)"0,-1,1,2,-1,3,4,5,-1,6,7,8,9,-1,10,11,13,-1,14,15,-1,16,17,-1,18,19,-1,20,-1,21", ResourceManager::TOOLBAR_ORDER },
+	{ SettingsManager::TOOLBAR_ORDER, (string)"0,-1,1,2,-1,3,4,5,-1,6,7,8,9,-1,10,11,13,-1,14,15,-1,16,17,-1,18,19,-1,21", ResourceManager::TOOLBAR_ORDER },
 }, {
 	// profile RAR
 	{ SettingsManager::MULTI_CHUNK, false, ResourceManager::SEGMENTS },
@@ -77,7 +77,7 @@ const ProfileSettingItem SettingsManager::profileSettings[SettingsManager::PROFI
 	{ SettingsManager::SEARCH_TIME, 5, ResourceManager::MINIMUM_SEARCH_INTERVAL },
 	//{ SettingsManager::AUTO_SEARCH_LIMIT, 5 },
 	{ SettingsManager::AUTO_FOLLOW, false, ResourceManager::SETTINGS_AUTO_FOLLOW },
-	{ SettingsManager::TOOLBAR_ORDER, (string)"1,-1,3,4,-1,6,7,8,9,-1,10,11,13,-1,14,15,-1,16,17,-1,18,19,-1,20,-1,21", ResourceManager::TOOLBAR_ORDER },
+	{ SettingsManager::TOOLBAR_ORDER, (string)"1,-1,3,4,-1,6,7,8,9,-1,10,11,13,-1,14,15,-1,16,17,-1,18,19,-1,21", ResourceManager::TOOLBAR_ORDER },
 }, {
 	// profile LAN
 	{ SettingsManager::MULTI_CHUNK, true, ResourceManager::SEGMENTS },
@@ -90,7 +90,7 @@ const ProfileSettingItem SettingsManager::profileSettings[SettingsManager::PROFI
 	{ SettingsManager::SEARCH_TIME, 5, ResourceManager::MINIMUM_SEARCH_INTERVAL },
 	//{ SettingsManager::AUTO_SEARCH_LIMIT, 5 },
 	{ SettingsManager::AUTO_FOLLOW, true, ResourceManager::SETTINGS_AUTO_FOLLOW },
-	{ SettingsManager::TOOLBAR_ORDER, (string)"0,-1,1,2,-1,3,4,5,-1,6,7,8,9,-1,10,11,13,-1,14,15,-1,16,17,-1,18,19,-1,20,-1,21", ResourceManager::TOOLBAR_ORDER },
+	{ SettingsManager::TOOLBAR_ORDER, (string)"0,-1,1,2,-1,3,4,5,-1,6,7,8,9,-1,10,11,13,-1,14,15,-1,16,17,-1,18,19,-1,21", ResourceManager::TOOLBAR_ORDER },
 } 
 
 };
@@ -218,7 +218,7 @@ const string SettingsManager::settingTags[] =
 	"ClearDirectoryHistory", "ClearExcludeHistory", "ClearDirHistory", "NoIpOverride6", "IPUpdate6", "SearchUseExcluded", "AutoSearchBold", "ShowEmoticon", "ShowMultiline", "ShowMagnet", "WarnElevated", "SkipEmptyDirsShare", "LogShareScans",
 	"AcceptFailoversFavs", "RemoveExpiredAs", "AdcLogGroupCID", "ShareFollowSymlinks", "ScanMonitoredFolders", "FinishedNoHash", "ConfirmFileDeletions", "UseDefaultCertPaths", "StartupRefresh", "DctmpStoreDestination", "FLReportDupeFiles",
 	"FilterFLShared", "FilterFLQueued", "FilterFLInversed", "FilterFLTop", "FilterFLPartialDupes", "FilterFLResetChange", "FilterSearchShared", "FilterSearchQueued", "FilterSearchInversed", "FilterSearchTop", "FilterSearchPartialDupes", "FilterSearchResetChange",
-	"SearchAschOnlyMan", "IgnoreIndirectSR", "UseUploadBundles",
+	"SearchAschOnlyMan", "IgnoreIndirectSR", "UseUploadBundles", "CloseMinimize",
 	"SENTRY",
 	// Int64
 	"TotalUpload", "TotalDownload",
@@ -401,7 +401,7 @@ SettingsManager::SettingsManager()
 	setDefault(EXTRA_PARTIAL_SLOTS, 1);
 	setDefault(SHUTDOWN_TIMEOUT, 150);
 	setDefault(SEARCH_PASSIVE, false);
-	setDefault(TOOLBAR_ORDER, "0,-1,1,2,-1,3,4,5,-1,6,7,8,9,-1,10,11,13,-1,14,15,-1,16,17,-1,18,19,-1,20,-1,21");
+	setDefault(TOOLBAR_ORDER, "0,-1,1,2,-1,3,4,5,-1,6,7,8,9,-1,10,11,13,-1,14,15,-1,16,17,-1,18,19,-1,21");
 	setDefault(MEDIATOOLBAR, "0,-1,1,-1,2,3,4,5,6,7,8,9,-1");
 	setDefault(AUTO_PRIORITY_DEFAULT, false);
 	setDefault(TOOLBARIMAGE,"");
@@ -857,7 +857,8 @@ SettingsManager::SettingsManager()
 	setDefault(FILTER_SEARCH_PARTIAL_DUPES, false);
 	setDefault(FILTER_SEARCH_RESET_CHANGE, true);
 
-	setDefault(UPDATE_CHANNEL, getVersionType() == VERSION_BETA ? UPDATE_BETA : UPDATE_STABLE);
+	setDefault(UPDATE_CHANNEL, VERSION_STABLE);
+	setDefault(CLOSE_USE_MINIMIZE, false);
 
 	// not in GUI
 	setDefault(IGNORE_INDIRECT_SR, false);

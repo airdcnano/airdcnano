@@ -49,10 +49,12 @@ void Properties::load(std::istream &in)
     m_properties.clear();
     for(std::string line; std::getline(in, line);) {
 		auto comment = line.find('#');
-		auto space = line.find_last_not_of(" \t\n");
-
-        if(comment < space)
-            continue;
+		if (comment != std::string::npos) {
+			auto space = line.find_first_not_of(" ", comment);
+			if (space == std::string::npos) {
+				continue;
+			}
+		}
 
         // key = value
 		auto keyend = line.find_first_of(" =");

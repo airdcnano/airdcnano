@@ -28,6 +28,7 @@
 
 #include <core/events.h>
 #include <utils/utils.h>
+#include <input/completion.h>
 
 namespace ui {
 
@@ -75,6 +76,7 @@ WindowQueue::WindowQueue() : ListView(display::TYPE_QUEUE, "queue") {
 	m_bindings['r'] = std::bind(&WindowQueue::remove_bundle, this);
 	m_bindings['R'] = std::bind(&WindowQueue::remove_bundle_finished, this);
 	m_bindings['p'] = std::bind(&WindowQueue::set_priority, this);
+	m_bindings['m'] = std::bind(&WindowQueue::move_bundle, this);
 
 	// add the existing bundles
 	{
@@ -83,6 +85,18 @@ WindowQueue::WindowQueue() : ListView(display::TYPE_QUEUE, "queue") {
 		for (const auto& b : qm->getBundles() | map_values) {
 			on(QueueManagerListener::BundleAdded(), b);
 		}
+	}
+}
+
+void WindowQueue::complete(const std::vector<std::string>& aArgs, int /*pos*/, std::vector<std::string>& suggest_, bool& appendSpace_) {
+	if (m_property == PROP_MOVE) {
+		if (!aArgs[0].empty()) {
+			input::Completion::getDiskPathSuggestions(aArgs[0], suggest_);
+		} else {
+			suggest_ = SettingsManager::getInstance()->getHistory(SettingsManager::HISTORY_DIR);
+		}
+
+		appendSpace_ = false;
 	}
 }
 
@@ -102,7 +116,8 @@ void WindowQueue::set_property(Property property) {
 		"",
 		"Priority? (0 - 6)",
 		"Remove bundle? (y/N)",
-		"Remove bundle and finished files? (y/N)"
+		"Remove bundle and finished files? (y/N)",
+		"Enter new location"
 	};
 	m_prompt = text[m_property];
 }
@@ -127,6 +142,11 @@ void WindowQueue::handle_line(const std::string &line) {
 				if (b)
 					QueueManager::getInstance()->removeBundle(b, false, m_property == PROP_REMOVE_FINISHED);
 			}
+		} else if (m_property == PROP_MOVE) {
+			auto b = get_selected_bundle();
+			if (b) {
+				QueueManager::getInstance()->moveBundle(b, line, true);
+			}
 		}
 	}
 
@@ -142,6 +162,10 @@ BundlePtr WindowQueue::get_selected_bundle() {
 		return nullptr;
 
 	return get_bundle(get_text(0, row));
+}
+
+void WindowQueue::move_bundle() {
+	set_property(PROP_MOVE);
 }
 
 void WindowQueue::search_bundle_alt() {
@@ -172,34 +196,6 @@ int WindowQueue::get_row(const std::string& aToken) {
 	return row;
 }
 
-/*TransferItem* WindowTransfers::create_transfer(const HintedUser& user, bool download, const std::string& aToken) {
-	if (m_transfers.find(aToken) != m_transfers.end()) {
-		return m_transfers[aToken];
-	}
-
-	auto item = new TransferItem(user, download, aToken);
-	m_transfers[aToken] = item;
-	return item;
-}
-
-TransferItem* WindowTransfers::get_transfer(const std::string& aToken) {
-	if (m_transfers.find(aToken) != m_transfers.end()) {
-		return m_transfers[aToken];
-	}
-
-	dcassert(0);
-	return nullptr;
-}
-
-void WindowTransfers::transfer_completed(const Transfer *transfer, bool isDownload) {
-	auto ui = new UpdateInfo(transfer->getToken(), isDownload);
-	ui->setPos(-1);
-	ui->setSpeed(-1);
-	ui->setStatusString(isDownload ? STRING(DOWNLOAD_FINISHED_IDLE) : STRING(UPLOAD_FINISHED_IDLE));
-	ui->setTimeLeft(-1);
-	speak(ui);
-}*/
-
 void WindowQueue::updateTitle() {
 	string title = "Queue window";
 	title += " (" + Util::toString(m_bundles.size()) + " bundles)";
@@ -207,15 +203,21 @@ void WindowQueue::updateTitle() {
 }
 
 void WindowQueue::on(QueueManagerListener::BundleMoved, const BundlePtr& aBundle) noexcept{
-
+	auto ui = new UpdateInfo(aBundle->getToken());
+	ui->setTarget(aBundle->getTarget());
+	speak(ui);
 }
 
 void WindowQueue::on(QueueManagerListener::BundleMerged, const BundlePtr& aBundle, const string& oldTarget) noexcept{
 
 }
 
-//void on(QueueManagerListener::BundleSources, const BundlePtr& aBundle) noexcept{ on(QueueManagerListener::BundlePriority(), aBundle); };
-//void on(QueueManagerListener::BundleSize, const BundlePtr& aBundle) noexcept{ on(QueueManagerListener::BundlePriority(), aBundle); };
+void WindowQueue::on(QueueManagerListener::BundleSize, const BundlePtr& aBundle) noexcept{
+	auto ui = new UpdateInfo(aBundle->getToken());
+	ui->setSize(aBundle->getSize());
+	speak(ui);
+}
+
 void WindowQueue::on(QueueManagerListener::BundlePriority, const BundlePtr& aBundle) noexcept{
 	auto ui = new UpdateInfo(aBundle->getToken());
 	ui->setPriority(aBundle->getPriority());
@@ -258,20 +260,9 @@ void WindowQueue::on(QueueManagerListener::BundleStatusChanged, const BundlePtr&
 void WindowQueue::on(DownloadManagerListener::BundleTick, const BundleList& tickBundles, uint64_t aTick) noexcept{
 	for (const auto& b : tickBundles) {
 		auto ui = new UpdateInfo(b->getToken());
-
-		/*std::string flags = "D";
-		if (dl->getUserConnection().isSecure())
-			flags += "S";
-		if (dl->isSet(Download::FLAG_ZDOWNLOAD))
-			flags += "Z";
-		if (dl->getUserConnection().isSet(UserConnection::FLAG_MCN1))
-			flags += "M";
-
-		ui->setFlags(flags);*/
 		ui->setSpeed(b->getSpeed());
 		ui->setPos(b->getDownloadedBytes());
 		ui->setStatusString("Running");
-		//ui->setTimeLeft(b->get);
 		speak(ui);
 	}
 

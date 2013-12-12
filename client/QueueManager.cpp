@@ -462,7 +462,7 @@ void QueueManager::checkSource(const HintedUser& aUser) const throw(QueueExcepti
 	}
 
 	// Check the encryption
-	if (aUser.user && !aUser.user->isSet(User::NMDC) && !aUser.user->isSet(User::TLS) && SETTING(TLS_MODE) == SettingsManager::TLS_FORCED) {
+	if (aUser.user && aUser.user->isOnline() && !aUser.user->isNMDC() && !aUser.user->isSet(User::TLS) && SETTING(TLS_MODE) == SettingsManager::TLS_FORCED) {
 		throw QueueException(ClientManager::getInstance()->getFormatedNicks(aUser) + ": " + STRING(SOURCE_NO_ENCRYPTION));
 	}
 }
@@ -1440,6 +1440,7 @@ void QueueManager::removeFinishedBundle(BundlePtr& aBundle) noexcept {
 	}
 
 	bundleQueue.removeBundle(aBundle);
+	fire(QueueManagerListener::BundleRemoved(), aBundle);
 }
 
 void QueueManager::onFileHashed(const string& aPath, HashedFile& aFileInfo, bool failed) noexcept {

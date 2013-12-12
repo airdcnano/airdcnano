@@ -248,8 +248,7 @@ int64_t File::getSize(const string& aFileName) noexcept {
 
 void File::ensureDirectory(const string& aFile) noexcept {
 	// Skip the first dir...
-	tstring file;
-	Text::toT(aFile, file);
+	tstring file(Text::toT(aFile));
 	tstring::size_type start = file.find_first_of(_T("\\/"));
 	if(start == string::npos)
 		return;
@@ -263,8 +262,7 @@ void File::ensureDirectory(const string& aFile) noexcept {
 bool File::createDirectory(const string& aFile) {
 	// Skip the first dir...
 	int result = 0;
-	tstring file;
-	Text::toT(aFile, file);
+	tstring file(Text::toT(aFile));
 	wstring::size_type start = file.find_first_of(L"\\/");
 	if(start == string::npos)
 		return false;
@@ -665,7 +663,7 @@ int64_t File::getDirSize(const string& aPath, bool recursive, const string& patt
 FileFindIter::FileFindIter() : handle(INVALID_HANDLE_VALUE) { }
 
 FileFindIter::FileFindIter(const string& aPath, const string& aPattern, bool dirsOnly /*false*/) : handle(INVALID_HANDLE_VALUE) {
-	if (Util::getOsMajor() >= 6 && Util::getOsMinor() >= 1) {
+	if (Util::IsOSVersionOrGreater(6, 1)) { //TODO: check is this not available in Vista??
 		handle = ::FindFirstFileEx(Text::toT(Util::FormatPath(aPath) + aPattern).c_str(), FindExInfoBasic, &data, dirsOnly ? FindExSearchLimitToDirectories : FindExSearchNameMatch, NULL, NULL);
 	} else {
 		handle = ::FindFirstFile(Text::toT(Util::FormatPath(aPath) + aPattern).c_str(), &data);

@@ -369,6 +369,7 @@ static NamedSettingItem settings [] = {
 	{ "open_transfers", SettingsManager::SHOW_TRANSFERVIEW, ResourceManager::MENU_TRANSFERS },
 	{ "open_hublist", SettingsManager::OPEN_PUBLIC, ResourceManager::MAX_HASHING_THREADS },
 	{ "open_favorites", SettingsManager::OPEN_FAVORITE_HUBS, ResourceManager::MAX_VOL_HASHERS },
+	{ "open_queue", SettingsManager::OPEN_QUEUE, ResourceManager::MAX_VOL_HASHERS },
 
 	{ ResourceManager::SETTINGS_ADVANCED },
 	{ "socket_read_buffer", SettingsManager::SOCKET_IN_BUFFER, ResourceManager::SETTINGS_SOCKET_IN_BUFFER },

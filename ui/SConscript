@@ -5,6 +5,7 @@ gui_files = [
             'window_favorites.cc',
             'window_log.cc',
             'window_privatemessage.cc',
+            'window_queue.cc',
             'window_search.cc',
             'window_sharebrowser.cc',
             'window_publichubs.cc',

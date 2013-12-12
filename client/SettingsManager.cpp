@@ -112,7 +112,7 @@ const string SettingsManager::settingTags[] =
 	"KickMsgRecent06", "KickMsgRecent07", "KickMsgRecent08", "KickMsgRecent09", "KickMsgRecent10", 
 	"KickMsgRecent11", "KickMsgRecent12", "KickMsgRecent13", "KickMsgRecent14", "KickMsgRecent15", 
 	"KickMsgRecent16", "KickMsgRecent17", "KickMsgRecent18", "KickMsgRecent19", "KickMsgRecent20",
-	"ToolbarOrder", "ToolbarImage", "ToolbarHot", "UploadQueueFrameOrder", "UploadQueueFrameWidths",
+	"ToolbarOrder", "UploadQueueFrameOrder", "UploadQueueFrameWidths",
 	"SoundTTH", "SoundException", "SoundHubConnected", "SoundHubDisconnected", "SoundFavUserOnline", "SoundTypingNotify",
 	"LogFileMainChat", 
 	"LogFilePrivateChat", "LogFileStatus", "LogFileUpload", "LogFileDownload", "LogFileSystem", "LogFormatSystem", 
@@ -218,7 +218,7 @@ const string SettingsManager::settingTags[] =
 	"ClearDirectoryHistory", "ClearExcludeHistory", "ClearDirHistory", "NoIpOverride6", "IPUpdate6", "SearchUseExcluded", "AutoSearchBold", "ShowEmoticon", "ShowMultiline", "ShowMagnet", "WarnElevated", "SkipEmptyDirsShare", "LogShareScans",
 	"AcceptFailoversFavs", "RemoveExpiredAs", "AdcLogGroupCID", "ShareFollowSymlinks", "ScanMonitoredFolders", "FinishedNoHash", "ConfirmFileDeletions", "UseDefaultCertPaths", "StartupRefresh", "DctmpStoreDestination", "FLReportDupeFiles",
 	"FilterFLShared", "FilterFLQueued", "FilterFLInversed", "FilterFLTop", "FilterFLPartialDupes", "FilterFLResetChange", "FilterSearchShared", "FilterSearchQueued", "FilterSearchInversed", "FilterSearchTop", "FilterSearchPartialDupes", "FilterSearchResetChange",
-	"SearchAschOnlyMan", "IgnoreIndirectSR", "UseUploadBundles", "CloseMinimize",
+	"SearchAschOnlyMan", "IgnoreIndirectSR", "UseUploadBundles", "CloseMinimize", "LogIgnored", "UsersFilterIgnore",
 	"SENTRY",
 	// Int64
 	"TotalUpload", "TotalDownload",
@@ -404,8 +404,6 @@ SettingsManager::SettingsManager()
 	setDefault(TOOLBAR_ORDER, "0,-1,1,2,-1,3,4,5,-1,6,7,8,9,-1,10,11,13,-1,14,15,-1,16,17,-1,18,19,-1,21");
 	setDefault(MEDIATOOLBAR, "0,-1,1,-1,2,3,4,5,6,7,8,9,-1");
 	setDefault(AUTO_PRIORITY_DEFAULT, false);
-	setDefault(TOOLBARIMAGE,"");
-	setDefault(TOOLBARHOTIMAGE,"");
 	setDefault(REMOVE_FORBIDDEN, true);
 	setDefault(EXTRA_DOWNLOAD_SLOTS, 3);
 
@@ -859,6 +857,8 @@ SettingsManager::SettingsManager()
 
 	setDefault(UPDATE_CHANNEL, VERSION_STABLE);
 	setDefault(CLOSE_USE_MINIMIZE, false);
+	setDefault(LOG_IGNORED, true);
+	setDefault(USERS_FILTER_IGNORE, false);
 
 	// not in GUI
 	setDefault(IGNORE_INDIRECT_SR, false);

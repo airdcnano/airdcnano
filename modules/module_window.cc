@@ -33,6 +33,7 @@
 #include <ui/window_log.h>
 #include <ui/window_publichubs.h>
 #include <ui/window_transfers.h>
+#include <ui/window_queue.h>
 
 #include <client/Util.h>
 
@@ -78,6 +79,8 @@ public:
 			handleOpenTab<ui::WindowTransfers>(display::TYPE_TRANSFERS);
 		} else if (key == INPUT_CTRL('S')) {
 			handleOpenTab<ui::WindowLog>(display::TYPE_LOGWND);
+		} else if (key == INPUT_CTRL('Q')) {
+			handleOpenTab<ui::WindowQueue>(display::TYPE_QUEUE);
 		}
 	}
 
@@ -96,12 +99,14 @@ public:
 			handleOpenTab<ui::WindowTransfers>(display::TYPE_TRANSFERS);
 		} else if (w == "syslog") {
 			handleOpenTab<ui::WindowLog>(display::TYPE_LOGWND);
+		} else if (w == "queue") {
+			handleOpenTab<ui::WindowQueue>(display::TYPE_QUEUE);
 		}
 	}
 
 	void handleSuggestOpen(const StringList& aArgs, int pos, StringList& suggest_, bool& appendSpace_) {
 		if (pos == 1) {
-			StringList ret{ "hublist", "transfers", "syslog", "favorites" };
+			StringList ret{ "hublist", "transfers", "syslog", "favorites", "queue" };
 			suggest_.swap(ret);
 		}
 	}

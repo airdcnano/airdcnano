@@ -246,6 +246,9 @@ public:
 
 	void setMatchers() noexcept;
 	void shutdown();
+
+	SharedMutex& getCS() { return cs; }
+	const Bundle::StringBundleMap& getBundles() const { return bundleQueue.getBundles(); }
 private:
 	friend class QueueLoader;
 	friend class Singleton<QueueManager>;

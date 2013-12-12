@@ -39,6 +39,7 @@
 #include <ui/window_publichubs.h>
 #include <ui/window_search.h>
 #include <ui/window_sharebrowser.h>
+#include <ui/window_queue.h>
 #include <ui/status_clock.h>
 #include <ui/status_user.h>
 #include <ui/status_windowinfo.h>
@@ -93,6 +94,8 @@ void Manager::create_windows()
 		dm->push_back(new ui::WindowFavorites());
 	if (SETTING(SHOW_TRANSFERVIEW))
 		dm->push_back(new ui::WindowTransfers());
+	if (SETTING(OPEN_QUEUE))
+		dm->push_back(new ui::WindowQueue());
 
 	ClientManager::getInstance()->addListener(this);
 	DirectoryListingManager::getInstance()->addListener(this);

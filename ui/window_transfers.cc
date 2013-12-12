@@ -291,7 +291,14 @@ void WindowTransfers::on(ConnectionManagerListener::StatusChanged, const Connect
 
 void WindowTransfers::on(ConnectionManagerListener::Removed, const ConnectionQueueItem *cqi) noexcept {
 	auto token = cqi->getToken();
-	callAsync([=] { delete_row(0, token); });
+	callAsync([=] { 
+		delete_row(0, token); 
+		auto p = m_transfers.find(token);
+		if (p != m_transfers.end()) {
+			delete p->second;
+			m_transfers.erase(p);
+		}
+	});
 }
 
 void WindowTransfers::on(ConnectionManagerListener::UserUpdated, const ConnectionQueueItem* aCqi) noexcept{

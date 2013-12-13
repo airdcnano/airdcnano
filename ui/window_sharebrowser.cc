@@ -57,6 +57,7 @@ WindowShareBrowser::WindowShareBrowser(DirectoryListing* aList, const std::strin
 
 	m_bindings['r'] = std::bind(&WindowShareBrowser::reload, this, false);
 	m_bindings['R'] = std::bind(&WindowShareBrowser::reload, this, true);
+	m_bindings['n'] = std::bind(&WindowShareBrowser::set_property, this, PROP_FILTER_NAME);
 
 	setInsertMode(false);
 	updateTitles();
@@ -91,7 +92,8 @@ void WindowShareBrowser::set_property(Property property) {
 	setInsertMode(true);
 	const char *text[] = {
 		"",
-		"Download to:"
+		"Download to:",
+		"Name?"
 	};
 	m_prompt = text[m_property];
 }
@@ -173,7 +175,24 @@ void WindowShareBrowser::handle_line(const std::string &line) {
 
 	if (m_property == PROP_DOWNLOAD) {
 		download(line);
+	} else if (m_property == PROP_FILTER_NAME) {
+		if (line.empty()) {
+			nameFilter.reset();
+		} else {
+			nameFilter.reset(new StringMatch);
+			nameFilter->pattern = line;
+			nameFilter->setMethod(StringMatch::PARTIAL);
+			nameFilter->prepare();
+		}
+
+		auto d = dl->findDirectory(m_path);
+		if (d)
+			insertItems(d, nullptr);
 	}
+
+	setInsertMode(false);
+	set_prompt("");
+	m_property = PROP_NONE;
 }
 
 bool WindowShareBrowser::isDirectorySelected() {
@@ -186,6 +205,7 @@ bool WindowShareBrowser::isDirectorySelected() {
 
 void WindowShareBrowser::loadDirectory(const std::string& aDir, bool reload) {
 	delete_all();
+	nameFilter.reset();
 
 	auto d = dl->findDirectory(aDir);
 	if (!d) {
@@ -234,7 +254,6 @@ void WindowShareBrowser::updateItems(const DirectoryListing::Directory::Ptr& d) 
 
 void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDir, const optional<string>& selectedName) {
 	delete_all();
-	//ctrlFiles.list.DeleteAllItems();
 
 	int selectedPos = -1;
 
@@ -251,6 +270,9 @@ void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDi
 	auto dirs = aDir->directories;
 	sort(dirs.begin(), dirs.end(), DirectoryListing::Directory::Sort());
 	for (const auto& d : dirs) {
+		if (nameFilter && !nameFilter->match(d->getName()))
+			continue;
+
 		auto row = insert_row();
 		set_text(0, row, "d");
 		set_text(1, row, utils::escape(d->getName()));
@@ -266,6 +288,9 @@ void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDi
 	auto files = aDir->files;
 	sort(files.begin(), files.end(), DirectoryListing::File::Sort());
 	for (const auto& f : files) {
+		if (nameFilter && !nameFilter->match(f->getName()))
+			continue;
+
 		auto row = insert_row();
 		set_text(0, row, "f");
 		set_text(1, row, utils::escape(f->getName()));
@@ -280,7 +305,7 @@ void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDi
 }
 
 void WindowShareBrowser::on(DirectoryListingListener::LoadingFinished, int64_t aStart, const string& aDir, bool reloadList, bool changeDir, bool loadInGUIThread) noexcept{
-	if (!changeDir && aDir != m_path) {
+	if (!changeDir && !reloadList && !AirUtil::isParentOrExact(aDir, m_path)) {
 		return;
 	}
 

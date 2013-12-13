@@ -28,6 +28,7 @@
 #include <client/stdinc.h>
 #include <client/DirectoryListing.h>
 #include <client/DirectoryListingListener.h>
+#include <client/StringMatch.h>
 
 #include <display/listview.h>
 
@@ -52,7 +53,8 @@ public:
 private:
 	enum Property {
 		PROP_NONE,
-		PROP_DOWNLOAD
+		PROP_DOWNLOAD,
+		PROP_FILTER_NAME
 	};
 	void set_property(Property property);
 	Property m_property = PROP_NONE;
@@ -82,6 +84,7 @@ private:
 	void on(DirectoryListingListener::HubChanged) noexcept;
 
 	std::string get_infobox_line(unsigned int);
+	std::unique_ptr<StringMatch> nameFilter;
 };
 
 } // namespace ui

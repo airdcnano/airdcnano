@@ -60,10 +60,11 @@ private:
     DirectoryListing* dl;
     std::string m_path;
 
+	void reload(bool all);
 	void download(const std::string& aPath);
 	bool isDirectorySelected();
 	void updateTitles();
-	void loadDirectory(const std::string& aDir);
+	void loadDirectory(const std::string& aDir, bool reload = false);
 	void updateItems(const DirectoryListing::Directory::Ptr& d);
 	void insertItems(const DirectoryListing::Directory::Ptr& d, const optional<string>& selectedName);
 

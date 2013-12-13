@@ -55,6 +55,9 @@ WindowShareBrowser::WindowShareBrowser(DirectoryListing* aList, const std::strin
 	// download to..
 	m_bindings['D'] = std::bind(&WindowShareBrowser::set_property, this, PROP_DOWNLOAD);
 
+	m_bindings['r'] = std::bind(&WindowShareBrowser::reload, this, false);
+	m_bindings['R'] = std::bind(&WindowShareBrowser::reload, this, true);
+
 	setInsertMode(false);
 	updateTitles();
 
@@ -91,6 +94,10 @@ void WindowShareBrowser::set_property(Property property) {
 		"Download to:"
 	};
 	m_prompt = text[m_property];
+}
+
+void WindowShareBrowser::reload(bool all) {
+	loadDirectory(m_path, true);
 }
 
 string getTargetBrowser(const string& aTarget) {
@@ -177,7 +184,7 @@ bool WindowShareBrowser::isDirectorySelected() {
 	return get_text(0, row) == "d";
 }
 
-void WindowShareBrowser::loadDirectory(const std::string& aDir) {
+void WindowShareBrowser::loadDirectory(const std::string& aDir, bool reload) {
 	delete_all();
 
 	auto d = dl->findDirectory(aDir);
@@ -188,7 +195,7 @@ void WindowShareBrowser::loadDirectory(const std::string& aDir) {
 
 	updateItems(d);
 
-	if (!d->isComplete() && !d->getLoading()) {
+	if (reload || (!d->isComplete() && !d->getLoading())) {
 		if (dl->getIsOwnList()) {
 			//d->setLoading(true);
 			//dl->addPartialListTask(Util::emptyString, d->getPath(), aReload == RELOAD_ALL);
@@ -197,7 +204,7 @@ void WindowShareBrowser::loadDirectory(const std::string& aDir) {
 				QueueManager::getInstance()->addList(dl->getHintedUser(), QueueItem::FLAG_PARTIAL_LIST | QueueItem::FLAG_CLIENT_VIEW, d->getPath());
 				d->setLoading(true);
 				//callAsync([]= ctrlTree.updateItemImage(ii);
-				set_prompt_timed("Downloading " + Util::toAdcFile(aDir) + "...");
+				set_prompt_timed((reload ? "Reloading " : "Downloading ") + Util::toAdcFile(aDir) + "...");
 			} catch (const QueueException& e) {
 				set_prompt_timed(e.getError());
 			}
@@ -246,7 +253,7 @@ void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDi
 	for (const auto& d : dirs) {
 		auto row = insert_row();
 		set_text(0, row, "d");
-		set_text(1, row, d->getName());
+		set_text(1, row, utils::escape(d->getName()));
 		set_text(2, row, Util::formatBytes(d->getTotalSize(false)));
 		set_text(3, row, Util::getDateTime(d->getRemoteDate()));
 		set_text(4, row, getDupeText(d->getDupe()));
@@ -261,7 +268,7 @@ void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDi
 	for (const auto& f : files) {
 		auto row = insert_row();
 		set_text(0, row, "f");
-		set_text(1, row, f->getName());
+		set_text(1, row, utils::escape(f->getName()));
 		set_text(2, row, Util::formatBytes(f->getSize()));
 		set_text(3, row, Util::getDateTime(f->getRemoteDate()));
 		set_text(4, row, getDupeText(f->getDupe()));
@@ -273,7 +280,7 @@ void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDi
 }
 
 void WindowShareBrowser::on(DirectoryListingListener::LoadingFinished, int64_t aStart, const string& aDir, bool reloadList, bool changeDir, bool loadInGUIThread) noexcept{
-	if (!changeDir) {
+	if (!changeDir && aDir != m_path) {
 		return;
 	}
 
@@ -337,10 +344,10 @@ void WindowShareBrowser::on(DirectoryListingListener::UpdateStatusMessage, const
 	callAsync([=] { set_prompt_timed(STRING(USER_OFFLINE)); });
 }
 void WindowShareBrowser::on(DirectoryListingListener::RemovedQueue, const string& aDir) noexcept{
-
+	callAsync([=] { set_prompt_timed(aDir + " was removed from queue"); });
 }
 void WindowShareBrowser::on(DirectoryListingListener::SetActive) noexcept{
-	
+	//set_current();
 }
 void WindowShareBrowser::on(DirectoryListingListener::HubChanged) noexcept{
 
@@ -358,7 +365,7 @@ std::string WindowShareBrowser::get_infobox_line(unsigned int n) {
 	switch (n) {
 	case 1:
 	{
-		ss << Util::toAdcFile(m_path) + name + (isDirectorySelected() ? "/" : "");
+		ss << utils::escape(Util::toAdcFile(m_path) + name + (isDirectorySelected() ? "/" : ""));
 		break;
 	}
 	/*case 2:

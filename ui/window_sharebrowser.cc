@@ -1,7 +1,7 @@
 /* vim:set ts=4 sw=4 sts=4 et cindent: */
 /*
- * nanodc - The ncurses DC++ client
- * Copyright © 2005-2006 Markus Lindqvist <nanodc.developer@gmail.com>
+ * AirDC++ nano
+ * Copyright © 2013 maksis@adrenaline-network.com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -195,7 +195,7 @@ void WindowShareBrowser::loadDirectory(const std::string& aDir) {
 				QueueManager::getInstance()->addList(dl->getHintedUser(), QueueItem::FLAG_PARTIAL_LIST | QueueItem::FLAG_CLIENT_VIEW, d->getPath());
 				d->setLoading(true);
 				//callAsync([]= ctrlTree.updateItemImage(ii);
-				set_prompt_timed(STRING(DOWNLOADING_LIST));
+				set_prompt_timed("Downloading " + Util::toAdcFile(aDir) + "...");
 			} catch (const QueueException& e) {
 				set_prompt_timed(e.getError());
 			}
@@ -239,7 +239,9 @@ void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDi
 		return "";
 	};
 
-	for (const auto& d : aDir->directories) {
+	auto dirs = aDir->directories;
+	sort(dirs.begin(), dirs.end(), DirectoryListing::Directory::Sort());
+	for (const auto& d : dirs) {
 		auto row = insert_row();
 		set_text(0, row, "d");
 		set_text(1, row, d->getName());
@@ -252,7 +254,9 @@ void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDi
 		}
 	}
 
-	for (const auto& f : aDir->files) {
+	auto files = aDir->files;
+	sort(files.begin(), files.end(), DirectoryListing::File::Sort());
+	for (const auto& f : files) {
 		auto row = insert_row();
 		set_text(0, row, "f");
 		set_text(1, row, f->getName());
@@ -268,7 +272,6 @@ void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDi
 
 void WindowShareBrowser::on(DirectoryListingListener::LoadingFinished, int64_t aStart, const string& aDir, bool reloadList, bool changeDir, bool loadInGUIThread) noexcept{
 	if (!changeDir) {
-		//set_prompt_timed(aDir + " loaded (background)");
 		return;
 	}
 
@@ -278,6 +281,7 @@ void WindowShareBrowser::on(DirectoryListingListener::LoadingFinished, int64_t a
 	callAsync([=] {
 		loadDirectory(aDir);
 		dl->setWaiting(false);
+		set_prompt_timed(Util::toAdcFile(aDir) + " loaded");
 	});
 }
 

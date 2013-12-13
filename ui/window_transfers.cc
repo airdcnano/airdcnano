@@ -76,6 +76,7 @@ WindowTransfers::WindowTransfers() : ListView(display::TYPE_TRANSFERS, "transfer
     m_bindings['r'] = std::bind(&WindowTransfers::remove_source, this);
     m_bindings['c'] = std::bind(&WindowTransfers::disconnect, this);
     m_bindings['R'] = std::bind(&WindowTransfers::remove_download, this);
+	m_bindings['b'] = std::bind(&WindowTransfers::handleGetList, this);
 
 	// add the existing connections
 	{
@@ -108,10 +109,7 @@ WindowTransfers::WindowTransfers() : ListView(display::TYPE_TRANSFERS, "transfer
 		}
 	}
 
-    // browse
-	//m_bindings['b'] = std::bind(&QueueManager::addList, QueueManager::getInstance(),
-	 //                   std::bind(&WindowTransfers::get_user, this), QueueItem::FLAG_CLIENT_VIEW);
-    // match queue
+	// match queue
     //m_bindings['M'] = std::bind(&QueueManager::addList, QueueManager::getInstance(),
     //                    std::bind(&WindowTransfers::get_user, this), QueueItem::FLAG_MATCH_QUEUE);
 
@@ -119,6 +117,17 @@ WindowTransfers::WindowTransfers() : ListView(display::TYPE_TRANSFERS, "transfer
     //m_bindings['g'] = std::bind(&UploadManager::reserveSlot,
     //                    UploadManager::getInstance(),
     //                    std::bind(&WindowTransfers::get_user, this));
+}
+
+void WindowTransfers::handleGetList() {
+	if (get_selected_row() == -1)
+		return;
+
+	try {
+		QueueManager::getInstance()->addList(get_user(), QueueItem::FLAG_CLIENT_VIEW);
+	} catch (...) {
+
+	}
 }
 
 HintedUser WindowTransfers::get_user()

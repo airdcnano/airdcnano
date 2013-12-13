@@ -26,23 +26,42 @@
 #include <utils/utils.h>
 #include <ui/window_sharebrowser.h>
 #include <client/ClientManager.h>
+#include <client/DirectoryListingManager.h>
+#include <client/QueueManager.h>
 #include <core/events.h>
+#include <input/completion.h>
 
 namespace ui {
 
 WindowShareBrowser::WindowShareBrowser(DirectoryListing* aList, const std::string& aDir, const std::string& aXML) :
-	m_listing(aList),
-	m_path(aDir), DirectoryWindow(display::TYPE_LISTBROWSER, aList->getUser()->getCID().toBase32())
+	dl(aList),
+	m_path(aDir), ListView(display::TYPE_LISTBROWSER, "list" + aList->getHintedUser().user->getCID().toBase32(), true)
 {
+	insert_column(new display::Column("Type"));
+	insert_column(new display::Column("Name", 10, 15, 20));
+	insert_column(new display::Column("Size", 10, 15, 20));
+	insert_column(new display::Column("Date", 6, 6, 12));
+	insert_column(new display::Column("Dupe", 4, 4, 5));
+
+	m_bindings[KEY_LEFT] = [&] { loadDirectory(Util::getNmdcParentDir(m_path)); };
+	m_bindings[KEY_RIGHT] = [&] { handle_line(""); };
+
+
+	// download
+	m_bindings['d'] = std::bind(&WindowShareBrowser::download, this, SETTING(DOWNLOAD_DIRECTORY));
+
+	// download to..
+	m_bindings['D'] = std::bind(&WindowShareBrowser::set_property, this, PROP_DOWNLOAD);
+
 	setInsertMode(false);
 	updateTitles();
 
 	aList->addListener(this);
     try {
-		if (m_listing->getPartialList()) {
-			m_listing->addPartialListTask(aXML, aDir, false, false);
+		if (dl->getPartialList()) {
+			dl->addPartialListTask(aDir, aXML, false, true);
 		} else {
-			m_listing->addFullListTask(aDir);
+			dl->addFullListTask(aDir);
 		}
     } catch(Exception &e) {
 		core::Log::get()->log("Cannot open list '" + aDir + "'" +
@@ -50,28 +69,241 @@ WindowShareBrowser::WindowShareBrowser(DirectoryListing* aList, const std::strin
     }
 }
 
+void WindowShareBrowser::complete(const std::vector<std::string>& aArgs, int /*pos*/, std::vector<std::string>& suggest_, bool& appendSpace_) {
+	if (m_property == PROP_DOWNLOAD) {
+		if (!aArgs[0].empty()) {
+			input::Completion::getDiskPathSuggestions(aArgs[0], suggest_);
+		} else {
+			suggest_ = SettingsManager::getInstance()->getHistory(SettingsManager::HISTORY_DIR);
+		}
+
+		appendSpace_ = false;
+	}
+}
+
+void WindowShareBrowser::set_property(Property property) {
+	m_property = property;
+	setInsertMode(true);
+	const char *text[] = {
+		"",
+		"Download to:"
+	};
+	m_prompt = text[m_property];
+}
+
+string getTargetBrowser(const string& aTarget) {
+	auto target = aTarget.empty() ? SETTING(DOWNLOAD_DIRECTORY) : aTarget;
+	if (!target.empty() && target.back() != '/')
+		target += "/";
+	return target;
+}
+
+void WindowShareBrowser::download(const std::string& aPath) {
+	int row = get_selected_row();
+	if (row == -1)
+		return;
+
+	auto name = get_text(1, row);
+
+	auto target = getTargetBrowser(aPath);
+
+	auto curDir = dl->findDirectory(m_path);
+	if (!curDir)
+		return;
+
+	try {
+		if (!isDirectorySelected()) {
+			auto f = find_if(curDir->files.begin(), curDir->files.end(), [&](const DirectoryListing::File* aFile) { return aFile->getName() == name; });
+			if (f == curDir->files.end())
+				return;
+
+			QueueManager::getInstance()->createFileBundle(
+				target + name,
+				0, (*f)->getTTH(),
+				dl->getHintedUser(), (*f)->getRemoteDate(), 0, QueueItemBase::DEFAULT);
+			set_prompt_timed("Queued " + target + name);
+		} else {
+			auto d = find_if(curDir->directories.begin(), curDir->directories.end(), [&](const DirectoryListing::Directory::Ptr& aDir) { return aDir->getName() == name; });
+			if (d == curDir->directories.end())
+				return;
+
+			DirectoryListingManager::getInstance()->addDirectoryDownload((*d)->getPath(), name,
+				dl->getHintedUser(), target, TargetUtil::TARGET_PATH, NO_CHECK);
+			set_prompt_timed("Queued " + (*d)->getPath());
+		}
+
+		if (!aPath.empty())
+			SettingsManager::getInstance()->addToHistory(target, SettingsManager::HISTORY_DIR);
+	} catch (const Exception &e) {
+		set_prompt_timed("Error downloading the file: " + e.getError());
+	}
+}
+
 void WindowShareBrowser::updateTitles() {
-	auto nicks = ClientManager::getInstance()->getFormatedNicks(m_listing->getHintedUser());
-	set_title("Browsing user " + nicks + " (" + ClientManager::getInstance()->getFormatedHubNames(m_listing->getHintedUser()) + ")");
+	auto nicks = ClientManager::getInstance()->getFormatedNicks(dl->getHintedUser());
+	set_title("Browsing user " + nicks + " (" + ClientManager::getInstance()->getFormatedHubNames(dl->getHintedUser()) + ")");
 	set_name("List:" + nicks);
 }
 
 WindowShareBrowser::~WindowShareBrowser() {
-	m_listing->removeListener(this);
+	dl->removeListener(this);
+}
+
+void WindowShareBrowser::handle_line(const std::string &line) {
+	if (!getInsertMode()) {
+		if (!isDirectorySelected())
+			return;
+
+		int row = get_selected_row();
+		if (row == -1)
+			return;
+
+		loadDirectory(m_path + get_text(1, row) + "\\");
+		return;
+	}
+
+	if (m_property == PROP_DOWNLOAD) {
+		download(line);
+	}
+}
+
+bool WindowShareBrowser::isDirectorySelected() {
+	int row = get_selected_row();
+	if (row == -1)
+		return false;
+
+	return get_text(0, row) == "d";
+}
+
+void WindowShareBrowser::loadDirectory(const std::string& aDir) {
+	delete_all();
+
+	auto d = dl->findDirectory(aDir);
+	if (!d) {
+		set_prompt_timed("Directory " + aDir + " not found");
+		return;
+	}
+
+	updateItems(d);
+
+	if (!d->isComplete() && !d->getLoading()) {
+		if (dl->getIsOwnList()) {
+			//d->setLoading(true);
+			//dl->addPartialListTask(Util::emptyString, d->getPath(), aReload == RELOAD_ALL);
+		} else if (dl->getUser()->isOnline()) {
+			try {
+				QueueManager::getInstance()->addList(dl->getHintedUser(), QueueItem::FLAG_PARTIAL_LIST | QueueItem::FLAG_CLIENT_VIEW, d->getPath());
+				d->setLoading(true);
+				//callAsync([]= ctrlTree.updateItemImage(ii);
+				set_prompt_timed(STRING(DOWNLOADING_LIST));
+			} catch (const QueueException& e) {
+				set_prompt_timed(e.getError());
+			}
+		} else {
+			set_prompt_timed(STRING(USER_OFFLINE));
+		}
+	}
+}
+
+void WindowShareBrowser::updateItems(const DirectoryListing::Directory::Ptr& d) {
+	/*ctrlFiles.list.SetRedraw(FALSE);
+	updating = true;*/
+	optional<string> selectedName;
+
+	if (d->getPath() == Util::getNmdcParentDir(m_path)) {
+		selectedName = Util::getNmdcLastDir(m_path);
+	}
+
+	m_path = d->getPath();
+
+	//ctrlFiles.onListChanged(false);
+	insertItems(d, selectedName);
+
+	//updating = false;
+	//updateStatus();
+}
+
+void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDir, const optional<string>& selectedName) {
+	delete_all();
+	//ctrlFiles.list.DeleteAllItems();
+
+	int selectedPos = -1;
+
+	auto getDupeText = [&](int aDupe) {
+		switch (aDupe) {
+			case SHARE_DUPE: return "S";
+			case SHARE_QUEUE_DUPE: return "SQ";
+			case QUEUE_DUPE: return "Q";
+		}
+
+		return "";
+	};
+
+	for (const auto& d : aDir->directories) {
+		auto row = insert_row();
+		set_text(0, row, "d");
+		set_text(1, row, d->getName());
+		set_text(2, row, Util::formatBytes(d->getTotalSize(false)));
+		set_text(3, row, Util::getDateTime(d->getRemoteDate()));
+		set_text(4, row, getDupeText(d->getDupe()));
+
+		if (selectedName && d->getName() == *selectedName) {
+			selectedPos = row;
+		}
+	}
+
+	for (const auto& f : aDir->files) {
+		auto row = insert_row();
+		set_text(0, row, "f");
+		set_text(1, row, f->getName());
+		set_text(2, row, Util::formatBytes(f->getSize()));
+		set_text(3, row, Util::getDateTime(f->getRemoteDate()));
+		set_text(4, row, getDupeText(f->getDupe()));
+	}
+
+	if (selectedPos > 0) {
+		scroll_list(selectedPos);
+	}
 }
 
 void WindowShareBrowser::on(DirectoryListingListener::LoadingFinished, int64_t aStart, const string& aDir, bool reloadList, bool changeDir, bool loadInGUIThread) noexcept{
-	m_root = new display::Directory(nullptr);
-	m_current = m_root;
+	if (!changeDir) {
+		//set_prompt_timed(aDir + " loaded (background)");
+		return;
+	}
 
-	create_tree(m_listing->getRoot().get(), m_root);
-	create_list();
+	if (!dl->getIsOwnList() && SETTING(DUPES_IN_FILELIST))
+		dl->checkShareDupes();
+
+	callAsync([=] {
+		loadDirectory(aDir);
+		dl->setWaiting(false);
+	});
 }
+
 void WindowShareBrowser::on(DirectoryListingListener::LoadingFailed, const string& aReason) noexcept{
-
+	if (!dl->getClosing()) {
+		/*callAsync([=] {
+			updateStatus(Text::toT(aReason));
+			if (!dl->getPartialList()) {
+				PostMessage(WM_CLOSE, 0, 0);
+			} else {
+				changeWindowState(true);
+			}
+		});*/
+	}
 }
-void WindowShareBrowser::on(DirectoryListingListener::LoadingStarted, bool changeDir) noexcept{
 
+void WindowShareBrowser::on(DirectoryListingListener::LoadingStarted, bool changeDir) noexcept{
+	callAsync([=] {
+		if (changeDir) {
+			//DisableWindow(false);
+		} else {
+			//changeWindowState(false);
+			//ctrlStatus.SetText(0, CTSTRING(LOADING_FILE_LIST));
+		}
+		dl->setWaiting(false);
+	});
 }
 void WindowShareBrowser::on(DirectoryListingListener::QueueMatched, const string& aMessage) noexcept{
 
@@ -87,98 +319,25 @@ void WindowShareBrowser::on(DirectoryListingListener::SearchFailed, bool timedOu
 
 }
 void WindowShareBrowser::on(DirectoryListingListener::ChangeDirectory, const string& aDir, bool isSearchChange) noexcept{
+	callAsync([=] { loadDirectory(aDir); });
+	/*if (isSearchChange) {
+		callAsync([=] { updateStatus(TSTRING_F(X_RESULTS_FOUND, dl->getResultCount())); });
+		findSearchHit(true);
+	}*/
 
+	//changeWindowState(true);
 }
 void WindowShareBrowser::on(DirectoryListingListener::UpdateStatusMessage, const string& aMessage) noexcept{
-
+	callAsync([=] { set_prompt_timed(STRING(USER_OFFLINE)); });
 }
 void WindowShareBrowser::on(DirectoryListingListener::RemovedQueue, const string& aDir) noexcept{
 
 }
 void WindowShareBrowser::on(DirectoryListingListener::SetActive) noexcept{
-
+	
 }
 void WindowShareBrowser::on(DirectoryListingListener::HubChanged) noexcept{
 
 }
-
-void WindowShareBrowser::create_tree(Dir *parent, display::Directory *parent2)
-{
-    display::Directory *current = new display::Directory(parent2);
-    parent2->get_children().push_back(current);
-
-	for (const auto& d : parent->directories) {
-		create_tree(d.get(), current);
-	}
-
-    for(const auto& i: parent->files) {
-        current->append_child(new ShareItem(i));
-        //core::Log::get()->log(i->getName());
-    }
-
-}
-
-void WindowShareBrowser::create_list(/*display::Directory *parent*/)
-{
-    //set_title(m_current->getName());
-
-    const auto& dirs = m_current->get_children();
-    for(const auto& d: dirs) {
-        m_dirView->set_text(0, m_dirView->insert_row(), d->get_name());
-    }
-
-    const auto& files = m_current->get_items();
-    for(const auto& i: files) {
-        m_fileView->set_text(0, m_fileView->insert_row(), i->get_name());
-    }
-
-	m_state = display::STATE_ACTIVITY;
-	events::emit("window status updated", static_cast<Window*>(this), m_state);
-}
-
-#if 0
-void WindowShareBrowser::create_list()
-{
-/*    typedef DirectoryListing::Directory Dir;
-    typedef DirectoryListing::File File;
-    set_title(m_current->getName());
-    display::Directory *currentDir = new display::Directory(m_current);
-
-    DirectoryListing::Directory dirs = m_current->directories;
-    for(Dir::Iter it = dirs.begin(); it != dirs.end(); it++) {
-        m_dirView->set_text(0, m_dirView->insert_row(), (*it)->getName());
-    }
-
-    DirectoryListing::File files = m_current->files;
-    for(File::List::iterator i = files.begin(); i != files.end(); ++i) {
-        m_fileView->set_text(0, m_fileView->insert_row(), (*i)->getName());
-    }
-    m_windowupdated(this);*/
-}
-
-
-void WindowShareBrowser::create_list(DirectoryListing::Directory::List dirs, display::Directory *parent)
-{
-    typedef DirectoryListing::Directory Dir;
-    typedef DirectoryListing::File File;
-    display::Directory *child = new display::Directory(parent);
-
-    for(Dir::Iter it = dirs.begin(); it != dirs.end(); it++) {
-        for(File::List::iterator i=(*it)->files.begin(); i != (*it)->files.end(); ++i) {
-            int row = m_fileView->insert_row();
-            m_fileView->set_text(0, row, (*i)->getName());
-            if(parent->get_parent() == 0) {
-                set_current(child);
-            }
-            child->append_child(new ShareItem(*i));
-        }
-        int row = m_dirView->insert_row();
-        m_dirView->set_text(0, row, (*it)->getName());
-        create_list((*it)->directories, child);
-    }
-    m_windowupdated(this);
-}
-
-#endif
 
 } // namespace ui

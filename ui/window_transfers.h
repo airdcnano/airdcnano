@@ -194,6 +194,8 @@ private:
 
 	void handleBytes() noexcept;
 	boost::signals2::connection bytesConn;
+
+	void handleGetList();
 };
 } // namespace ui
 

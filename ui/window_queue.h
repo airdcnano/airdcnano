@@ -1,7 +1,7 @@
 /* vim:set ts=4 sw=4 sts=4 et cindent: */
 /*
-* nanodc - The ncurses DC++ client
-* Copyright © 2005-2006 Markus Lindqvist <nanodc.developer@gmail.com>
+* AirDC++ nano
+* Copyright © 2013 maksis@adrenaline-network.com
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by

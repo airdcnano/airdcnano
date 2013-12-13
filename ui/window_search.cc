@@ -70,7 +70,7 @@ WindowSearch::WindowSearch(const std::string &aStr):
     m_bindings['S'] = std::bind(&WindowSearch::set_property, this, PROP_DIRECTORYTARGET);
 
     // browse
-	//m_bindings['b'] = std::bind(&WindowSearch::handleGetList, this);
+	m_bindings['b'] = std::bind(&WindowSearch::handleGetList, this);
     // match queue
 	m_bindings['M'] = std::bind(&WindowSearch::handleMatchQueue, this);
     // search

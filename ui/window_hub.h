@@ -97,6 +97,7 @@ private:
 
 	void handleShowJoins();
 	void handleMsg();
+	void handleBrowse();
 
 	void print_help();
 	void handleNames();

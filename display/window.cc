@@ -220,5 +220,9 @@ Window::~Window()
 {
 }
 
+void Window::set_current() {
+
+}
+
 } // namespace display
 

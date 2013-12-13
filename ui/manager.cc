@@ -151,6 +151,8 @@ void Manager::on(DirectoryListingManagerListener::OpenListing, DirectoryListing*
 		auto dl = new ui::WindowShareBrowser(aList, aDir, aXML);
 		mger->push_back(dl);
 	}
+
+	mger->set_current(it);
 }
 
 void Manager::on(TimerManagerListener::Second, uint64_t aTick) noexcept{

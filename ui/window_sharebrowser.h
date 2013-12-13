@@ -29,7 +29,7 @@
 #include <client/DirectoryListing.h>
 #include <client/DirectoryListingListener.h>
 
-#include <display/directory_window.h>
+#include <display/listview.h>
 
 using namespace dcpp;
 
@@ -39,33 +39,33 @@ typedef DirectoryListing::Directory Dir;
 typedef DirectoryListing::File File;
 
 class WindowShareBrowser:
-    public display::DirectoryWindow, public DirectoryListingListener
+	public display::ListView, public DirectoryListingListener
 {
 public:
 	WindowShareBrowser(DirectoryListing* aList, const std::string& aDir, const std::string& aXML);
 
-    //virtual void create_list(DirectoryListing::Directory::List dirs, display::Directory *parent);
-    virtual void create_list();
-    void create_tree(Dir *parent, display::Directory *parent2);
-
 	~WindowShareBrowser();
+
+	/** Handle user input. */
+	void handle_line(const std::string &line);
+	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_);
 private:
-    DirectoryListing* m_listing;
+	enum Property {
+		PROP_NONE,
+		PROP_DOWNLOAD
+	};
+	void set_property(Property property);
+	Property m_property = PROP_NONE;
+
+    DirectoryListing* dl;
     std::string m_path;
-    class ShareItem:
-        public display::Item
-    {
-        public:
-            ShareItem(DirectoryListing::File *file):m_file(file){ }
-            std::string get_value() { return m_file->getName(); }
-            std::string get_line(unsigned int line) { return m_file->getTTH().toBase32(); }
-            ~ShareItem() { }
-        private:
-            DirectoryListing::File *m_file;
 
-    };
-
+	void download(const std::string& aPath);
+	bool isDirectorySelected();
 	void updateTitles();
+	void loadDirectory(const std::string& aDir);
+	void updateItems(const DirectoryListing::Directory::Ptr& d);
+	void insertItems(const DirectoryListing::Directory::Ptr& d, const optional<string>& selectedName);
 
 	void on(DirectoryListingListener::LoadingFinished, int64_t aStart, const string& aDir, bool reloadList, bool changeDir, bool loadInGUIThread) noexcept;
 	void on(DirectoryListingListener::LoadingFailed, const string& aReason) noexcept;

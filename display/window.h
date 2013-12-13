@@ -144,6 +144,8 @@ public:
 
 	// does this window have an input line for commands
 	const bool allowCommands;
+
+	void set_current();
 protected:
 	const std::string id;
     std::string m_prompt;

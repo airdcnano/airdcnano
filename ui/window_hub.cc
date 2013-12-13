@@ -38,6 +38,7 @@
 #include <client/LogManager.h>
 #include <client/FavoriteManager.h>
 #include <client/HubEntry.h>
+#include <client/QueueManager.h>
 #include <client/ShareManager.h>
 #include <client/StringTokenizer.h>
 
@@ -53,6 +54,7 @@ WindowHub::WindowHub(const std::string &address):
 	ScrolledWindow(address, display::TYPE_HUBWINDOW),
 	commands({
 		{ "fav", boost::bind(&WindowHub::handleFav, this), nullptr },
+		{ "browse", boost::bind(&WindowHub::handleBrowse, this), COMPLETION(WindowHub::complete), false },
 		{ "msg", boost::bind(&WindowHub::handleMsg, this), COMPLETION(WindowHub::complete), false },
 		{ "names", boost::bind(&WindowHub::handleNames, this), nullptr },
 		{ "reconnect", boost::bind(&WindowHub::handleReconnect, this), nullptr },
@@ -72,6 +74,32 @@ void WindowHub::print_help() {
 		return;
 
 	add_line(display::LineEntry("Hub context: /fav /names /reconnect /showjoins"));
+}
+
+void WindowHub::handleBrowse() {
+	core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
+	parser.parse();
+
+	if (parser.args() < 1) {
+		display::Manager::get()->cmdMessage("Not enough parameters given");
+		return;
+	}
+
+	auto nick = parser.arg(0);
+
+	auto p = m_users.find(nick);
+	if (p == m_users.end()) {
+		display::Manager::get()->cmdMessage("User " + nick + " not found");
+		return;
+	}
+
+	auto user = p->second;
+
+	try {
+		QueueManager::getInstance()->addList(HintedUser(user->getUser(), m_client->getHubUrl()), QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_PARTIAL_LIST);
+	} catch (const Exception& e) {
+		LogManager::getInstance()->message(e.getError(), LogManager::LOG_ERROR);
+	}
 }
 
 void WindowHub::handleMsg() {

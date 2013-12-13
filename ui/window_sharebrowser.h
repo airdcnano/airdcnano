@@ -79,6 +79,8 @@ private:
 	void on(DirectoryListingListener::RemovedQueue, const string& aDir) noexcept;
 	void on(DirectoryListingListener::SetActive) noexcept;
 	void on(DirectoryListingListener::HubChanged) noexcept;
+
+	std::string get_infobox_line(unsigned int);
 };
 
 } // namespace ui

@@ -37,8 +37,10 @@ WindowShareBrowser::WindowShareBrowser(DirectoryListing* aList, const std::strin
 	dl(aList),
 	m_path(aDir), ListView(display::TYPE_LISTBROWSER, "list" + aList->getHintedUser().user->getCID().toBase32(), true)
 {
+	m_infoboxHeight = 2;
+
 	insert_column(new display::Column("Type"));
-	insert_column(new display::Column("Name", 10, 15, 20));
+	insert_column(new display::Column("Name", 10, 15, 50));
 	insert_column(new display::Column("Size", 10, 15, 20));
 	insert_column(new display::Column("Date", 6, 6, 12));
 	insert_column(new display::Column("Dupe", 4, 4, 5));
@@ -342,6 +344,41 @@ void WindowShareBrowser::on(DirectoryListingListener::SetActive) noexcept{
 }
 void WindowShareBrowser::on(DirectoryListingListener::HubChanged) noexcept{
 
+}
+
+
+std::string WindowShareBrowser::get_infobox_line(unsigned int n) {
+	int row = get_selected_row();
+	if (row == -1)
+		return "";
+
+	auto name = get_text(1, row);
+
+	std::stringstream ss;
+	switch (n) {
+	case 1:
+	{
+		ss << Util::toAdcFile(m_path) + name + (isDirectorySelected() ? "/" : "");
+		break;
+	}
+	/*case 2:
+		ss << "%21Size:%21 " << std::left << std::setw(9)
+			<< Util::formatBytes(result->getSize())
+			<< " %21Slots:%21 " << result->getFreeSlots() << "/" << result->getSlots()
+			<< " %21TTH:%21 " << (result->getType() == SearchResult::TYPE_FILE ? result->getTTH().toBase32() : "-");
+		break;
+	case 3:
+		ss << "%21Hub:%21 " << std::left << std::setw(18)
+			<< ClientManager::getInstance()->getFormatedHubNames(result->getUser())
+			<< " %21Date:%21 " << Util::getDateTime(result->getDate());
+		break;
+	case 4:
+	{
+		ss << utils::escape(Util::toAdcFile(result->getPath()));
+		break;
+	}*/
+	}
+	return ss.str();
 }
 
 } // namespace ui

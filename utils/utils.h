@@ -84,10 +84,6 @@ static String remove_formatting(String str) {
 	return lusikka;
 }
 
-/** Sleep 
-    @param usec Microseconds to sleep */
-void sleep(int usec);
-
 /** Convert \ -> / */
 std::string linux_separator(const std::string &ps);
 
@@ -99,26 +95,6 @@ template<class T> std::string to_string(T s)
     std::ostringstream oss;
     oss << s;
     return oss.str();
-}
-
-/** Removes the last element of the container.
- * Does nothing if the container is empty. */
-template<typename Container>
-Container &remove_last(Container &container)
-{
-    if(container.length() != 0)
-        container.erase(container.size()-1);
-    return container;
-}
-
-/** Convert a string to T. */
-template <class T>
-T to(const std::string &str)
-{
-    T t;
-    std::istringstream iss(str);
-    iss >> t;
-    return t;
 }
 
 /**  */
@@ -133,13 +109,6 @@ bool find_in_string(const std::string &str, Iterator start, Iterator end)
     return false;
 }
 
-/**
-    Get string representation of current time.
-    @param format Format eg. "[%H:%M:%S]"
-*/
-std::string time_to_string(const std::string &format);
-std::string time_to_string(const std::string &format, time_t time);
-
 /** Delete. */
 template <typename T>
 struct delete_functor
@@ -149,12 +118,6 @@ struct delete_functor
         t = 0;
     }
 };
-
-std::string to_utf8(const std::string &str) noexcept;
-
-std::string from_utf8(const std::string &str) noexcept;
-
-std::string convert(const std::string &str, const std::string &from, const std::string &to) throw(std::runtime_error);
 
 inline long strlen(const std::string &str) noexcept
 {
@@ -168,8 +131,6 @@ uint32_t get_millisecs() {
     gettimeofday(&tv, NULL);
     return (uint32_t)((tv.tv_sec) * 1000 ) + ( (tv.tv_usec) / 1000);
 }
-
-std::string tolower(const std::string &str) noexcept;
 
 /** Converts an IP-address to hostname. Eg. 66.35.250.150 -> slashdot.org */
 std::string ip_to_host(const std::string &ip);

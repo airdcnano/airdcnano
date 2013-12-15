@@ -173,7 +173,7 @@ void Nanodc::handle_crash(int sig)
     endwin();
     remove(m_pidfile.c_str());
 
-    std::cerr << utils::SignalHandler::to_string(sig) << std::endl;
+    std::cerr << Util::toString(sig) << std::endl;
     std::cerr << "pid: " << getpid() <<
         ", tid: " << utils::gettid() << std::endl;
 #if USE_STACKTRACE

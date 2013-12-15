@@ -24,7 +24,10 @@
 #include <iostream>
 #include <stdexcept>
 #include <display/curses_window.h>
-#include <utils/utils.h>
+
+#include <client/stdinc.h>
+#include <client/Text.h>
+#include <client/Util.h>
 
 namespace display {
 
@@ -36,7 +39,7 @@ CursesWindow::CursesWindow(int x, int y, int width, int height):
 
 void CursesWindow::set_flags(const std::string &flags)
 {
-    int code = utils::to<int>(flags);
+    int code = dcpp::Util::toInt(flags);
     switch(code) {
         case 21:
             m_flags ^= A_BOLD;
@@ -58,14 +61,14 @@ void CursesWindow::print(const std::string &text, int x, int y, bool colors)
 {
     wmove(m_window, y, x);
 
-    std::string str = utils::from_utf8(text);
+    //std::string str = dcpp::Text::fromUtf8(text);
     int width = get_width();
-    for(unsigned int i=0; i < str.length() && m_window && getcurx(m_window) < width; ++i)
+	for (unsigned int i = 0; i < text.length() && m_window && getcurx(m_window) < width; ++i)
     {
-        unsigned char c = str.at(i);
+		unsigned char c = text.at(i);
         if(colors && c == '%') {
-            if(str.length() > ++i && str.at(i) != '%') {
-                set_flags(str.substr(i, 2));
+			if (text.length() > ++i && text.at(i) != '%') {
+				set_flags(text.substr(i, 2));
                 ++i;
                 continue;
             }

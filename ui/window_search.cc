@@ -354,20 +354,13 @@ void WindowSearch::free_results()
 	updateTitle();
 }
 
-string getTarget(const string& aTarget) {
-	auto target = aTarget.empty() ? SETTING(DOWNLOAD_DIRECTORY) : aTarget;
-	if (!target.empty() && target[target.length() - 1] != '/')
-		target += "/";
-	return target;
-}
-
 void WindowSearch::download(const std::string& aPath)
 {
     auto result = get_result();
 	if (!result)
 		return;
 
-	auto target = getTarget(aPath);
+	auto target = Util::validatePath(aPath);
 
     try {
         if(result->getType() == SearchResult::TYPE_FILE) {
@@ -393,11 +386,11 @@ void WindowSearch::download_directory(const std::string& aPath)
 	if (!result)
 		return;
 
-	auto target = getTarget(aPath);
+	auto target = Util::validatePath(aPath);
     try {
         if(result->getType() == SearchResult::TYPE_FILE)
         {
-			DirectoryListingManager::getInstance()->addDirectoryDownload(utils::windows_separator(Util::getNmdcFilePath(utils::linux_separator(result->getPath()))),
+			DirectoryListingManager::getInstance()->addDirectoryDownload(result->getPath(),
                 Util::getNmdcLastDir(result->getFilePath()), result->getUser(),
                 target.empty() ? SETTING (DOWNLOAD_DIRECTORY) : target + "/", TargetUtil::TARGET_PATH, NO_CHECK);
         }

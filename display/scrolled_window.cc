@@ -107,7 +107,7 @@ LineEntry ScrolledWindow::koskenkorva_viina(const display::LineEntry &line_)
 
     std::string text;
  
-    text = utils::time_to_string(m_timestamp, line.m_time);
+	text = Util::formatTime(m_timestamp, line.m_time);
     line.m_indent += text.length();
 
 	if (line.m_type == LineEntry::ACTIVITY_ERROR) {

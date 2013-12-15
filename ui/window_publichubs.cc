@@ -136,22 +136,22 @@ void WindowHubs::handle_line(const std::string &line)
 			m_words = dcpp::StringTokenizer<string>(Text::toLower(param), " ").getTokens();
             break;
         case PROP_ADDRESS:
-            m_addressFilter = utils::tolower(param);
+            m_addressFilter = Text::toLower(param);
             break;
 		case PROP_HUBLIST:
 		{
-			m_hublist = utils::to<int>(param);
+			m_hublist = Util::toInt(param);
 			FavoriteManager *man = FavoriteManager::getInstance();
 			man->setHubList(m_hublist);
 			break;
 		}
         case PROP_USERS:
-            m_minUsers = utils::to<int64_t>(param);
+            m_minUsers = Util::toInt64(param);
             break;
         case PROP_MINSHARE:
         case PROP_MAXSHARE:
         {
-            int64_t size = utils::to<unsigned long>(param);
+            int64_t size = Util::toInt64(param);
             size *= 1024*1024*1024;
 
             if(m_property == PROP_MINSHARE)
@@ -205,7 +205,7 @@ bool WindowHubs::matches(const HubEntry &entry)
     if(m_minUsers && m_minUsers < entry.getMaxUsers())
         return false;
 
-    std::string description = utils::tolower(entry.getDescription());
+    std::string description = Text::toLower(entry.getDescription());
 
     if(m_words.size() && !utils::find_in_string(description, m_words.begin(), m_words.end())) {
         return false;

@@ -23,8 +23,9 @@
 
 #include <functional>
 #include <core/events.h>
-#include <utils/utils.h>
 #include <ui/status_windowinfo.h>
+
+#include <client/Util.h>
 
 namespace ui {
 
@@ -41,7 +42,7 @@ void StatusWindowInfo::update()
     display::Manager *dm = display::Manager::get();
     display::Window *window = dm->get_current_window();
     unsigned int number = std::distance(dm->begin(), dm->get_current()) + 1;
-    m_text = utils::to_string(number) + ":" + window->get_name();
+    m_text = dcpp::Util::toString(number) + ":" + window->get_name();
     events::emit("statusbar updated");
 }
 

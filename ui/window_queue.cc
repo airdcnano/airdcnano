@@ -69,7 +69,7 @@ WindowQueue::WindowQueue() : ListView(display::TYPE_QUEUE, "queue") {
 	set_name("queue");
 
 	insert_column(new display::Column("ID"));
-	insert_column(new display::Column("Name", 10, 15, 20));
+	insert_column(new display::Column("Name", 10, 15, 50));
 	insert_column(new display::Column("Status", 10, 15, 20));
 	insert_column(new display::Column("Size", 6, 6, 12));
 	insert_column(new display::Column("%%", 6, 6, 6));
@@ -227,6 +227,7 @@ void WindowQueue::on(QueueManagerListener::BundleSize, const BundlePtr& aBundle)
 void WindowQueue::on(QueueManagerListener::BundlePriority, const BundlePtr& aBundle) noexcept{
 	auto ui = new UpdateInfo(aBundle->getToken());
 	ui->setPriority(aBundle->getPriority());
+	ui->setStatusString(getStatusString(aBundle));
 	speak(ui);
 }
 

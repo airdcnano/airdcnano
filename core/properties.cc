@@ -30,6 +30,7 @@
 
 #include <client/stdinc.h>
 #include <client/StringTokenizer.h>
+#include <client/Util.h>
 
 namespace core {
 
@@ -133,7 +134,7 @@ int Properties::find_int(const std::string &key, int def)
 {
     if(!exists(key))
         return def;
-	return utils::to<int>(find_str(key));
+	return dcpp::Util::toInt(find_str(key));
 }
 
 bool Properties::find_bool(const std::string &key, bool def)
@@ -167,7 +168,7 @@ void Properties::set(const std::string &key, const char *value)
 
 void Properties::set(const std::string &key, int value)
 {
-    set(key, utils::to_string(value));
+    set(key, dcpp::Util::toString(value));
 }
 
 void Properties::set(const std::string &key, bool value)

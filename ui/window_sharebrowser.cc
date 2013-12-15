@@ -102,13 +102,6 @@ void WindowShareBrowser::reload(bool all) {
 	loadDirectory(m_path, true);
 }
 
-string getTargetBrowser(const string& aTarget) {
-	auto target = aTarget.empty() ? SETTING(DOWNLOAD_DIRECTORY) : aTarget;
-	if (!target.empty() && target.back() != '/')
-		target += "/";
-	return target;
-}
-
 void WindowShareBrowser::download(const std::string& aPath) {
 	int row = get_selected_row();
 	if (row == -1)
@@ -116,7 +109,7 @@ void WindowShareBrowser::download(const std::string& aPath) {
 
 	auto name = get_text(1, row);
 
-	auto target = getTargetBrowser(aPath);
+	auto target = Util::validatePath(aPath);
 
 	auto curDir = dl->findDirectory(m_path);
 	if (!curDir)
@@ -130,7 +123,7 @@ void WindowShareBrowser::download(const std::string& aPath) {
 
 			QueueManager::getInstance()->createFileBundle(
 				target + name,
-				0, (*f)->getTTH(),
+				(*f)->getSize(), (*f)->getTTH(),
 				dl->getHintedUser(), (*f)->getRemoteDate(), 0, QueueItemBase::DEFAULT);
 			set_prompt_timed("Queued " + target + name);
 		} else {

@@ -34,15 +34,6 @@
 
 namespace utils {
     
-void sleep(int usec)
-{
-    struct timeval tv;
-    tv.tv_sec = 0;
-    tv.tv_usec = usec;
-
-    select(0, 0, 0, 0, &tv);
-}
-
 size_t real_length(const std::string &str)
 {
     size_t l = 0;
@@ -59,27 +50,6 @@ size_t real_length(const std::string &str)
 
 }
 
-std::string time_to_string(const std::string &format)
-{
-    return time_to_string(format, time(0));
-}
-
-std::string time_to_string(const std::string &format, time_t _tt)
-{
-    const int BUF_SIZE = 1024;
-    char buf[BUF_SIZE];
-    memset(buf, 0, BUF_SIZE);
-
-    tm* _tm = localtime(&_tt);
-
-    //if(_tm == NULL)
-    //    throw std::runtime_error("_tm == NULL");
-
-    strftime(buf, BUF_SIZE, format.c_str(), _tm);
-
-    return std::string(buf);
-}
-
 std::string linux_separator(const std::string &ps)
 {
     std::string str = ps;
@@ -94,55 +64,6 @@ std::string windows_separator(const std::string &ps)
     std::replace_if(str.begin(), str.end(),
         std::bind2nd(std::equal_to<char>(), '/'), '\\');
     return str;
-}
-
-std::string to_utf8(const std::string &str) throw()
-{
-    std::string utf8;
-    gchar *cstring = g_locale_to_utf8(str.c_str(), -1, NULL, NULL, NULL);
-    if(cstring == NULL) {
-        cstring = g_convert_with_fallback(str.c_str(), -1,
-            "UTF-8", "ISO-8859-15", "", NULL, NULL, NULL);
-        if(cstring == NULL)
-            return utf8;
-    }
-    utf8 = std::string(cstring);
-    g_free(cstring);
-    return utf8;
-}
-
-std::string from_utf8(const std::string &str) throw()
-{
-    std::string result;
-    gchar *cstring = g_locale_from_utf8(str.c_str(), -1, NULL, NULL, NULL);
-    if (cstring == NULL)
-        return result;
-    result = std::string(cstring);
-    g_free(cstring);
-    return result;
-}
-
-std::string convert(const std::string &str, const std::string &from, const std::string &to)
-    throw(std::runtime_error)
-{
-    gchar *converted = g_convert(str.c_str(), -1, to.c_str(), from.c_str(), 0, 0, 0);
-    if(converted == 0)
-        throw std::runtime_error("Character set conversion failed");
-    std::string ret(converted);
-    g_free(converted);
-    return ret;
-}
-
-std::string tolower(const std::string &str) throw()
-{
-    std::string lowerString = to_utf8(str);
-    gchar *lowerCString;
-    if(!lowerString.empty()) {
-        lowerCString = g_utf8_strdown(lowerString.c_str(), -1);
-        lowerString = std::string(lowerCString);
-       g_free(lowerCString);
-    }
-    return lowerString;
 }
 
 std::string ip_to_host(const std::string &ip)
@@ -175,41 +96,39 @@ std::string ip_to_host(const std::string &ip)
     }
 }
 
+int utf16_char_to_utf8(int c, char *outbuf) {
+	int len, first;
 
-int utf16_char_to_utf8(int c, char *outbuf)
-{
-    int len, first;
+	len = 0;
+	if (c < 0x80) {
+		first = 0;
+		len = 1;
+	} else if (c < 0x800) {
+		first = 0xc0;
+		len = 2;
+	} else if (c < 0x10000) {
+		first = 0xe0;
+		len = 3;
+	} else if (c < 0x200000) {
+		first = 0xf0;
+		len = 4;
+	} else if (c < 0x4000000) {
+		first = 0xf8;
+		len = 5;
+	} else {
+		first = 0xfc;
+		len = 6;
+	}
 
-    len = 0;
-    if(c < 0x80) {
-        first = 0;
-        len = 1;
-    } else if (c < 0x800) {
-        first = 0xc0;
-        len = 2;
-    } else if (c < 0x10000) {
-        first = 0xe0;
-        len = 3;
-    } else if (c < 0x200000) {
-        first = 0xf0;
-        len = 4;
-    } else if (c < 0x4000000) {
-        first = 0xf8;
-        len = 5;
-    } else {
-        first = 0xfc;
-        len = 6;
-    }
+	if (outbuf) {
+		for (int i = len - 1; i > 0; --i) {
+			outbuf[i] = (c & 0x3f) | 0x80;
+			c >>= 6;
+		}
+		outbuf[0] = c | first;
+	}
 
-    if(outbuf) {
-        for(int i=len-1; i > 0;--i) {
-            outbuf[i] = (c & 0x3f) | 0x80;
-            c >>= 6;
-        }
-        outbuf[0] = c | first;
-    }
-
-    return len;
+	return len;
 }
 
 std::vector<std::string> make_vector(int n, ...)

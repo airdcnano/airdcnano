@@ -81,11 +81,13 @@ void ArgParser::parse(bool unescapeWhitespaces /*true*/)
 		wordStartPos = start;
 	}
 
-    /* save rest of the string if there's any */
-	auto arg = m_line.substr(start, end - start);
-    if(!arg.empty()) {
-        m_args.push_back(arg);
-    }
+	try {
+		/* save rest of the string if there's any */
+		auto arg = m_line.substr(start, end - start);
+		if (!arg.empty()) {
+			m_args.push_back(arg);
+		}
+	} catch (...) {}
 }
 
 std::string ArgParser::get_text(unsigned int n)

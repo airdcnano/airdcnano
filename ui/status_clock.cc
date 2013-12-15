@@ -26,6 +26,8 @@
 #include <ui/status_clock.h>
 #include <utils/utils.h>
 
+#include <client/Util.h>
+
 namespace ui {
 
 StatusClock::StatusClock() : StatusItem("clock")
@@ -48,7 +50,7 @@ void StatusClock::on(TimerManagerListener::Second, uint64_t)
 
 void StatusClock::update()
 {
-	callAsync([this] { m_text = utils::time_to_string(m_timeformat); });
+	callAsync([this] { m_text = dcpp::Util::formatTime(m_timeformat, GET_TIME()); });
 }
 
 void StatusClock::update_config()

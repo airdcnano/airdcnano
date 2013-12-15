@@ -151,7 +151,7 @@ void WindowQueue::handle_line(const std::string &line) {
 		} else if (m_property == PROP_MOVE) {
 			auto b = get_selected_bundle();
 			if (b) {
-				QueueManager::getInstance()->moveBundle(b, line, true);
+				QueueManager::getInstance()->moveBundle(b, Util::validatePath(line, true), true);
 			}
 		}
 	}
@@ -313,13 +313,9 @@ std::string WindowQueue::get_infobox_line(unsigned int n) {
 		break;
 	case 3:
 	{
-		//QueueManager::getInstance()->cs;
+		RLock l(QueueManager::getInstance()->getCS());
 		oss << "%21Files:%21 " + Util::toString(b->getQueueItems().size());
 		oss << " %21Sources:%21 " + Util::toString(b->getSources().size());
-		//oss << "%21Hubs:%21 " + ClientManager::getInstance()->getFormatedHubNames(get_user());
-		//if (!item->m_ip.empty())
-		//	oss << " %21IP:%21 " + item->m_ip;
-
 		break;
 	}
 	case 4:

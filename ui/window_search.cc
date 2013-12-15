@@ -360,7 +360,7 @@ void WindowSearch::download(const std::string& aPath)
 	if (!result)
 		return;
 
-	auto target = Util::validatePath(aPath);
+	auto target = Util::validatePath(aPath, true);
 
     try {
         if(result->getType() == SearchResult::TYPE_FILE) {

@@ -109,7 +109,7 @@ void WindowShareBrowser::download(const std::string& aPath) {
 
 	auto name = get_text(1, row);
 
-	auto target = Util::validatePath(aPath);
+	auto target = Util::validatePath(aPath, true);
 
 	auto curDir = dl->findDirectory(m_path);
 	if (!curDir)

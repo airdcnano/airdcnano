@@ -59,7 +59,7 @@ Manager::Manager():
    events::add_listener("client created",
             std::bind(&Manager::create_windows, this));
 
-    events::add_listener("client created",
+    events::add_listener("timer started",
             std::bind(&Manager::init_statusbar, this));
 
     events::add_listener_first("window updated",

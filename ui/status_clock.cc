@@ -36,7 +36,7 @@ StatusClock::StatusClock() : StatusItem("clock")
     core::Settings::get()->add_listener(
             std::bind(&StatusClock::update_config, this));
 
-	events::add_listener("client created", [this] { TimerManager::getInstance()->addListener(this); });
+	events::add_listener("timer started", [this] { TimerManager::getInstance()->addListener(this); });
 	//events::add_listener("command quit", [this] { TimerManager::getInstance()->removeListener(this); });
     update();
 }

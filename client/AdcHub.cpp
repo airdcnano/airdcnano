@@ -263,7 +263,7 @@ void AdcHub::handle(AdcCommand::INF, AdcCommand& c) noexcept {
 		state = STATE_NORMAL;
 		setAutoReconnect(true);
 		setMyIdentity(u->getIdentity());
-		updateCounts(false, true);
+		updateCounts(false);
 
 		if (oldState != STATE_NORMAL && u->getIdentity().getAdcConnectionSpeed(false) == 0)
 			fire(ClientListener::StatusMessage(), this, "WARNING: This hub is not displaying the connection speed fields, which prevents the client from choosing the best sources for downloads. Please advise the hub owner to fix this.");
@@ -478,7 +478,7 @@ void AdcHub::handle(AdcCommand::RCM, AdcCommand& c) noexcept {
 
 	if(getMyIdentity().isTcpActive()) {
 		//we are active the other guy is not
-    	connect(*u, token, secure);
+    	connect(*u, token, secure, true);
 		return;
 	}
 
@@ -1019,10 +1019,10 @@ AdcCommand::Error AdcHub::allowConnect(const OnlineUser& user, bool secure, stri
 	return AdcCommand::SUCCESS;
 }
 
-void AdcHub::connect(const OnlineUser& user, const string& token, bool secure) {
+void AdcHub::connect(const OnlineUser& user, const string& token, bool secure, bool replyingRCM) {
 	const string* proto = secure ? &SECURE_CLIENT_PROTOCOL_TEST : &CLIENT_PROTOCOL;
 
-	if((user.getIdentity().allowV6Connections() && getMyIdentity().isTcp6Active()) || (user.getIdentity().allowV4Connections() && getMyIdentity().isTcp4Active())) {
+	if (replyingRCM || (user.getIdentity().allowV6Connections() && getMyIdentity().isTcp6Active()) || (user.getIdentity().allowV4Connections() && getMyIdentity().isTcp4Active())) {
 		const string& port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
 		if(port.empty()) {
 			// Oops?
@@ -1393,7 +1393,7 @@ void AdcHub::infoImpl() {
 	AdcCommand c(AdcCommand::CMD_INF, AdcCommand::TYPE_BROADCAST);
 
 	if (state == STATE_NORMAL) {
-		if(!updateCounts(false, false))
+		if(!updateCounts(false))
 			return;
 	}
 
@@ -1447,7 +1447,7 @@ void AdcHub::infoImpl() {
 		su += "," + ADCS_FEATURE;
 	}
 
-	if (SETTING(ENABLE_SUDP) && isActive())
+	if (SETTING(ENABLE_SUDP))
 		su += "," + SUD1_FEATURE;
 
 	if(addV4 && isActiveV4()) {
@@ -1460,7 +1460,8 @@ void AdcHub::infoImpl() {
 		su += "," + UDP6_FEATURE;
 	}
 
-	if ((addV6 && !isActiveV6()) || (addV4 && !isActiveV4())) {
+	if ((addV6 && !isActiveV6() && get(HubSettings::Connection6) != SettingsManager::INCOMING_DISABLED) || 
+		(addV4 && !isActiveV4() && get(HubSettings::Connection) != SettingsManager::INCOMING_DISABLED)) {
 		su += "," + NAT0_FEATURE;
 	}
 	su += "," + ASCH_FEATURE;
@@ -1548,6 +1549,7 @@ void AdcHub::on(Line l, const string& aLine) noexcept {
 void AdcHub::on(Failed f, const string& aLine) noexcept {
 	clearUsers();
 	Client::on(f, aLine);
+	updateCounts(true); //we are disconnected, remove the count like nmdc hubs do...
 }
 
 void AdcHub::on(Second s, uint64_t aTick) noexcept {

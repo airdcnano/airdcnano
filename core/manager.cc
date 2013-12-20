@@ -77,6 +77,7 @@ public:
 				msg += " (" + Util::toString(min) + "-" + Util::toString(max) + ")";
 		}
 
+		events::emit("window updated", display::Manager::get()->get_current_window());
 		while (true) {
 			bool ready = false;
 			auto conn = events::add_listener_first("key pressed", [&] {
@@ -95,8 +96,8 @@ public:
 			}
 
 			while (!ready) {
-				ui::Manager::get()->redraw_screen();
-				sleep(1);
+				//ui::Manager::get()->redraw_screen();
+				Thread::sleep(200);
 			}
 
 			conn.disconnect();
@@ -202,6 +203,15 @@ void Manager::start_client()
 
     core::Log::get()->log("Starting the client...");
 
+	bool timerStarted = false;
+	auto startTimer = [&] {
+		if (!timerStarted) {
+			timerStarted = true;
+			TimerManager::getInstance()->start();
+			events::emit("timer started");
+		}
+	};
+
 	try {
 		display::ProgressUpdater pu("loader");
 		startup(
@@ -216,11 +226,13 @@ void Manager::start_client()
 					return p.getBool();
 				return true;
 			},
-			[] {
+			[&] {
 				auto setInput = [](const string& text) {
 					core::Log::get()->log("");
 					display::Manager::get()->m_inputWindow.setInputStr(text);
 				};
+
+				startTimer();
 
 				// wizard
 				Prompter p;
@@ -290,7 +302,7 @@ void Manager::start_client()
         core::Log::get()->log("Note: Using HTTP proxy " + std::string(http_proxy));
     }
 
-	TimerManager::getInstance()->start();
+	startTimer();
 	events::emit("client created");
 }
 

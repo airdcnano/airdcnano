@@ -24,7 +24,7 @@
 #include "SettingsManager.h"
 #include "QueueManagerListener.h"
 
-#include "AdcSearch.h"
+#include "SearchQuery.h"
 #include "BloomFilter.h"
 #include "CriticalSection.h"
 #include "Exception.h"
@@ -58,7 +58,7 @@ class File;
 class OutputStream;
 class MemoryInputStream;
 //struct ShareLoader;
-class AdcSearch;
+class SearchQuery;
 class Worker;
 class TaskQueue;
 
@@ -164,8 +164,8 @@ public:
 	void changeExcludedDirs(const ProfileTokenStringList& aAdd, const ProfileTokenStringList& aRemove) noexcept;
 	void rebuildTotalExcludes() noexcept;
 
-	void search(SearchResultList& l, const string& aString, int aSearchType, int64_t aSize, int aFileType, StringList::size_type maxResults, bool aHideShare) noexcept;
-	void search(SearchResultList& l, AdcSearch& aSearch, StringList::size_type maxResults, ProfileToken aProfile, const CID& cid, const string& aDir) throw(ShareException);
+	void nmdcSearch(SearchResultList& l, const string& aString, int aSearchType, int64_t aSize, int aFileType, StringList::size_type maxResults, bool aHideShare) noexcept;
+	void search(SearchResultList& l, SearchQuery& aSearch, StringList::size_type maxResults, ProfileToken aProfile, const CID& cid, const string& aDir) throw(ShareException);
 
 	bool isDirShared(const string& aDir) const noexcept;
 	uint8_t isDirShared(const string& aPath, int64_t aSize) const noexcept;
@@ -178,7 +178,6 @@ public:
 	bool loadCache(function<void (float)> progressF) noexcept;
 
 	vector<pair<string, StringList>> getGroupedDirectories() const noexcept;
-	static bool checkType(const string& aString, int aType);
 	MemoryInputStream* generatePartialList(const string& dir, bool recurse, ProfileToken aProfile) const noexcept;
 	MemoryInputStream* generateTTHList(const string& dir, bool recurse, ProfileToken aProfile) const noexcept;
 	MemoryInputStream* getTree(const string& virtualFile, ProfileToken aProfile) const noexcept;
@@ -192,8 +191,6 @@ public:
 	void getProfileInfo(ProfileToken aProfile, int64_t& size, size_t& files) const noexcept;
 	
 	void getBloom(HashBloom& bloom) const noexcept;
-
-	static SearchManager::TypeModes getType(const string& fileName) noexcept;
 
 	string validateVirtual(const string& /*aVirt*/) const noexcept;
 	void addHits(uint32_t aHits) noexcept{
@@ -313,8 +310,8 @@ private:
 				FLAG_INCOMING			= 0x08
 			};
 
-			bool hasExcludes() const noexcept { return !excludedProfiles.empty(); }
-			bool hasRoots() const noexcept { return !rootProfiles.empty(); }
+			inline bool hasExcludes() const noexcept { return !excludedProfiles.empty(); }
+			inline bool hasRoots() const noexcept{ return !rootProfiles.empty(); }
 
 			bool hasRootProfile(ProfileToken aProfile) const noexcept;
 			bool hasRootProfile(const ProfileTokenSet& aProfiles) const noexcept;
@@ -356,17 +353,17 @@ private:
 			//typedef set<File, FileLess> Set;
 			typedef SortedVector<File*, std::vector, string, Compare, NameLower> Set;
 
-			File(DualString&& aName, const Directory::Ptr& aParent, HashedFile& aFileInfo);
+			File(DualString&& aName, const Directory::Ptr& aParent, const HashedFile& aFileInfo);
 			~File();
 
 			/*bool operator==(const File& rhs) const {
 				return name.getLower().compare(rhs.name.getLower()) == 0 && parent == rhs.getParent();
 			}*/
 		
-			string getADCPath(ProfileToken aProfile) const { return parent->getADCPath(aProfile) + name.getNormal(); }
-			string getFullName(ProfileToken aProfile) const { return parent->getFullName(aProfile) + name.getNormal(); }
-			string getRealPath(bool validate = true) const { return parent->getRealPath(name.getNormal(), validate); }
-			bool hasProfile(ProfileToken aProfile) const noexcept { return parent->hasProfile(aProfile); }
+			inline string getADCPath(ProfileToken aProfile) const { return parent->getADCPath(aProfile) + name.getNormal(); }
+			inline string getFullName(ProfileToken aProfile) const { return parent->getFullName(aProfile) + name.getNormal(); }
+			inline string getRealPath(bool validate = true) const { return parent->getRealPath(name.getNormal(), validate); }
+			inline bool hasProfile(ProfileToken aProfile) const noexcept{ return parent->hasProfile(aProfile); }
 
 			void toXml(OutputStream& xmlFile, string& indent, string& tmp2, bool addDate) const;
 			void addSR(SearchResultList& aResults, ProfileToken aProfile, bool addParent) const noexcept;
@@ -403,15 +400,10 @@ private:
 			}
 		};
 
-		bool hasType(uint32_t type) const noexcept {
-			return ( (type == SearchManager::TYPE_ANY) || (fileTypes & (1 << type)) );
-		}
-		void addType(uint32_t type) noexcept;
-
 		string getADCPath(ProfileToken aProfile) const noexcept;
 		string getVirtualName(ProfileToken aProfile) const noexcept;
 		string getFullName(ProfileToken aProfile) const noexcept; 
-		string getRealPath(bool checkExistance) const throw(ShareException)  { return getRealPath(Util::emptyString, checkExistance); };
+		inline string getRealPath(bool checkExistance) const throw(ShareException)  { return getRealPath(Util::emptyString, checkExistance); };
 
 		bool hasProfile(ProfileTokenSet& aProfiles) const noexcept;
 		bool hasProfile(ProfileToken aProfiles) const noexcept;
@@ -421,8 +413,7 @@ private:
 		int64_t getTotalSize() const noexcept;
 		void getProfileInfo(ProfileToken aProfile, int64_t& totalSize, size_t& filesCount) const noexcept;
 
-		void search(SearchResultList& aResults, StringSearch::List& aStrings, int aSearchType, int64_t aSize, int aFileType, StringList::size_type maxResults, ProfileToken aProfile) const noexcept;
-		void search(SearchResultList& aResults, AdcSearch& aStrings, StringList::size_type maxResults, ProfileToken aProfile) const noexcept;
+		void search(SearchResultList& aResults, SearchQuery& aStrings, StringList::size_type maxResults, ProfileToken aProfile) const noexcept;
 
 		void toFileList(FileListDir* aListDir, ProfileToken aProfile, bool isFullList);
 		void toXml(SimpleXML& aXml, bool fullList, ProfileToken aProfile) const;
@@ -450,12 +441,12 @@ private:
 		void countStats(uint64_t& totalAge_, size_t& totalDirs_, int64_t& totalSize_, size_t& totalFiles, size_t& lowerCaseFiles, size_t& totalStrLen_) const noexcept;
 		DualString name;
 
+		// check for an updated modify date from filesystem
+		void updateModifyDate();
 		void getRenameInfoList(const string& aPath, RenameList& aRename) noexcept;
 		Directory::Ptr findDirByPath(const string& aPath, char separator) const noexcept;
 	private:
 		friend void intrusive_ptr_release(intrusive_ptr_base<Directory>*);
-		/** Set of flags that say which SearchManager::TYPE_* a directory contains */
-		uint32_t fileTypes;
 
 		string getRealPath(const string& path, bool checkExistance) const throw(ShareException);
 	};
@@ -502,7 +493,7 @@ private:
 		int refreshOptions;
 	};
 
-	bool addDirResult(const string& aPath, SearchResultList& aResults, ProfileToken aProfile, AdcSearch& srch) const noexcept;
+	bool addDirResult(const string& aPath, SearchResultList& aResults, ProfileToken aProfile, SearchQuery& srch) const noexcept;
 
 	typedef unordered_map<string, ProfileDirectory::Ptr, noCaseStringHash, noCaseStringEq> ProfileDirMap;
 	ProfileDirMap profileDirs;
@@ -585,7 +576,7 @@ private:
 	}
 
 	void buildTree(string& aPath, string& aPathLower, const Directory::Ptr& aDir, const ProfileDirMap& aSubRoots, DirMultiMap& aDirs, DirMap& newShares, int64_t& hashSize, int64_t& addedSize, HashFileMap& tthIndexNew, ShareBloom& aBloom) noexcept;
-	void addFile(const string& aName, Directory::Ptr& aDir, HashedFile& fi, ProfileTokenSet& dirtyProfiles_) noexcept;
+	void addFile(const string& aName, Directory::Ptr& aDir, const HashedFile& fi, ProfileTokenSet& dirtyProfiles_) noexcept;
 
 	//void rebuildIndices();
 	static void updateIndices(Directory::Ptr& aDirectory, ShareBloom& aBloom, int64_t& sharedSize, HashFileMap& tthIndex, DirMultiMap& aDirNames) noexcept;
@@ -754,13 +745,6 @@ private:
 	};
 
 	typedef set<string, Util::PathSortOrderBool> PathSet;
-	struct FileAddInfo {
-		FileAddInfo(string&& aName, uint64_t aLastWrite, int64_t aSize) : name(aName), lastWrite(aLastWrite), size(aSize) { }
-
-		string name;
-		uint64_t lastWrite;
-		int64_t size;
-	};
 
 	DirModifyInfo::List fileModifications;
 

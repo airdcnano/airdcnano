@@ -169,7 +169,7 @@ void WindowSearch::search(const std::string &str)
 	auto type = str.size() == 39 && Encoder::isBase32(str.c_str()) ? SearchManager::TYPE_TTH : SearchManager::TYPE_ANY;
 
     // new search
-	auto newSearch = AdcSearch::getSearch(str, Util::emptyString, 0, type, SearchManager::SIZE_DONTCARE, StringList(), AdcSearch::MATCH_FULL_PATH, false);
+	auto newSearch = SearchQuery::getSearch(str, Util::emptyString, 0, type, SearchManager::SIZE_DONTCARE, StringList(), SearchQuery::MATCH_FULL_PATH, false);
 	if (!newSearch) {
 		return;
 	}
@@ -201,7 +201,7 @@ void WindowSearch::handle_line(const std::string &line)
 			filtering = true;
 			if (m_property == PROP_SEARCHFILTER) {
 				if (line.length() >= MIN_SEARCH) {
-					curSearch.reset(new AdcSearch(line, Util::emptyString, StringList(), AdcSearch::MATCH_NAME));
+					curSearch.reset(new SearchQuery(line, Util::emptyString, StringList(), SearchQuery::MATCH_NAME));
 				} else {
 					m_property = PROP_NONE;
 					return;
@@ -239,7 +239,7 @@ void WindowSearch::handle_line(const std::string &line)
 			create_list();
 		}
 	} else if (m_property != PROP_FILETARGET && m_property != PROP_DIRECTORYTARGET && filtering) {
-		curSearch.reset(new AdcSearch(m_searchStr, Util::emptyString, StringList(), AdcSearch::MATCH_NAME));
+		curSearch.reset(new SearchQuery(m_searchStr, Util::emptyString, StringList(), SearchQuery::MATCH_NAME));
 		filtering = false;
 		create_list();
 	}

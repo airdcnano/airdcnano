@@ -976,14 +976,15 @@ bool QueueManager::addSource(QueueItemPtr& qi, const HintedUser& aUser, Flags::M
 	
 }
 
-Download* QueueManager::getDownload(UserConnection& aSource, const StringSet& runningBundles, const OrderedStringSet& onlineHubs, string& aMessage, string& newUrl, QueueItemBase::DownloadType aType) noexcept {
+Download* QueueManager::getDownload(UserConnection& aSource, const StringSet& runningBundles, const OrderedStringSet& onlineHubs, string& lastError_, string& newUrl, QueueItemBase::DownloadType aType) noexcept{
 	QueueItemPtr q = nullptr;
 	const UserPtr& u = aSource.getUser();
+	bool hasDownload = false;
 	{
 		WLock l(cs);
 		dcdebug("Getting download for %s...", u->getCID().toBase32().c_str());
 
-		q = userQueue.getNext(aSource.getUser(), runningBundles, onlineHubs, QueueItem::LOWEST, aSource.getChunkSize(), aSource.getSpeed(), aType);
+		q = userQueue.getNext(aSource.getUser(), runningBundles, onlineHubs, lastError_, hasDownload, QueueItem::LOWEST, aSource.getChunkSize(), aSource.getSpeed(), aType);
 		if (q) {
 			auto source = q->getSource(aSource.getUser());
 
@@ -998,12 +999,11 @@ Download* QueueManager::getDownload(UserConnection& aSource, const StringSet& ru
 					// no other partial chunk from this user, remove him from queue
 					userQueue.removeQI(q, u);
 					q->removeSource(u, QueueItem::Source::FLAG_NO_NEED_PARTS);
-					aMessage = STRING(NO_NEEDED_PART);
+					lastError_ = STRING(NO_NEEDED_PART);
 					return nullptr;
 				}
 			}
 		} else {
-			aMessage = userQueue.getLastError();
 			dcdebug("none\n");
 			return nullptr;
 		}
@@ -1025,7 +1025,7 @@ Download* QueueManager::getDownload(UserConnection& aSource, const StringSet& ru
 	}
 }
 
-bool QueueManager::allowStartQI(const QueueItemPtr& aQI, const StringSet& runningBundles, bool mcn /*false*/) noexcept {
+bool QueueManager::allowStartQI(const QueueItemPtr& aQI, const StringSet& runningBundles, string& lastError_, bool mcn /*false*/) noexcept{
 	// nothing to download?
 	if (!aQI)
 		return false;
@@ -1039,21 +1039,24 @@ bool QueueManager::allowStartQI(const QueueItemPtr& aQI, const StringSet& runnin
 		return false;
 
 	size_t downloadCount = DownloadManager::getInstance()->getDownloadCount();
-	bool full = (AirUtil::getSlots(true) != 0) && (downloadCount >= (size_t) AirUtil::getSlots(true));
-	full = full || ((AirUtil::getSpeedLimit(true) != 0) && (DownloadManager::getInstance()->getRunningAverage() >= Util::convertSize(AirUtil::getSpeedLimit(true), Util::KB)));
+	bool slotsFull = (AirUtil::getSlots(true) != 0) && (downloadCount >= (size_t) AirUtil::getSlots(true));
+	bool speedFull = (AirUtil::getSpeedLimit(true) != 0) && (DownloadManager::getInstance()->getRunningAverage() >= Util::convertSize(AirUtil::getSpeedLimit(true), Util::KB));
 	//LogManager::getInstance()->message("Speedlimit: " + Util::toString(Util::getSpeedLimit(true)*1024) + " slots: " + Util::toString(Util::getSlots(true)) + " (avg: " + Util::toString(getRunningAverage()) + ")");
 
-	if (full) {
+	if (slotsFull | speedFull) {
 		bool extraFull = (AirUtil::getSlots(true) != 0) && (downloadCount >= (size_t) (AirUtil::getSlots(true) + SETTING(EXTRA_DOWNLOAD_SLOTS)));
-		if (extraFull || mcn) {
+		if (extraFull || mcn || aQI->getPriority() != QueueItem::HIGHEST) {
+			lastError_ = slotsFull ? STRING(ALL_DOWNLOAD_SLOTS_TAKEN) : STRING(MAX_DL_SPEED_REACHED);
 			return false;
 		}
-		return aQI->getPriority() == QueueItem::HIGHEST;
+		return true;
 	}
 
 	// bundle with the lowest prio? don't start if there are other bundle running
-	if (aQI->getBundle() && aQI->getBundle()->getPriority() == QueueItemBase::LOWEST && !runningBundles.empty() && runningBundles.find(aQI->getBundle()->getToken()) == runningBundles.end())
+	if (aQI->getBundle() && aQI->getBundle()->getPriority() == QueueItemBase::LOWEST && !runningBundles.empty() && runningBundles.find(aQI->getBundle()->getToken()) == runningBundles.end()) {
+		lastError_ = STRING(LOWEST_PRIO_ERR_BUNDLES);
 		return false;
+	}
 
 	if (aQI->getPriority() == QueueItem::LOWEST) {
 		if (aQI->getBundle()) {
@@ -1061,8 +1064,15 @@ bool QueueManager::allowStartQI(const QueueItemPtr& aQI, const StringSet& runnin
 			auto bundleDownloads = DownloadManager::getInstance()->getDownloadCount(aQI->getBundle());
 
 			RLock l(cs);
-			return bundleDownloads == 0 || bundleDownloads == aQI->getDownloads().size();
+			bool start = bundleDownloads == 0 || bundleDownloads == aQI->getDownloads().size();
+			if (!start) {
+				lastError_ = STRING(LOWEST_PRIO_ERR_FILES);
+			}
+
+			return start;
 		} else {
+			// shouldn't happen at the moment
+			dcassert(0);
 			return downloadCount == 0;
 		}
 	}
@@ -1070,17 +1080,22 @@ bool QueueManager::allowStartQI(const QueueItemPtr& aQI, const StringSet& runnin
 	return true;
 }
 
-bool QueueManager::startDownload(const UserPtr& aUser, const StringSet& runningBundles, const OrderedStringSet& onlineHubs, QueueItemBase::DownloadType aType, int64_t aLastSpeed) noexcept{
+bool QueueManager::startDownload(const UserPtr& aUser, const StringSet& runningBundles, const OrderedStringSet& onlineHubs, 
+	QueueItemBase::DownloadType aType, int64_t aLastSpeed, string& lastError_) noexcept{
+
+	bool hasDownload = false;
 	QueueItemPtr qi = nullptr;
 	{
 		RLock l(cs);
-		qi = userQueue.getNext(aUser, runningBundles, onlineHubs, QueueItem::LOWEST, 0, aLastSpeed, aType);
+		qi = userQueue.getNext(aUser, runningBundles, onlineHubs, lastError_, hasDownload, QueueItem::LOWEST, 0, aLastSpeed, aType);
 	}
 
-	return allowStartQI(qi, runningBundles);
+	return allowStartQI(qi, runningBundles, lastError_);
 }
 
-pair<QueueItem::DownloadType, bool> QueueManager::startDownload(const UserPtr& aUser, string& hubHint, QueueItemBase::DownloadType aType, string& bundleToken, bool& allowUrlChange, bool& hasDownload) noexcept {
+pair<QueueItem::DownloadType, bool> QueueManager::startDownload(const UserPtr& aUser, string& hubHint, QueueItemBase::DownloadType aType, 
+	string& bundleToken, bool& allowUrlChange, bool& hasDownload, string& lastError_) noexcept{
+
 	StringSet runningBundles;
 	DownloadManager::getInstance()->getRunningBundles(runningBundles);
 
@@ -1089,10 +1104,9 @@ pair<QueueItem::DownloadType, bool> QueueManager::startDownload(const UserPtr& a
 		QueueItemPtr qi = nullptr;
 		{
 			RLock l(cs);
-			qi = userQueue.getNext(aUser, runningBundles, hubs, QueueItem::LOWEST, 0, 0, aType);
+			qi = userQueue.getNext(aUser, runningBundles, hubs, lastError_, hasDownload, QueueItem::LOWEST, 0, 0, aType);
 
 			if (qi) {
-				hasDownload = true;
 				if (qi->getBundle()) {
 					bundleToken = qi->getBundle()->getToken();
 				}
@@ -1108,9 +1122,11 @@ pair<QueueItem::DownloadType, bool> QueueManager::startDownload(const UserPtr& a
 		}
 
 		if (qi) {
-			bool start = allowStartQI(qi, runningBundles);
+			bool start = allowStartQI(qi, runningBundles, lastError_);
 			return { qi->usesSmallSlot() ? QueueItem::TYPE_SMALL : QueueItem::TYPE_ANY, start };
 		}
+	} else {
+		lastError_ = STRING(USER_OFFLINE);
 	}
 
 	return { QueueItem::TYPE_NONE, false };
@@ -1161,10 +1177,12 @@ bool QueueManager::getQueueInfo(const HintedUser& aUser, string& aTarget, int64_
 	DownloadManager::getInstance()->getRunningBundles(runningBundles);
 
 	QueueItemPtr qi = nullptr;
+	string lastError_;
+	bool hasDownload = false;
 
 	{
 		RLock l(cs);
-		qi = userQueue.getNext(aUser, runningBundles, hubs);
+		qi = userQueue.getNext(aUser, runningBundles, hubs, lastError_, hasDownload);
 	}
 
 	if (!qi)
@@ -1503,7 +1521,7 @@ void QueueManager::checkBundleHashed(BundlePtr& b) noexcept {
 	bool fireHashed = false;
 	{
 		RLock l(cs);
-		if (!b->getQueueItems().empty() || boost::find_if(b->getFinishedFiles(), [](QueueItemPtr q) { return !q->isSet(QueueItem::FLAG_HASHED); }) != b->getFinishedFiles().end())
+		if (!b->getQueueItems().empty() || !all_of(b->getFinishedFiles().begin(), b->getFinishedFiles().end(), Flags::IsSet(QueueItem::FLAG_HASHED)))
 			return;
 
 

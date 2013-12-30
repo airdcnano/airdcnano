@@ -27,8 +27,8 @@
 #include <client/stdinc.h>
 #include <client/SearchManagerListener.h>
 
-#include <client/AdcSearch.h>
 #include <client/HintedUser.h>
+#include <client/SearchQuery.h>
 #include <client/SearchResult.h>
 
 #include <display/listview.h>
@@ -108,7 +108,7 @@ private:
 
 	// search result filters
 	bool m_freeSlots = false;
-	unique_ptr<AdcSearch> curSearch;
+	unique_ptr<SearchQuery> curSearch;
 	bool filtering = false;
 
 	void updateTitle();

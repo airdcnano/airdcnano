@@ -16,8 +16,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#ifndef ADCSEARCH_H
-#define ADCSEARCH_H
+#ifndef SEARCHQUERY_H
+#define SEARCHQUERY_H
 
 #include "typedefs.h"
 #include "forward.h"
@@ -30,7 +30,7 @@
 
 namespace dcpp {
 
-	class AdcSearch {
+	class SearchQuery {
 	public:
 		enum MatchType {
 			MATCH_FULL_PATH,
@@ -44,20 +44,22 @@ namespace dcpp {
 			TYPE_DIRECTORY
 		};
 
-		static AdcSearch* getSearch(const string& aSearchString, const string& aExcluded, int64_t aSize, int aTypeMode, int aSizeMode, const StringList& aExtList, MatchType aMatchType, bool returnParents);
+		// General initialization
+		static SearchQuery* getSearch(const string& aSearchString, const string& aExcluded, int64_t aSize, int aTypeMode, int aSizeMode, const StringList& aExtList, MatchType aMatchType, bool returnParents);
 		static StringList parseSearchString(const string& aString);
+		SearchQuery(const string& aString, const string& aExcluded, const StringList& aExt, MatchType aMatchType);
+		SearchQuery(const TTHValue& aRoot);
 
-		AdcSearch(const StringList& params);
+		// Protocol-specific
+		SearchQuery(const StringList& adcParams);
+		SearchQuery(const string& nmdcString, int searchType, int64_t size, int fileType);
 
-		AdcSearch(const string& aString, const string& aExcluded, const StringList& aExt, MatchType aMatchType);
-		AdcSearch(const TTHValue& aRoot);
-
-		bool isIndirectExclude(const string& aName) const;
+		bool anyIncludeMatches(const string& aName) const;
 		bool isExcluded(const string& str) const;
 		bool hasExt(const string& name);
 
-		StringSearch::List* include = &includeX;
-		StringSearch::List includeX;
+		StringSearch::List* include = &includeInit;
+		StringSearch::List includeInit;
 		StringSearch::List exclude;
 		StringList ext;
 		StringList noExt;
@@ -83,7 +85,8 @@ namespace dcpp {
 
 		bool matchesSize(int64_t aSize);
 		bool matchesDate(uint32_t aDate);
+	private:
 	};
 }
 
-#endif // !defined(ADCSEARCH_H)
+#endif // !defined(SEARCHQUERY_H)

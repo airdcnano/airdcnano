@@ -17,7 +17,7 @@
  */
 
 #include "stdinc.h"
-#include "AdcSearch.h"
+#include "SearchQuery.h"
 #include "Util.h"
 #include "AdcHub.h"
 #include "StringTokenizer.h"
@@ -30,27 +30,27 @@ namespace {
 
 namespace dcpp {
 
-AdcSearch* AdcSearch::getSearch(const string& aSearchString, const string& aExcluded, int64_t aSize, int aTypeMode, int aSizeMode, const StringList& aExtList, MatchType aMatchType, bool returnParents) {
-	AdcSearch* s = nullptr;
+SearchQuery* SearchQuery::getSearch(const string& aSearchString, const string& aExcluded, int64_t aSize, int aTypeMode, int aSizeMode, const StringList& aExtList, MatchType aMatchType, bool returnParents) {
+	SearchQuery* s = nullptr;
 
 	if(aTypeMode == SearchManager::TYPE_TTH) {
-		s = new AdcSearch(TTHValue(aSearchString));
+		s = new SearchQuery(TTHValue(aSearchString));
 	} else {
-		s = new AdcSearch(aSearchString, aExcluded, aExtList, aMatchType);
+		s = new SearchQuery(aSearchString, aExcluded, aExtList, aMatchType);
 		if(aSizeMode == SearchManager::SIZE_ATLEAST) {
 			s->gt = aSize;
 		} else if(aSizeMode == SearchManager::SIZE_ATMOST) {
 			s->lt = aSize;
 		}
 
-		s->itemType = (aTypeMode == SearchManager::TYPE_DIRECTORY) ? AdcSearch::TYPE_DIRECTORY : (aTypeMode == SearchManager::TYPE_FILE) ? AdcSearch::TYPE_FILE : AdcSearch::TYPE_ANY;
+		s->itemType = (aTypeMode == SearchManager::TYPE_DIRECTORY) ? SearchQuery::TYPE_DIRECTORY : (aTypeMode == SearchManager::TYPE_FILE) ? SearchQuery::TYPE_FILE : SearchQuery::TYPE_ANY;
 		s->addParents = returnParents;
 	}
 
 	return s;
 }
 
-StringList AdcSearch::parseSearchString(const string& aString) {
+StringList SearchQuery::parseSearchString(const string& aString) {
 	// similar to StringTokenizer but handles quotation marks (and doesn't create empty tokens)
 
 	StringList ret;
@@ -86,19 +86,49 @@ StringList AdcSearch::parseSearchString(const string& aString) {
 	return ret;
 }
 
-AdcSearch::AdcSearch(const TTHValue& aRoot) : root(aRoot) {
+SearchQuery::SearchQuery(const string& nmdcString, int searchType, int64_t size, int fileType) {
+	if (fileType == SearchManager::TYPE_TTH && nmdcString.compare(0, 4, "TTH:") == 0) {
+		root = TTHValue(nmdcString.substr(4));
+
+	} else {
+		StringTokenizer<string> tok(Text::toLower(nmdcString), '$');
+		for (auto& term : tok.getTokens()) {
+			if (!term.empty()) {
+				includeInit.emplace_back(term);
+			}
+		}
+
+		if (searchType == SearchManager::SIZE_ATLEAST) {
+			gt = size;
+		} else if (searchType == SearchManager::SIZE_ATMOST) {
+			lt = size;
+		}
+
+		switch (fileType) {
+		case SearchManager::TYPE_AUDIO: ext = AdcHub::parseSearchExts(1 << 0); break;
+		case SearchManager::TYPE_COMPRESSED: ext = AdcHub::parseSearchExts(1 << 1); break;
+		case SearchManager::TYPE_DOCUMENT: ext = AdcHub::parseSearchExts(1 << 2); break;
+		case SearchManager::TYPE_EXECUTABLE: ext = AdcHub::parseSearchExts(1 << 3); break;
+		case SearchManager::TYPE_PICTURE: ext = AdcHub::parseSearchExts(1 << 4); break;
+		case SearchManager::TYPE_VIDEO: ext = AdcHub::parseSearchExts(1 << 5); break;
+		case SearchManager::TYPE_DIRECTORY: itemType = SearchQuery::TYPE_DIRECTORY; break;
+		}
+	}
+}
+
+SearchQuery::SearchQuery(const TTHValue& aRoot) : root(aRoot) {
 
 }
 
-AdcSearch::AdcSearch(const string& aSearch, const string& aExcluded, const StringList& aExt, MatchType aMatchType) : matchType(aMatchType) {
+SearchQuery::SearchQuery(const string& aSearch, const string& aExcluded, const StringList& aExt, MatchType aMatchType) : matchType(aMatchType) {
 
 	//add included
 	if (matchType == MATCH_EXACT) {
-		includeX.emplace_back(aSearch);
+		includeInit.emplace_back(aSearch);
 	} else {
 		auto inc = move(parseSearchString(aSearch));
 		for(auto& i: inc)
-			includeX.emplace_back(i);
+			includeInit.emplace_back(i);
 	}
 
 
@@ -111,7 +141,7 @@ AdcSearch::AdcSearch(const string& aSearch, const string& aExcluded, const Strin
 		ext.push_back(Text::toLower(i));
 }
 
-AdcSearch::AdcSearch(const StringList& params) {
+SearchQuery::SearchQuery(const StringList& params) {
 	for(const auto& p: params) {
 		if(p.length() <= 2)
 			continue;
@@ -121,7 +151,7 @@ AdcSearch::AdcSearch(const StringList& params) {
 			root = TTHValue(p.substr(2));
 			return;
 		} else if(toCode('A', 'N') == cmd) {
-			includeX.emplace_back(p.substr(2));		
+			includeInit.emplace_back(p.substr(2));
 		} else if(toCode('N', 'O') == cmd) {
 			exclude.emplace_back(p.substr(2));
 		} else if(toCode('E', 'X') == cmd) {
@@ -151,11 +181,11 @@ AdcSearch::AdcSearch(const StringList& params) {
 	}
 }
 
-bool AdcSearch::isIndirectExclude(const string& aName) const {
+bool SearchQuery::anyIncludeMatches(const string& aName) const {
 	if (root)
 		return false;
 
-	for (auto& i : includeX) {
+	for (auto& i : includeInit) {
 		if (i.match(aName))
 			return false;
 	}
@@ -163,7 +193,7 @@ bool AdcSearch::isIndirectExclude(const string& aName) const {
 	return true;
 }
 
-bool AdcSearch::isExcluded(const string& str) const {
+bool SearchQuery::isExcluded(const string& str) const {
 	for(auto& i: exclude) {
 		if(i.match(str))
 			return true;
@@ -171,7 +201,7 @@ bool AdcSearch::isExcluded(const string& str) const {
 	return false;
 }
 
-bool AdcSearch::hasExt(const string& name) {
+bool SearchQuery::hasExt(const string& name) {
 	if(ext.empty())
 		return true;
 
@@ -187,7 +217,7 @@ bool AdcSearch::hasExt(const string& name) {
 	return false;
 }
 
-bool AdcSearch::matchesFileLower(const string& aName, int64_t aSize, uint64_t aDate) {
+bool SearchQuery::matchesFileLower(const string& aName, int64_t aSize, uint64_t aDate) {
 	if(!(aSize >= gt)) {
 		return false;
 	} else if(!(aSize <= lt)) {
@@ -219,7 +249,7 @@ bool AdcSearch::matchesFileLower(const string& aName, int64_t aSize, uint64_t aD
 	return true;
 }
 
-bool AdcSearch::matchesDirectory(const string& aName) {
+bool SearchQuery::matchesDirectory(const string& aName) {
 	if (itemType == TYPE_FILE)
 		return false;
 
@@ -241,7 +271,7 @@ bool AdcSearch::matchesDirectory(const string& aName) {
 	return false;
 }
 
-StringSearch::List* AdcSearch::matchesDirectoryReLower(const string& aName) {
+StringSearch::List* SearchQuery::matchesDirectoryReLower(const string& aName) {
 	StringSearch::List* newStr = nullptr;
 	for(const auto& k: *include) {
 		if(k.matchLower(aName)) {
@@ -255,11 +285,11 @@ StringSearch::List* AdcSearch::matchesDirectoryReLower(const string& aName) {
 	return newStr;
 }
 
-bool AdcSearch::matchesSize(int64_t aSize) {
+bool SearchQuery::matchesSize(int64_t aSize) {
 	return aSize >= gt && aSize <= lt;
 }
 
-bool AdcSearch::matchesDate(uint32_t aDate) {
+bool SearchQuery::matchesDate(uint32_t aDate) {
 	return aDate == 0 || (aDate >= minDate && aDate <= maxDate);
 }
 

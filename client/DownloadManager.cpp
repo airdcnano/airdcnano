@@ -77,7 +77,7 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept 
 
 	{
 		RLock l(cs);
-		for (auto& b: runningBundles | map_values) {
+		for (auto& b : bundles | map_values) {
 			if (b->onDownloadTick(UBNList)) {
 				bundleTicks.push_back(b);
 			}
@@ -142,7 +142,6 @@ void DownloadManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept 
 }
 
 void DownloadManager::sendSizeNameUpdate(BundlePtr& aBundle) {
-	//LogManager::getInstance()->message("QueueManager::sendBundleUpdate");
 	RLock l (cs);
 	aBundle->sendSizeNameUpdate();
 }
@@ -150,7 +149,6 @@ void DownloadManager::sendSizeNameUpdate(BundlePtr& aBundle) {
 void DownloadManager::startBundle(UserConnection* aSource, BundlePtr aBundle) {
 	if (aSource->getLastBundle().empty() || aSource->getLastBundle() != aBundle->getToken()) {
 		if (!aSource->getLastBundle().empty()) {
-			//LogManager::getInstance()->message("LASTBUNDLE NOT EMPTY, REMOVE");
 			removeRunningUser(aSource);
 		} 
 
@@ -159,7 +157,7 @@ void DownloadManager::startBundle(UserConnection* aSource, BundlePtr aBundle) {
 			if (aBundle->addRunningUser(aSource)) {
 				//this is the first running user for this bundle
 				aBundle->setStart(GET_TICK());
-				runningBundles[aBundle->getToken()] = aBundle;
+				bundles[aBundle->getToken()] = aBundle;
 			}
 		}
 		aSource->setLastBundle(aBundle->getToken());
@@ -210,8 +208,20 @@ void DownloadManager::addConnection(UserConnection* conn) {
 
 void DownloadManager::getRunningBundles(StringSet& bundles_) const {
 	RLock l(cs);
-	for (auto& token : runningBundles | map_keys)
-		bundles_.insert(token);
+	for (const auto& b : bundles | map_values) {
+		// we need to check this to ignore previous bundles for running connections 
+		// (non-running bundles are removed only when no next download was found)
+		if (b->getDownloads().empty())
+			continue;
+		
+		// these won't be included in the running bundle limit
+		if (b->getPriority() == QueueItemBase::HIGHEST)
+			continue;
+		if (all_of(b->getDownloads().begin(), b->getDownloads().end(), Flags::IsSet(Download::FLAG_HIGHEST_PRIO)))
+			continue;
+
+		bundles_.insert(b->getToken());
+	}
 }
 
 void DownloadManager::checkDownloads(UserConnection* aConn) {
@@ -230,10 +240,11 @@ void DownloadManager::checkDownloads(UserConnection* aConn) {
 	//always make sure that the current hub is also compared even if it is offline
 	hubs.insert(aConn->getHubUrl());
 
+	string errorMessage;
 	StringSet runningBundles;
 	getRunningBundles(runningBundles);
 
-	bool start = QueueManager::getInstance()->startDownload(aConn->getHintedUser(), runningBundles, hubs, dlType, aConn->getSpeed());
+	bool start = QueueManager::getInstance()->startDownload(aConn->getHintedUser(), runningBundles, hubs, dlType, aConn->getSpeed(), errorMessage);
 
 	// not a finished download?
 	if(!start && aConn->getState() != UserConnection::STATE_RUNNING) {
@@ -243,7 +254,7 @@ void DownloadManager::checkDownloads(UserConnection* aConn) {
 		return;
 	}
 
-	string errorMessage, newUrl;
+	string newUrl;
 	Download* d = nullptr;
 
 	if (start)
@@ -255,6 +266,7 @@ void DownloadManager::checkDownloads(UserConnection* aConn) {
 		if(!errorMessage.empty()) {
 			fire(DownloadManagerListener::Status(), aConn, errorMessage);
 		}
+
 		if (!checkIdle(aConn->getUser(), aConn->isSet(UserConnection::FLAG_SMALL_SLOT), true)) {
 			aConn->setState(UserConnection::STATE_IDLE);
 			removeRunningUser(aConn);
@@ -577,8 +589,8 @@ void DownloadManager::changeBundle(BundlePtr sourceBundle, BundlePtr targetBundl
 }
 
 BundlePtr DownloadManager::findRunningBundle(const string& bundleToken) {
-	auto s = runningBundles.find(bundleToken);
-	if (s != runningBundles.end()) {
+	auto s = bundles.find(bundleToken);
+	if (s != bundles.end()) {
 		return s->second;
 	}
 	return nullptr;
@@ -594,7 +606,7 @@ void DownloadManager::removeRunningUser(UserConnection* aSource, bool sendRemove
 		BundlePtr bundle = findRunningBundle(aSource->getLastBundle());
 		if (bundle && bundle->removeRunningUser(aSource, sendRemove)) {
 			//no running users for this bundle
-			runningBundles.erase(bundle->getToken());
+			bundles.erase(bundle->getToken());
 			fire(DownloadManagerListener::BundleWaiting(), bundle);
 		}
 	}

@@ -776,7 +776,7 @@ ShareManager::Directory::~Directory() {
 }
 
 void ShareManager::Directory::updateModifyDate() {
-	lastWrite = dcpp::File::getLastModified(getRealPath(false));
+	lastWrite = dcpp::File::getLastModified(getRealPath());
 }
 
 void ShareManager::Directory::getResultInfo(ProfileToken aProfile, int64_t& size_, size_t& files_, size_t& folders_) const noexcept {

@@ -39,8 +39,9 @@ WindowShareBrowser::WindowShareBrowser(DirectoryListing* aList, const std::strin
 {
 	m_infoboxHeight = 2;
 
-	insert_column(new display::Column("Type"));
-	insert_column(new display::Column("Name", 10, 15, 50));
+	insert_column(new display::Column("ItemType"));
+	insert_column(new display::Column("Name", 10, 15, 60));
+	insert_column(new display::Column("Type", 5, 10, 15));
 	insert_column(new display::Column("Size", 10, 15, 20));
 	insert_column(new display::Column("Date", 6, 6, 12));
 	insert_column(new display::Column("Dupe", 4, 4, 5));
@@ -252,9 +253,9 @@ void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDi
 
 	auto getDupeText = [&](int aDupe) {
 		switch (aDupe) {
-			case SHARE_DUPE: return "S";
-			case SHARE_QUEUE_DUPE: return "SQ";
-			case QUEUE_DUPE: return "Q";
+			case DUPE_SHARE: return "S";
+			case DUPE_SHARE_QUEUE: return "SQ";
+			case DUPE_QUEUE: return "Q";
 		}
 
 		return "";
@@ -269,9 +270,10 @@ void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDi
 		auto row = insert_row();
 		set_text(0, row, "d");
 		set_text(1, row, utils::escape(d->getName()));
-		set_text(2, row, Util::formatBytes(d->getTotalSize(false)));
-		set_text(3, row, Util::getDateTime(d->getRemoteDate()));
-		set_text(4, row, getDupeText(d->getDupe()));
+		set_text(2, row, Util::emptyString);
+		set_text(3, row, Util::formatBytes(d->getTotalSize(false)));
+		set_text(4, row, Util::getDateTime(d->getRemoteDate()));
+		set_text(5, row, getDupeText(d->getDupe()));
 
 		if (selectedName && d->getName() == *selectedName) {
 			selectedPos = row;
@@ -284,12 +286,17 @@ void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDi
 		if (nameFilter && !nameFilter->match(f->getName()))
 			continue;
 
+		auto type = Util::getFileExt(f->getName());
+		if (type.size() > 0 && type[0] == '.')
+			type.erase(0, 1);
+
 		auto row = insert_row();
 		set_text(0, row, "f");
 		set_text(1, row, utils::escape(f->getName()));
-		set_text(2, row, Util::formatBytes(f->getSize()));
-		set_text(3, row, Util::getDateTime(f->getRemoteDate()));
-		set_text(4, row, getDupeText(f->getDupe()));
+		set_text(2, row, utils::escape(type));
+		set_text(3, row, Util::formatBytes(f->getSize()));
+		set_text(4, row, Util::getDateTime(f->getRemoteDate()));
+		set_text(5, row, getDupeText(f->getDupe()));
 	}
 
 	if (selectedPos > 0) {

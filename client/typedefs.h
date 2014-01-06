@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2013 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,7 +71,6 @@ typedef vector<Client*> ClientList;
 typedef int ProfileToken;
 typedef vector<ProfileToken> ProfileTokenList;
 typedef vector<pair<ProfileToken, string>> ProfileTokenStringList;
-typedef std::unordered_map <ProfileToken, string> ProfileTokenStringMap;
 
 #ifdef UNICODE
 

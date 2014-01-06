@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013 AirDC++ Project
+ * Copyright (C) 2011-2014 AirDC++ Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,7 +81,7 @@ namespace dcpp {
 		bool matchesDirectory(const string& aName);
 
 		//returns list of search terms that didn't match the name
-		StringSearch::List* matchesDirectoryReLower(const string& aName);
+		unique_ptr<StringSearch::List> matchesDirectoryReLower(const string& aName);
 
 		bool matchesSize(int64_t aSize);
 		bool matchesDate(uint32_t aDate);

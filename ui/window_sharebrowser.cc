@@ -270,7 +270,7 @@ void WindowShareBrowser::insertItems(const DirectoryListing::Directory::Ptr& aDi
 		auto row = insert_row();
 		set_text(0, row, "d");
 		set_text(1, row, utils::escape(d->getName()));
-		set_text(2, row, Util::emptyString);
+		// 2: no type for dirs
 		set_text(3, row, Util::formatBytes(d->getTotalSize(false)));
 		set_text(4, row, Util::getDateTime(d->getRemoteDate()));
 		set_text(5, row, getDupeText(d->getDupe()));

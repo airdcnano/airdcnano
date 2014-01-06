@@ -1605,6 +1605,7 @@ std::string dcpp::ResourceManager::strings[] = {
 "The file list is queued already", 
 "The file %1% has been added in queue (%2%)", 
 "The following error(s) occurred when queueing the bundle %1% from a user %2%: %3%", 
+"Failed to queue the file %1% from a user %2%: %3%", 
 "%1% (%2% out of %3% bundle files were affected)", 
 "%1% (affected file(s): %2%)", 
 "A file with the same hash exists in a queued directory %1%", 
@@ -1857,6 +1858,8 @@ std::string dcpp::ResourceManager::strings[] = {
 "Shell menu", 
 "Shell menus", 
 "Failed to load the menu for %1%", 
+"Could not open NFO via external viewer, Error: ", 
+"Open .nfo files externally", 
 };
 std::string dcpp::ResourceManager::names[] = {
 "Active", 
@@ -3462,6 +3465,7 @@ std::string dcpp::ResourceManager::names[] = {
 "ListAlreadyQueued", 
 "FileXQueued", 
 "AddBundleErrorsOcc", 
+"AddFileError", 
 "XFileCount", 
 "XFileNames", 
 "FileAlreadyQueued", 
@@ -3714,4 +3718,6 @@ std::string dcpp::ResourceManager::names[] = {
 "ShellMenu", 
 "ShellMenus", 
 "ShellMenuFailed", 
+"ErrorOpeningNfoExternal", 
+"OpenNfoExternal", 
 };

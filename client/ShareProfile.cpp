@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2013 AirDC++ Project
+ * Copyright (C) 2012-2014 AirDC++ Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,10 +76,10 @@ string ShareProfileInfo::getDisplayName() const {
 	return ret;
 }
 
-ShareProfile::ShareProfile(const string& aName, ProfileToken aToken) : token(aToken), plainName(aName), profileList(new FileList(aToken)){ }
+ShareProfile::ShareProfile(const string& aName, ProfileToken aToken) : token(aToken), plainName(aName), fileList(aToken) {}
 
 ShareProfile::~ShareProfile() {
-	delete profileList;
+
 }
 
 string ShareProfile::getDisplayName() const {
@@ -90,9 +90,8 @@ string ShareProfile::getDisplayName() const {
 	return ret;
 }
 
-FileList* ShareProfile::generateProfileList() {
-	profileList = new FileList(token);
-	return profileList;
+FileList* ShareProfile::getProfileList() {
+	return &fileList;
 }
 
 } //dcpp

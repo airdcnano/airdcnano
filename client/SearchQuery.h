@@ -44,6 +44,10 @@ namespace dcpp {
 			TYPE_DIRECTORY
 		};
 
+		typedef vector<pair<size_t, int>> ResultPointsList;
+		static double getRelevancyScores(const SearchQuery& aSearch, int aLevel, bool aIsDirectory, const string& aName);
+		ResultPointsList toPointList(const string& aName) const;
+
 		// General initialization
 		static SearchQuery* getSearch(const string& aSearchString, const string& aExcluded, int64_t aSize, int aTypeMode, int aSizeMode, const StringList& aExtList, MatchType aMatchType, bool returnParents, size_t aMaxResults = 0);
 		static StringList parseSearchString(const string& aString);
@@ -68,23 +72,29 @@ namespace dcpp {
 		int getLastIncludeMatches() const { return lastIncludeMatches; }
 
 		// get the merged positions
-		StringSearch::ResultList getResultPositions() const;
+		ResultPointsList getResultPositions(const string& aName) const;
 		bool positionsComplete() const;
 
 
 		// We count the positions from the beginning of name of the first matching item
 		// This struct will keep the positions from the upper levels
 		struct Recursion{
-			Recursion(const SearchQuery& aSearch);
+			Recursion() { }
+			Recursion(const SearchQuery& aSearch, const string& aName);
+
+			inline void increase(string::size_type aLen) { recursionLevel++; depthLen += aLen; }
+			inline void decrease(string::size_type aLen) { recursionLevel--; depthLen -= aLen; }
 
 			// are we complete after the new results?
 			bool completes(const StringSearch::ResultList& compareTo) const;
 
 			// merge old position to a new set of positions (new positions are preferred)
-			static void merge(StringSearch::ResultList& mergeTo, const Recursion* parent);
+			// returns true if something from the parent list was needed
+			static bool merge(ResultPointsList& mergeTo, const Recursion* parent);
 
 			size_t depthLen = 0;
-			StringSearch::ResultList positions;
+			int recursionLevel = 0;
+			ResultPointsList positions;
 		};
 
 		Recursion* recursion = nullptr;
@@ -108,6 +118,7 @@ namespace dcpp {
 
 		bool matchesDirectory(const string& aName);
 		bool matchesFile(const string& aName, int64_t aSize, uint64_t aDate, const TTHValue& aTTH);
+		bool matchesNmdcPath(const string& aPath, Recursion& recursion_);
 
 		inline bool matchesSize(int64_t aSize) { return aSize >= gt && aSize <= lt; }
 		inline bool matchesDate(time_t aDate) { return aDate == 0 || (aDate >= minDate && aDate <= maxDate); }

@@ -3177,57 +3177,6 @@ void ShareManager::nmdcSearch(SearchResultList& l, const string& nmdcString, int
 	search(l, query, aHideShare ? SP_HIDDEN : SETTING(DEFAULT_SP), CID(), Util::emptyString, false);
 }
 
-void ShareManager::Directory::SearchResultInfo::init(const SearchQuery& aSearch) {
-	auto positions = aSearch.getResultPositions();
-	dcassert(find(positions, string::npos) == positions.end());
-
-	hasMatchRecursion = aSearch.getLastIncludeMatches() != static_cast<int>(aSearch.include.count());
-	isSorted = is_sorted(positions.begin(), positions.end());
-	if (isSorted) {
-		auto minmaxpos = minmax_element(positions.begin(), positions.end());
-		distance = *minmaxpos.second - *minmaxpos.first;
-		startFromZero = positions[0] == 0;
-	}
-}
-
-bool ShareManager::Directory::SearchResultInfo::Sort::operator()(const SearchResultInfo& left, const SearchResultInfo& right) const {
-	// Check if the positions are sequential
-	if (left.isSorted != right.isSorted) {
-		return left.isSorted;
-	}
-
-	// Check recursion
-	if (left.hasMatchRecursion != right.hasMatchRecursion) {
-		return !left.hasMatchRecursion;
-	}
-	
-	// Check the starting position
-	if (left.startFromZero != right.startFromZero) {
-		return left.startFromZero;
-	}
-
-	// Check the distance of the matches
-	if (left.distance != right.distance) {
-		return left.distance < right.distance;
-	}
-
-	// Check the level
-	if (left.level != right.level) {
-		return left.level < right.level;
-	}
-
-	// Prefer directories over files
-	if (left.type != right.type) {
-		return left.type == DIRECTORY;
-	}
-
-	// Sort by the name
-	if (left.type == DIRECTORY) {
-		return compare(left.directory->realName.getLower(), right.directory->realName.getLower()) < 0;
-	}
-	return compare(left.file->name.getLower(), right.file->name.getLower()) < 0;
-}
-
 /**
 * Alright, the main point here is that when searching, a search string is most often found in
 * the filename, not directory name, so we want to make that case faster. Also, we want to
@@ -3248,29 +3197,30 @@ void ShareManager::Directory::search(SearchResultInfo::Set& results_, SearchQuer
 
 	// Find any matches in the directory name
 	if (aStrings.matchesAnyDirectoryLower(dirName)) {
-		if (aStrings.itemType != SearchQuery::TYPE_FILE && aStrings.positionsComplete()) {
-			if (aStrings.gt == 0 && aStrings.matchesDate(lastWrite)) {
-				// Full match
-				results_.insert(Directory::SearchResultInfo(this, aStrings, level));
-				if (aStrings.matchType == SearchQuery::MATCH_FULL_PATH) {
-					return;
-				}
-			}
+		bool positionsComplete = aStrings.positionsComplete();
+		if (aStrings.itemType != SearchQuery::TYPE_FILE && positionsComplete && aStrings.gt == 0 && aStrings.matchesDate(lastWrite)) {
+			// Full match
+			results_.insert(Directory::SearchResultInfo(this, aStrings, level));
+			//if (aStrings.matchType == SearchQuery::MATCH_FULL_PATH) {
+			//	return;
+			//}
 		} 
 		
 		if (aStrings.matchType == SearchQuery::MATCH_FULL_PATH) {
-			// Partial match; ignore if all matches are less than 3 chars in length
-			bool hasValidResult = false;
-			const auto& positions = aStrings.getLastPositions();
-			for (size_t j = 0; j < positions.size(); ++j) {
-				if (positions[j] != string::npos && aStrings.include.getPatterns()[j].size() > 2) {
-					hasValidResult = true;
-					break;
+			bool hasValidResult = positionsComplete;
+			if (!hasValidResult) {
+				// Partial match; ignore if all matches are less than 3 chars in length
+				const auto& positions = aStrings.getLastPositions();
+				for (size_t j = 0; j < positions.size(); ++j) {
+					if (positions[j] != string::npos && aStrings.include.getPatterns()[j].size() > 2) {
+						hasValidResult = true;
+						break;
+					}
 				}
 			}
 
 			if (hasValidResult) {
-				rec.reset(new SearchQuery::Recursion(aStrings));
+				rec.reset(new SearchQuery::Recursion(aStrings, dirName));
 				aStrings.recursion = rec.get();
 			}
 		}
@@ -3279,8 +3229,7 @@ void ShareManager::Directory::search(SearchResultInfo::Set& results_, SearchQuer
 	// Moving up
 	level++;
 	if (aStrings.recursion) {
-		// increase depth
-		aStrings.recursion->depthLen += dirName.length();
+		aStrings.recursion->increase(dirName.length());
 	}
 
 	// Match files
@@ -3303,11 +3252,12 @@ void ShareManager::Directory::search(SearchResultInfo::Set& results_, SearchQuer
 		d->search(results_, aStrings, aProfile, level);
 	}
 
-	aStrings.recursion = old;
+	// Moving to a lower level
 	if (aStrings.recursion) {
-		// decrease depth
-		aStrings.recursion->depthLen -= dirName.length();
+		aStrings.recursion->decrease(dirName.length());
 	}
+
+	aStrings.recursion = old;
 }
 
 void ShareManager::search(SearchResultList& results, SearchQuery& srch, ProfileToken aProfile, const CID& cid, const string& aDir, bool isAutoSearch) throw(ShareException) {

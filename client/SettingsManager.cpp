@@ -218,7 +218,7 @@ const string SettingsManager::settingTags[] =
 	"ClearDirectoryHistory", "ClearExcludeHistory", "ClearDirHistory", "NoIpOverride6", "IPUpdate6", "SearchUseExcluded", "AutoSearchBold", "ShowEmoticon", "ShowMultiline", "ShowMagnet", "WarnElevated", "SkipEmptyDirsShare", "LogShareScans",
 	"AcceptFailoversFavs", "RemoveExpiredAs", "AdcLogGroupCID", "ShareFollowSymlinks", "ScanMonitoredFolders", "FinishedNoHash", "ConfirmFileDeletions", "UseDefaultCertPaths", "StartupRefresh", "DctmpStoreDestination", "FLReportDupeFiles",
 	"FilterFLShared", "FilterFLQueued", "FilterFLInversed", "FilterFLTop", "FilterFLPartialDupes", "FilterFLResetChange", "FilterSearchShared", "FilterSearchQueued", "FilterSearchInversed", "FilterSearchTop", "FilterSearchPartialDupes", "FilterSearchResetChange",
-	"SearchAschOnlyMan", "IgnoreIndirectSR", "UseUploadBundles", "CloseMinimize", "LogIgnored", "UsersFilterIgnore", "NfoExternal",
+	"SearchAschOnlyMan", "IgnoreIndirectSR", "UseUploadBundles", "CloseMinimize", "LogIgnored", "UsersFilterIgnore", "NfoExternal", "SingleClickTray",
 	"SENTRY",
 	// Int64
 	"TotalUpload", "TotalDownload",
@@ -310,7 +310,7 @@ SettingsManager::SettingsManager()
 	setDefault(LOG_FILE_PRIVATE_CHAT, "PM" + string(PATH_SEPARATOR_STR) + "%B - %Y" + string(PATH_SEPARATOR_STR) + "%[userNI].log");
 	setDefault(LOG_FILE_UPLOAD, "Uploads.log");
 	setDefault(LOG_FILE_DOWNLOAD, "Downloads.log");
-	setDefault(LOG_FILE_SYSTEM, "system.log");
+	setDefault(LOG_FILE_SYSTEM, "%Y-%m-system.log");
 	setDefault(GET_USER_INFO, true);
 	setDefault(URL_HANDLER, true);
 	setDefault(AUTO_AWAY, false);
@@ -859,6 +859,7 @@ SettingsManager::SettingsManager()
 	setDefault(LOG_IGNORED, true);
 	setDefault(USERS_FILTER_IGNORE, false);
 	setDefault(NFO_EXTERNAL, false);
+	setDefault(SINGLE_CLICK_TRAY, false);
 
 	// not in GUI
 	setDefault(IGNORE_INDIRECT_SR, false);
@@ -904,10 +905,7 @@ string SettingsManager::getProfileName(int profile) {
 void SettingsManager::load(function<bool (const string& /*Message*/, bool /*isQuestion*/, bool /*isError*/)> messageF) {
 	try {
 		SimpleXML xml;
-		xml.loadSettingFile(CONFIG_DIR, CONFIG_NAME);
-		
-		xml.resetCurrentChild();
-		
+		loadSettingFile(xml, CONFIG_DIR, CONFIG_NAME);
 		if(xml.findChild("DCPlusPlus"))
 		{
 			xml.stepIn();
@@ -1043,8 +1041,8 @@ void SettingsManager::load(function<bool (const string& /*Message*/, bool /*isQu
 			xml.stepOut();
 		}
 
-	} catch(const Exception&) { 
-		//...
+	} catch(const Exception& e) { 
+		LogManager::getInstance()->message(STRING_F(LOAD_FAILED_X, CONFIG_NAME % e.getError()), LogManager::LOG_ERROR);
 	}
 
 	setDefault(UDP_PORT, SETTING(TCP_PORT));
@@ -1200,24 +1198,7 @@ void SettingsManager::save() {
 
 
 	fire(SettingsManagerListener::Save(), xml);
-
-	try {
-		xml.saveSettingFile(CONFIG_DIR, CONFIG_NAME);
-	} catch(const Exception& e) {
-		LogManager::getInstance()->message("Failed to save the setting file: " + e.getError(), LogManager::LOG_ERROR);
-	}
-	/*try {
-		File out(aFileName + ".tmp", File::WRITE, File::CREATE | File::TRUNCATE);
-		BufferedOutputStream<false> f(&out);
-		f.write(SimpleXML::utf8Header);
-		xml.toXML(&f);
-		f.flush();
-		out.close();
-		File::deleteFile(aFileName);
-		File::renameFile(aFileName + ".tmp", aFileName);
-	} catch(...) {
-		// ...
-	}*/
+	saveSettingFile(xml, CONFIG_DIR, CONFIG_NAME);
 }
 
 HubSettings SettingsManager::getHubSettings() const {
@@ -1236,6 +1217,36 @@ HubSettings SettingsManager::getHubSettings() const {
 	ret.get(HubSettings::AcceptFailovers) = get(ACCEPT_FAILOVERS);
 	ret.get(HubSettings::NmdcEncoding) = get(NMDC_ENCODING);
 	return ret;
+}
+
+void SettingsManager::loadSettingFile(SimpleXML& aXML, Util::Paths aPath, const string& aFileName, bool migrate /*true*/) throw(Exception) {
+	string fname = Util::getPath(aPath) + aFileName;
+
+	if (migrate)
+		Util::migrate(fname);
+
+	if (Util::fileExists(fname)) {
+		aXML.fromXML(File(fname, File::READ, File::OPEN).read());
+	}
+}
+
+void SettingsManager::saveSettingFile(SimpleXML& aXML, Util::Paths aPath, const string& aFileName) noexcept {
+	string fname = Util::getPath(aPath) + aFileName;
+
+	try {
+		File f(fname + ".tmp", File::WRITE, File::CREATE | File::TRUNCATE);
+		f.write(SimpleXML::utf8Header);
+		f.write(aXML.toXML());
+		f.close();
+
+		//dont overWrite with empty file.
+		if (File::getSize(fname + ".tmp") > 0) {
+			File::deleteFile(fname);
+			File::renameFile(fname + ".tmp", fname);
+		}
+	} catch (const FileException& e) {
+		LogManager::getInstance()->message(STRING_F(SAVE_FAILED_X, fname % e.getError()), LogManager::LOG_ERROR);
+	}
 }
 
 } // namespace dcpp

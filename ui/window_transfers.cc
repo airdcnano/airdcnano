@@ -324,7 +324,7 @@ void WindowTransfers::on(DownloadManagerListener::Requesting, const Download* d,
 	starting(ui, d);
 
 	ui->setActual(d->getActual());
-	ui->setSize(d->getSize());
+	ui->setSize(d->getSegmentSize());
 	//ui->setStatus(ItemInfo::STATUS_RUNNING);	
 	//ui->updateMask &= ~UpdateInfo::MASK_STATUS; // hack to avoid changing item status
 	ui->setStatusString(STRING(REQUESTING) + " " + getFile(d->getType(), Util::getFileName(d->getPath())) + "...");
@@ -392,7 +392,7 @@ void WindowTransfers::on(DownloadManagerListener::Failed, const Download* aDownl
 	auto ui = new UpdateInfo(aDownload->getToken(), true, true);
 	//ui->setStatus(ItemInfo::STATUS_WAITING);
 	ui->setPos(-1);
-	ui->setSize(aDownload->getSize());
+	ui->setSize(aDownload->getSegmentSize());
 	ui->setTarget(aDownload->getPath());
 	ui->setType(aDownload->getType());
 	//ui->setBundle(aDownload->getBundle() ? aDownload->getBundle()->getToken() : Util::emptyString);
@@ -415,7 +415,7 @@ void WindowTransfers::on(UploadManagerListener::Starting, const Upload *aUpload)
 	starting(ui, aUpload);
 
 	ui->setActual(aUpload->getStartPos() + aUpload->getActual());
-	ui->setSize(aUpload->getType() == Transfer::TYPE_TREE ? aUpload->getSize() : aUpload->getFileSize());
+	ui->setSize(aUpload->getType() == Transfer::TYPE_TREE ? aUpload->getSegmentSize() : aUpload->getFileSize());
 	ui->setRunning(1);
 	speak(ui);
 }
@@ -425,7 +425,7 @@ void WindowTransfers::starting(UpdateInfo* ui, const Transfer* t) {
 	ui->setTarget(t->getPath());
 	ui->setType(t->getType());
 	ui->setStart(GET_TICK());
-	ui->setSize(t->getSize());
+	ui->setSize(t->getSegmentSize());
 	const auto& uc = t->getUserConnection();
 
 	const auto& ip = uc.getRemoteIp();

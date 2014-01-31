@@ -8,3 +8,5 @@ build
 .sconf_temp
 *.log
 *.opensdf
+*.gz
+*.user

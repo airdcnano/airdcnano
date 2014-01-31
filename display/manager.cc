@@ -104,20 +104,26 @@ void Manager::handle_key()
     wint_t key = events::arg<wint_t>(1);
     if(key == 0x1B) {
         m_altPressed = true;
+		core::Log::get()->log("ALT");
         events::stop();
         return;
     }
 
-    if(m_altPressed == false)
-        return;
+	if (m_altPressed == false) {
+		core::Log::get()->log("RET");
+		return;
+	}
 
     m_altPressed = false;
     if(key >= '1' && key <= '9') {
 		set_active_window(key - '1');
+		core::Log::get()->log("NUM");
         events::stop();
     } else if(key == KEY_LEFT) {
+		core::Log::get()->log("ÖRG");
 		prev();
     } else if(key == KEY_RIGHT) {
+		core::Log::get()->log("ÖRG");
 		next();
     }
 }

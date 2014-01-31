@@ -240,7 +240,7 @@ public:
 
 	void getShares(ShareDirInfo::Map& aDirs) const noexcept;
 
-	enum Tasks {
+	enum TaskType {
 		ASYNC,
 		ADD_DIR,
 		REFRESH_ALL,
@@ -273,7 +273,7 @@ public:
 	string printStats() const noexcept;
 	mutable SharedMutex cs;
 
-	int addRefreshTask(uint8_t aTaskType, StringList& dirs, RefreshType aRefreshType, const string& displayName=Util::emptyString, function<void (float)> progressF = nullptr) noexcept;
+	int addRefreshTask(TaskType aTaskType, StringList& dirs, RefreshType aRefreshType, const string& displayName = Util::emptyString, function<void(float)> progressF = nullptr) noexcept;
 	struct ShareLoader;
 
 	void rebuildMonitoring() noexcept;
@@ -604,7 +604,7 @@ private:
 		}
 	}
 
-	void buildTree(string& aPath, string& aPathLower, const Directory::Ptr& aDir, const ProfileDirMap& aSubRoots, DirMultiMap& aDirs, DirMap& newShares, int64_t& hashSize, int64_t& addedSize, HashFileMap& tthIndexNew, ShareBloom& aBloom) noexcept;
+	void buildTree(string& aPath, string& aPathLower, const Directory::Ptr& aDir, const ProfileDirMap& aSubRoots, DirMultiMap& aDirs, DirMap& newShares, int64_t& hashSize, int64_t& addedSize, HashFileMap& tthIndexNew, ShareBloom& aBloom);
 	void addFile(const string& aName, Directory::Ptr& aDir, const HashedFile& fi, ProfileTokenSet& dirtyProfiles_) noexcept;
 
 	static void updateIndices(Directory::Ptr& aDirectory, ShareBloom& aBloom, int64_t& sharedSize, HashFileMap& tthIndex, DirMultiMap& aDirNames) noexcept;

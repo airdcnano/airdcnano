@@ -279,7 +279,7 @@ public:
 	void rebuildMonitoring() noexcept;
 	void handleChangedFiles() noexcept;
 private:
-	unique_ptr<DirectoryMonitor> monitor;
+	DirectoryMonitor monitor;
 
 	uint64_t totalSearches = 0;
 	uint64_t tthSearches = 0;
@@ -587,6 +587,8 @@ private:
 
 	typedef shared_ptr<RefreshInfo> RefreshInfoPtr;
 	typedef vector<RefreshInfoPtr> RefreshInfoList;
+
+	bool handleRefreshedDirectory(RefreshInfoPtr& ri, TaskType aTaskType);
 
 	template<typename T>
 	void mergeRefreshChanges(T& aList, DirMultiMap& aDirNameMap, DirMap& aRootPaths, HashFileMap& aTTHIndex, int64_t& totalHash, int64_t& totalAdded, ProfileTokenSet* dirtyProfiles) noexcept {

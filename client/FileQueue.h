@@ -53,7 +53,9 @@ public:
 
 	size_t getSize() noexcept { return queue.size(); }
 	QueueItem::StringMap& getQueue() noexcept { return queue; }
+	const QueueItem::StringMap& getQueue() const noexcept{ return queue; }
 	QueueItem::TTHMap& getTTHIndex() noexcept { return tthIndex; }
+
 	void move(QueueItemPtr& qi, const string& aTarget) noexcept;
 	void remove(QueueItemPtr& qi) noexcept;
 	int isFileQueued(const TTHValue& aTTH) const noexcept;

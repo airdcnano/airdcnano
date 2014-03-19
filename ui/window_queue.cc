@@ -83,6 +83,8 @@ WindowQueue::WindowQueue() : ListView(display::TYPE_QUEUE, "queue") {
 	m_bindings['R'] = std::bind(&WindowQueue::remove_bundle_finished, this);
 	m_bindings['p'] = std::bind(&WindowQueue::set_priority, this);
 	m_bindings['m'] = std::bind(&WindowQueue::move_bundle, this);
+	m_bindings['F'] = std::bind(&WindowQueue::force_share_bundle, this);
+	m_bindings['S'] = std::bind(&WindowQueue::rescan_bundle, this);
 
 	// add the existing bundles
 	{
@@ -146,7 +148,7 @@ void WindowQueue::handle_line(const std::string &line) {
 			if (line == "y") {
 				auto b = get_selected_bundle();
 				if (b)
-					QueueManager::getInstance()->removeBundle(b, false, m_property == PROP_REMOVE_FINISHED);
+					QueueManager::getInstance()->removeBundle(b, m_property == PROP_REMOVE_FINISHED);
 			}
 		} else if (m_property == PROP_MOVE) {
 			auto b = get_selected_bundle();
@@ -178,6 +180,20 @@ void WindowQueue::search_bundle_alt() {
 	auto b = get_selected_bundle();
 	if (b) {
 		QueueManager::getInstance()->searchBundle(b, true);
+	}
+}
+
+void WindowQueue::force_share_bundle() {
+	auto b = get_selected_bundle();
+	if (b) {
+		QueueManager::getInstance()->shareBundle(b, true);
+	}
+}
+
+void WindowQueue::rescan_bundle() {
+	auto b = get_selected_bundle();
+	if (b) {
+		QueueManager::getInstance()->shareBundle(b, false);
 	}
 }
 

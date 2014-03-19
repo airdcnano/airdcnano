@@ -18,9 +18,6 @@
 
 #include "stdinc.h"
 
-#include <boost/random/discrete_distribution.hpp>
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/fusion/include/count_if.hpp>
 #include <boost/range/numeric.hpp>
 
 #include "AirUtil.h"
@@ -43,19 +40,24 @@ size_t BundleQueue::getTotalFiles() const noexcept {
 }
 
 void BundleQueue::addBundle(BundlePtr& aBundle) noexcept {
-	aBundle->setStatus(Bundle::STATUS_QUEUED);
-	aBundle->setDownloadedBytes(0); //sets to downloaded segments
-	aBundle->updateSearchMode();
-
-	addSearchPrio(aBundle);
 	bundles[aBundle->getToken()] = aBundle;
-
 	//check if we need to insert the root bundle dir
 	if (!aBundle->isFileBundle()) {
 		if (findLocalDir(aBundle->getTarget()) == bundleDirs.end()) {
 			addDirectory(aBundle->getTarget(), aBundle);
 		}
 	}
+
+	if (aBundle->isFinished()) {
+		aBundle->setStatus(Bundle::STATUS_FINISHED);
+		return;
+	}
+
+	aBundle->setStatus(Bundle::STATUS_QUEUED);
+	aBundle->setDownloadedBytes(0); //sets to downloaded segments
+	aBundle->updateSearchMode();
+
+	addSearchPrio(aBundle);
 }
 
 void BundleQueue::getSourceInfo(const UserPtr& aUser, Bundle::SourceBundleList& aSources, Bundle::SourceBundleList& aBad) const noexcept {
@@ -72,168 +74,9 @@ void BundleQueue::getSourceInfo(const UserPtr& aUser, Bundle::SourceBundleList& 
 	}
 }
 
-void BundleQueue::addSearchPrio(BundlePtr& aBundle) noexcept{
-	if (aBundle->getPriority() < Bundle::LOW) {
-		return;
-	}
-
-	if (aBundle->isRecent()) {
-		dcassert(find(recentSearchQueue, aBundle) == recentSearchQueue.end());
-		recentSearchQueue.push_back(aBundle);
-		return;
-	} else {
-		dcassert(find(prioSearchQueue[aBundle->getPriority()], aBundle) == prioSearchQueue[aBundle->getPriority()].end());
-		prioSearchQueue[aBundle->getPriority()].push_back(aBundle);
-	}
-}
-
-void BundleQueue::removeSearchPrio(BundlePtr& aBundle) noexcept {
-	if (aBundle->getPriority() < Bundle::LOW) {
-		return;
-	}
-
-	if (aBundle->isRecent()) {
-		auto i = find(recentSearchQueue, aBundle);
-		if (i != recentSearchQueue.end()) {
-			recentSearchQueue.erase(i);
-		}
-	} else {
-		auto i = find(prioSearchQueue[aBundle->getPriority()], aBundle);
-		if (i != prioSearchQueue[aBundle->getPriority()].end()) {
-			prioSearchQueue[aBundle->getPriority()].erase(i);
-		}
-	}
-}
-
-BundlePtr BundleQueue::findSearchBundle(uint64_t aTick, bool force /* =false */) noexcept {
-	BundlePtr bundle = nullptr;
-	if(aTick >= nextSearch || force) {
-		bundle = findAutoSearch();
-	}
-	
-	if(!bundle && (aTick >= nextRecentSearch || force)) {
-		bundle = findRecent();
-	}
-	return bundle;
-}
-
-int64_t BundleQueue::recalculateSearchTimes(bool aRecent, bool isPrioChange) noexcept {
-	if (!aRecent) {
-		int prioBundles = getPrioSum();
-		int minInterval = SETTING(SEARCH_TIME);
-
-		if (prioBundles > 0) {
-			minInterval = max(60 / prioBundles, SETTING(SEARCH_TIME));
-		}
-
-		if (nextSearch > 0 && isPrioChange) {
-			nextSearch = min(nextSearch, GET_TICK() + (minInterval * 60 * 1000));
-		} else {
-			nextSearch = GET_TICK() + (minInterval * 60 * 1000);
-		}
-		return nextSearch;
-	} else {
-		if (nextRecentSearch > 0 && isPrioChange) {
-			nextRecentSearch = min(nextRecentSearch, GET_TICK() + getRecentIntervalMs());
-		} else {
-			nextRecentSearch = GET_TICK() + getRecentIntervalMs();
-		}
-		return nextRecentSearch;
-	}
-}
-
-int BundleQueue::getRecentIntervalMs() const noexcept {
-	int recentBundles = count_if(recentSearchQueue.begin(), recentSearchQueue.end(), [](const BundlePtr& b) { return b->allowAutoSearch(); });
-	if (recentBundles == 1) {
-		return 15 * 60 * 1000;
-	} else if (recentBundles == 2) {
-		return 8 * 60 * 1000;
-	} else {
-		return 5 * 60 * 1000;
-	}
-}
-
-BundlePtr BundleQueue::findRecent() noexcept {
-	if (recentSearchQueue.size() == 0) {
-		return nullptr;
-	}
-
-	uint32_t count = 0;
-	for (;;) {
-		BundlePtr b = recentSearchQueue.front();
-		recentSearchQueue.pop_front();
-
-		//check if the bundle still belongs to here
-		if (b->checkRecent()) {
-			recentSearchQueue.push_back(b);
-		} else {
-			addSearchPrio(b);
-		}
-
-		if (b->allowAutoSearch()) {
-			return b;
-		} else if (count >= recentSearchQueue.size()) {
-			break;
-		}
-
-		count++;
-	}
-
-	return nullptr;
-}
-
-boost::mt19937 gen;
-static vector<double> probabilities;
-
-int BundleQueue::getPrioSum() const noexcept {
-	probabilities.clear();
-
-	int prioBundles = 0;
-	int p = Bundle::LOW;
-	do {
-		int dequeBundles = count_if(prioSearchQueue[p].begin(), prioSearchQueue[p].end(), [](const BundlePtr& b) { return b->allowAutoSearch(); });
-		probabilities.push_back((p-1)*dequeBundles); //multiply with a priority factor to get bigger probability for higher prio bundles
-		prioBundles += dequeBundles;
-		p++;
-	} while(p < Bundle::LAST);
-
-	probabilities.shrink_to_fit();
-	return prioBundles;
-}
-
-BundlePtr BundleQueue::findAutoSearch() noexcept{
-	int prioBundles = getPrioSum();
-
-	//do we have anything where to search from?
-	if (prioBundles == 0) {
-		return nullptr;
-	}
-
-	auto dist = boost::random::discrete_distribution<>(probabilities);
-
-	//choose the search queue, can't be paused or lowest
-	auto& sbq = prioSearchQueue[dist(gen) + QueueItemBase::LOW];
-	dcassert(!sbq.empty());
-
-	//find the first item from the search queue that can be searched for
-	auto s = find_if(sbq, [](const BundlePtr& b) { return b->allowAutoSearch(); } );
-	if (s != sbq.end()) {
-		BundlePtr b = *s;
-		//move to the back
-		sbq.erase(s);
-		sbq.push_back(b);
-		return b;
-	}
-
-	return nullptr;
-}
-
 BundlePtr BundleQueue::findBundle(const string& bundleToken) const noexcept {
 	auto i = bundles.find(bundleToken);
-	if (i != bundles.end()) {
-		return i->second;
-	}
-	return nullptr;
+	return i != bundles.end() ? i->second : nullptr;
 }
 
 void BundleQueue::findRemoteDirs(const string& aPath, Bundle::StringBundleList& paths_) const noexcept {
@@ -242,12 +85,12 @@ void BundleQueue::findRemoteDirs(const string& aPath, Bundle::StringBundleList& 
 
 	//get the last directory, we might need the position later with subdirs
 	string remoteDir = aPath;
-	if (remoteDir[remoteDir.length()-1] == '\\')
+	if (remoteDir.back() == '\\')
 		remoteDir.pop_back();
 
 	auto pos = remoteDir.rfind("\\");
 	if (pos != string::npos)
-		remoteDir = move(remoteDir.substr(pos+1));
+		remoteDir = remoteDir.substr(pos+1);
 
 	auto directories = bundleDirs.equal_range(remoteDir);
 	if (directories.first == directories.second)
@@ -280,38 +123,19 @@ void BundleQueue::findRemoteDirs(const string& aPath, Bundle::StringBundleList& 
 			}
 		}
 	} else {
+		// copy all found directories
 		for (auto s = directories.first; s != directories.second; ++s)
 			paths_.emplace_back(s->second);
-	}
-}
-
-void BundleQueue::getInfo(const string& aPath, BundleList& retBundles, int& finishedFiles, int& fileBundles) const noexcept {
-	//find the matching bundles
-	for(auto& b: bundles | map_values) {
-		if (b->isFinished()) {
-			//don't modify those
-			continue;
-		}
-
-		if (AirUtil::isParentOrExact(aPath, b->getTarget())) {
-			//parent or the same dir
-			retBundles.push_back(b);
-			finishedFiles += b->getFinishedFiles().size();
-			if (b->isFileBundle())
-				fileBundles++;
-		} else if (!b->isFileBundle() && AirUtil::isSub(aPath, b->getTarget())) {
-			//subfolder
-			retBundles.push_back(b);
-			finishedFiles = count_if(b->getFinishedFiles().begin(), b->getFinishedFiles().end(), [&aPath](QueueItemPtr qi) { return AirUtil::isSub(qi->getTarget(), aPath); });
-			return;
-		}
 	}
 }
 
 BundlePtr BundleQueue::getMergeBundle(const string& aTarget) const noexcept {
 	/* Returns directory bundles that are in sub or parent dirs (or in the same location), in which we can merge to */
 	for(auto& compareBundle: bundles | map_values) {
-		if (!compareBundle->isFileBundle() && (AirUtil::isSub(aTarget, compareBundle->getTarget()) || AirUtil::isParentOrExact(aTarget, compareBundle->getTarget()))) {
+		if (compareBundle->isFileBundle()) {
+			if (!aTarget.empty() && aTarget.back() != PATH_SEPARATOR && aTarget == compareBundle->getTarget())
+				return compareBundle;
+		} else if (AirUtil::isSub(aTarget, compareBundle->getTarget()) || AirUtil::isParentOrExact(aTarget, compareBundle->getTarget())) {
 			return compareBundle;
 		}
 	}
@@ -335,7 +159,9 @@ void BundleQueue::addBundleItem(QueueItemPtr& qi, BundlePtr& aBundle) noexcept {
 }
 
 void BundleQueue::removeBundleItem(QueueItemPtr& qi, bool finished) noexcept {
-	if (qi->getBundle()->removeQueue(qi, finished) && !finished && !qi->getBundle()->isFileBundle()) {
+	dcassert(qi->getBundle());
+	auto isFileBundle = qi->getBundle()->isFileBundle();
+	if (qi->getBundle()->removeQueue(qi, finished) && !finished && !isFileBundle) {
 		removeDirectory(qi->getFilePath());
 	}
 }
@@ -357,19 +183,6 @@ Bundle::BundleDirMap::iterator BundleQueue::findLocalDir(const string& aPath) no
 	return s.base() != bdr.second ? s.base() : bundleDirs.end();
 }
 
-void BundleQueue::addFinishedItem(QueueItemPtr& qi, BundlePtr& aBundle) noexcept {
-	dcassert(!qi->getBundle());
-	if (aBundle->addFinishedItem(qi, false) && !aBundle->isFileBundle()) {
-		addDirectory(qi->getFilePath(), aBundle);
-	}
-}
-
-void BundleQueue::removeFinishedItem(QueueItemPtr& qi) noexcept {
-	if (qi->getBundle()->removeFinishedItem(qi) && !qi->getBundle()->isFileBundle()) {
-		removeDirectory(qi->getFilePath());
-	}
-}
-
 void BundleQueue::removeBundle(BundlePtr& aBundle) noexcept{
 	if (aBundle->getStatus() == Bundle::STATUS_NEW) {
 		return;
@@ -381,14 +194,8 @@ void BundleQueue::removeBundle(BundlePtr& aBundle) noexcept{
 
 	removeDirectory(aBundle->getTarget());
 
-	//make sure that everything will be freed from the memory
 	dcassert(aBundle->getFinishedFiles().empty());
 	dcassert(aBundle->getQueueItems().empty());
-
-	/*for(auto i = aBundle->getFinishedFiles().begin(); i != aBundle->getFinishedFiles().end(); )
-		aBundle->getFinishedFiles().erase(i);
-	for(auto i = aBundle->getQueueItems().begin(); i != aBundle->getQueueItems().end(); )
-		aBundle->getQueueItems().erase(i);*/
 
 	removeSearchPrio(aBundle);
 	bundles.erase(aBundle->getToken());
@@ -408,12 +215,12 @@ void BundleQueue::moveBundle(BundlePtr& aBundle, const string& newTarget) noexce
 
 void BundleQueue::getDiskInfo(TargetUtil::TargetInfoMap& dirMap, const TargetUtil::VolumeSet& volumes) const noexcept{
 	string tempVol;
-	bool useSingleTempDir = (SETTING(TEMP_DOWNLOAD_DIRECTORY).find("%[targetdrive]") == string::npos);
+	bool useSingleTempDir = !SETTING(DCTMP_STORE_DESTINATION) && SETTING(TEMP_DOWNLOAD_DIRECTORY).find("%[targetdrive]") == string::npos;
 	if (useSingleTempDir) {
 		tempVol = TargetUtil::getMountPath(SETTING(TEMP_DOWNLOAD_DIRECTORY), volumes);
 	}
 
-	for(auto& b: bundles | map_values) {
+	for(const auto& b: bundles | map_values) {
 		string mountPath = TargetUtil::getMountPath(b->getTarget(), volumes);
 		if (!mountPath.empty()) {
 			auto s = dirMap.find(mountPath);
@@ -431,11 +238,11 @@ void BundleQueue::getDiskInfo(TargetUtil::TargetInfoMap& dirMap, const TargetUti
 
 void BundleQueue::saveQueue(bool force) noexcept {
 	for(auto& b: bundles | map_values) {
-		if (!b->isFinished() && (b->getDirty() || force)) {
+		if (b->getDirty() || force) {
 			try {
 				b->save();
 			} catch(FileException& e) {
-				LogManager::getInstance()->message("Failed to save the bundle " + b->getName() + ": " + e.getError(), LogManager::LOG_ERROR);
+				LogManager::getInstance()->message(STRING_F(SAVE_FAILED_X, b->getName() % e.getError()), LogManager::LOG_ERROR);
 			}
 		}
 	}

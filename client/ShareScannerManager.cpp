@@ -62,6 +62,7 @@ ShareScannerManager::ShareScannerManager() : stop(false) {
 	flacReg.assign(".+(-|\\()(LOSSLESS|FLAC)((-|\\)).+)?", boost::regex_constants::icase);
 	subDirReg.assign("((((DVD)|(CD)|(DIS(K|C))).?([0-9](0-9)?))|(Sample)|(Cover(s)?)|(.{0,5}Sub(s)?))", boost::regex_constants::icase);
 	subReg.assign("(.{0,8}[Ss]ub(s|pack)?)", boost::regex_constants::icase);
+	diskReg.assign(R"((DVD|CD|(DIS(K|C))).?[0-9](0-9)?((\.|-|_|\s).+)?)", boost::regex_constants::icase);
 }
 
 ShareScannerManager::~ShareScannerManager() { 
@@ -244,6 +245,7 @@ void ShareScannerManager::ScanInfo::merge(ScanInfo& collect) const {
 	collect.noReleaseFiles += noReleaseFiles;
 	collect.emptyFolders += emptyFolders;
 	collect.dupesFound += dupesFound;
+	collect.disksMissing += disksMissing;
 
 	collect.scanMessage += scanMessage;
 }
@@ -319,7 +321,7 @@ void ShareScannerManager::scanDir(const string& aPath, ScanInfo& aScan) noexcept
 		}
 
 		if (isDir) {
-			folderList.push_back(Text::toLower(aFileName));
+			folderList.push_back(Text::toLower(aFileName.substr(0, aFileName.length()-1)));
 			return;
 		}
 
@@ -340,6 +342,28 @@ void ShareScannerManager::scanDir(const string& aPath, ScanInfo& aScan) noexcept
 				aScan.emptyFolders++;
 			}
 			return;
+		}
+	}
+
+	if (SETTING(CHECK_DISK_COUNTS)) {
+		StringList disks;
+		copy_if(folderList.begin(), folderList.end(), back_inserter(disks), [this](const string& s) { return regex_match(s, diskReg); });
+		if (!disks.empty()) {
+			int exceptedCount = 0;
+
+			// find the maximum disk number
+			for (const auto& s : disks) {
+				auto pos = s.find_first_of("0123456789");
+				if (pos != string::npos) {
+					int num = atoi(s.data() + pos);
+					exceptedCount = max(num, exceptedCount);
+				}
+			}
+
+			if (disks.size() == 1 || exceptedCount > disks.size()) {
+				reportMessage(STRING(DISKS_MISSING) + " " + aPath, aScan);
+				aScan.disksMissing++;
+			}
 		}
 	}
 
@@ -606,7 +630,7 @@ void ShareScannerManager::checkFileSFV(const string& aFileName, DirSFVReader& sf
 	}
 }
 
-Bundle::Status ShareScannerManager::onScanBundle(const BundlePtr& aBundle, string& error_) noexcept {
+Bundle::Status ShareScannerManager::onScanBundle(const BundlePtr& aBundle, bool finished, string& error_) noexcept{
 	if (SETTING(SCAN_DL_BUNDLES) && !aBundle->isFileBundle()) {
 		ScanInfo scanner(aBundle->getName(), ScanInfo::TYPE_SYSLOG, false);
 
@@ -616,25 +640,22 @@ Bundle::Status ShareScannerManager::onScanBundle(const BundlePtr& aBundle, strin
 		bool hasMissing = scanner.hasMissing();
 		bool hasExtras = scanner.hasExtras();
 
-		if (!aBundle->isFailed() || hasMissing || hasExtras) {
+		if (finished || hasMissing || hasExtras) {
 			string logMsg;
-			if (aBundle->isFailed()) {
+			if (!finished) {
 				logMsg = STRING_F(SCAN_FAILED_BUNDLE_FINISHED, aBundle->getName());
 			} else {
 				logMsg = STRING_F(SCAN_BUNDLE_FINISHED, aBundle->getName());
 			}
 
 			if (hasMissing || hasExtras) {
-				if (!aBundle->isFailed()) {
+				if (finished) {
 					logMsg += " ";
 					logMsg += CSTRING(SCAN_PROBLEMS_FOUND);
 					logMsg += ":  ";
 				}
 
 				logMsg += scanner.getResults();
-				if (SETTING(ADD_FINISHED_INSTANTLY)) {
-					logMsg += ". " + STRING_F(FORCE_HASH_NOTIFICATION, aBundle->getName());
-				}
 
 				error_ = STRING_F(SCANNING_FAILED_X, scanner.getResults());
 			} else {
@@ -691,7 +712,7 @@ void ShareScannerManager::reportMessage(const string& aMessage, ScanInfo& aScan,
 }
 
 bool ShareScannerManager::ScanInfo::hasMissing() const {
-	return (missingFiles > 0 || missingNFO > 0 || missingSFV > 0 || noReleaseFiles > 0);
+	return (missingFiles > 0 || missingNFO > 0 || missingSFV > 0 || noReleaseFiles > 0 || disksMissing > 0);
 }
 
 bool ShareScannerManager::ScanInfo::hasExtras() const {
@@ -742,6 +763,11 @@ string ShareScannerManager::ScanInfo::getResults() const {
 	if (dupesFound > 0) {
 		checkFirst();
 		tmp += STRING_F(X_DUPE_FOLDERS, dupesFound);
+	}
+
+	if (disksMissing > 0) {
+		checkFirst();
+		tmp += STRING_F(X_MISSING_DISKS, disksMissing);
 	}
 
 	return tmp;

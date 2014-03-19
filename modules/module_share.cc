@@ -65,7 +65,6 @@ namespace modules {
 
 		HelpHandler help;
 		Share() : help(&commands, "Share") {
-			events::add_listener("command allow", std::bind(&Share::handleAllow, this));
 			events::add_listener("key pressed", std::bind(&Share::keyPressed, this));
 		}
 
@@ -74,15 +73,6 @@ namespace modules {
 			if (key == INPUT_CTRL('E')) {
 				ShareManager::getInstance()->refresh(false, ShareManager::TYPE_MANUAL);
 			}
-		}
-
-		void handleAllow() {
-			if (events::args() == 0) {
-				log("Usage: /allow <bundle>");
-				return;
-			}
-
-			QueueManager::getInstance()->shareBundle(events::arg<string>(0));
 		}
 
 		void handleProfile() {

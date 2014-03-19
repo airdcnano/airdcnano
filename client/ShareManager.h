@@ -23,6 +23,7 @@
 #include "TimerManager.h"
 #include "SettingsManager.h"
 #include "QueueManagerListener.h"
+#include "ShareManagerListener.h"
 
 #include "SearchQuery.h"
 #include "BloomFilter.h"
@@ -121,7 +122,8 @@ public:
 class ShareProfile;
 class FileList;
 
-class ShareManager : public Singleton<ShareManager>, private Thread, private SettingsManagerListener, private TimerManagerListener, private QueueManagerListener, private DirectoryMonitorListener
+class ShareManager : public Singleton<ShareManager>, public Speaker<ShareManagerListener>, private Thread, private SettingsManagerListener, 
+	private TimerManagerListener, private QueueManagerListener, private DirectoryMonitorListener
 {
 public:
 	void setSkipList();
@@ -262,6 +264,8 @@ public:
 	void renameProfiles(const ShareProfileInfo::List& aProfiles) noexcept;
 
 	bool isRealPathShared(const string& aPath) noexcept;
+	string realToVirtual(const string& aPath, ProfileToken aProfile) noexcept;
+
 	ShareProfilePtr getProfile(ProfileToken aProfile) const noexcept;
 
 	/* Only for gui use purposes, no locking */

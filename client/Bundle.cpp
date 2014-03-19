@@ -44,11 +44,15 @@ using boost::range::copy;
 Bundle::Bundle(QueueItemPtr& qi, time_t aFileDate, const string& aToken /*empty*/, bool aDirty /*true*/) noexcept :
 	Bundle(qi->getTarget(), qi->getAdded(), qi->getPriority(), aFileDate, aToken, aDirty, true) {
 
-	finishedSegments = qi->getDownloadedSegments();
-	currentDownloaded = qi->getDownloadedBytes();
-	setAutoPriority(qi->getAutoPriority());
 
-	addQueue(qi);
+	if (qi->isFinished()) {
+		addFinishedItem(qi, false);
+	} else {
+		finishedSegments = qi->getDownloadedSegments();
+		currentDownloaded = qi->getDownloadedBytes();
+		setAutoPriority(qi->getAutoPriority());
+		addQueue(qi);
+	}
 }
 
 Bundle::Bundle(const string& aTarget, time_t aAdded, Priority aPriority, time_t aBundleDate /*0*/, const string& aToken /*Util::emptyString*/, bool aDirty /*true*/, bool isFileBundle /*false*/) noexcept :
@@ -137,7 +141,7 @@ void Bundle::addFinishedSegment(int64_t aSize) noexcept {
 	setDirty();
 }
 
-void Bundle::removeDownloadedSegment(int64_t aSize) noexcept {
+void Bundle::removeFinishedSegment(int64_t aSize) noexcept{
 	dcassert(finishedSegments - aSize >= 0);
 	finishedSegments -= aSize;
 	dcassert(finishedSegments <= size);
@@ -147,6 +151,7 @@ void Bundle::removeDownloadedSegment(int64_t aSize) noexcept {
 void Bundle::finishBundle() noexcept {
 	speed = 0;
 	currentDownloaded = 0;
+	bundleFinished = GET_TIME();
 }
 
 int64_t Bundle::getSecondsLeft() const noexcept {
@@ -222,8 +227,9 @@ bool Bundle::removeFinishedItem(QueueItemPtr& qi) noexcept {
 	int pos = 0;
 	for (auto& fqi: finishedFiles) {
 		if (fqi == qi) {
+			//qi->setBundle(nullptr);
 			decreaseSize(qi->getSize());
-			removeDownloadedSegment(qi->getSize());
+			removeFinishedSegment(qi->getSize());
 			swap(finishedFiles[pos], finishedFiles[finishedFiles.size()-1]);
 			finishedFiles.pop_back();
 
@@ -241,6 +247,10 @@ bool Bundle::removeFinishedItem(QueueItemPtr& qi) noexcept {
 }
 
 bool Bundle::addQueue(QueueItemPtr& qi) noexcept {
+	if (qi->isFinished()) {
+		return addFinishedItem(qi, false);
+	}
+
 	dcassert(find(queueItems, qi) == queueItems.end());
 	qi->setBundle(this);
 	queueItems.push_back(qi);
@@ -256,6 +266,10 @@ bool Bundle::addQueue(QueueItemPtr& qi) noexcept {
 }
 
 bool Bundle::removeQueue(QueueItemPtr& qi, bool finished) noexcept {
+	if (!finished && qi->isFinished()) {
+		return removeFinishedItem(qi);
+	}
+
 	int pos = 0;
 	for (auto& cur: queueItems) {
 		if (cur == qi) {
@@ -268,7 +282,7 @@ bool Bundle::removeQueue(QueueItemPtr& qi, bool finished) noexcept {
 
 	if (!finished) {
 		if (qi->getDownloadedSegments() > 0) {
-			removeDownloadedSegment(qi->getDownloadedSegments());
+			removeFinishedSegment(qi->getDownloadedSegments());
 		}
 		decreaseSize(qi->getSize());
 		setFlag(Bundle::FLAG_UPDATE_SIZE);
@@ -375,8 +389,9 @@ void Bundle::removeFinishedNotify(const UserPtr& aUser) noexcept {
 }
 
 void Bundle::getSources(HintedUserList& l) const noexcept {
-	for(auto& st: sources) 
-		l.push_back(st.user);
+	for (auto& st : sources) {
+		l.push_back(st.getUser());
+	}
 }
 
 void Bundle::getDirQIs(const string& aDir, QueueItemList& ql) const noexcept {
@@ -471,10 +486,10 @@ void Bundle::rotateUserQueue(QueueItemPtr& qi, const UserPtr& aUser) noexcept {
 
 void Bundle::removeUserQueue(QueueItemPtr& qi) noexcept {
 	for(auto& s: qi->getSources())
-		removeUserQueue(qi, s.getUser(), false);
+		removeUserQueue(qi, s.getUser(), 0);
 }
 
-bool Bundle::removeUserQueue(QueueItemPtr& qi, const UserPtr& aUser, bool addBad) noexcept {
+bool Bundle::removeUserQueue(QueueItemPtr& qi, const UserPtr& aUser, Flags::MaskType reason) noexcept{
 
 	//remove from UserQueue
 	dcassert(qi->isSource(aUser));
@@ -498,13 +513,14 @@ bool Bundle::removeUserQueue(QueueItemPtr& qi, const UserPtr& aUser, bool addBad
 	auto m = find(sources, aUser);
 	dcassert(m != sources.end());
 
-	if (addBad) {
+	if (reason > 0) {
 		auto bsi = find(badSources, aUser);
 		if (bsi == badSources.end()) {
-			badSources.emplace_back((*m).user, qi->getSize());
+			badSources.emplace_back((*m).getUser(), qi->getSize(), reason);
 		} else {
 			(*bsi).files++;
 			(*bsi).size += qi->getSize();
+			(*bsi).setFlag(reason);
 		}
 	}
 
@@ -548,8 +564,8 @@ pair<int64_t, double> Bundle::getPrioInfo() noexcept {
 	int64_t bundleSpeed = 0;
 	double bundleSources = 0;
 	for (const auto& s: sources) {
-		if (s.user.user->isOnline()) {
-			bundleSpeed += s.user.user->getSpeed();
+		if (s.getUser().user->isOnline()) {
+			bundleSpeed += s.getUser().user->getSpeed();
 		}
 
 		bundleSources += s.files;
@@ -583,7 +599,7 @@ multimap<QueueItemPtr, pair<int64_t, double>> Bundle::getQIBalanceMaps() noexcep
 int Bundle::countOnlineUsers() const noexcept {
 	int files=0, users=0;
 	for(const auto& s: sources) {
-		if(s.user.user->isOnline()) {
+		if(s.getUser().user->isOnline()) {
 			users++;
 			files += s.files;
 		}
@@ -913,6 +929,16 @@ void Bundle::save() throw(FileException) {
 	string tmp;
 	string b32tmp;
 
+	auto saveFiles = [&] {
+		for (const auto& q : finishedFiles) {
+			q->save(f, tmp, b32tmp);
+		}
+
+		for (const auto& q : queueItems) {
+			q->save(f, tmp, b32tmp);
+		}
+	};
+
 	if (isFileBundle()) {
 		f.write(LIT("<File Version=\"" FILE_BUNDLE_VERSION));
 		f.write(LIT("\" Token=\""));
@@ -920,7 +946,7 @@ void Bundle::save() throw(FileException) {
 		f.write(LIT("\" Date=\""));
 		f.write(Util::toString(bundleDate));
 		f.write(LIT("\">\r\n"));
-		queueItems.front()->save(f, tmp, b32tmp);
+		saveFiles();
 		f.write(LIT("</File>\r\n"));
 	} else {
 		f.write(LIT("<Bundle Version=\"" DIR_BUNDLE_VERSION));
@@ -936,23 +962,13 @@ void Bundle::save() throw(FileException) {
 			f.write(LIT("\" Priority=\""));
 			f.write(Util::toString((int)getPriority()));
 		}
+		if (bundleFinished > 0) {
+			f.write(LIT("\" TimeFinished=\""));
+			f.write(Util::toString(bundleFinished));
+		}
 		f.write(LIT("\">\r\n"));
 
-		for (const auto& qi: finishedFiles) {
-			f.write(LIT("\t<Finished TTH=\""));
-			f.write(qi->getTTH().toBase32());
-			f.write(LIT("\" Target=\""));
-			f.write(SimpleXML::escape(qi->getTarget(), tmp, true));
-			f.write(LIT("\" Size=\""));
-			f.write(Util::toString(qi->getSize()));
-			f.write(LIT("\" Added=\""));
-			f.write(Util::toString(qi->getAdded()));
-			f.write(LIT("\"/>\r\n"));
-		}
-
-		for (const auto& q: queueItems) {
-			q->save(f, tmp, b32tmp);
-		}
+		saveFiles();
 
 		f.write(LIT("</Bundle>\r\n"));
 	}

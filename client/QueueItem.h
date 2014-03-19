@@ -171,13 +171,6 @@ public:
 	
 	QueueItem(const string& aTarget, int64_t aSize, Priority aPriority, Flags::MaskType aFlag, time_t aAdded, const TTHValue& tth, const string& aTempTarget);
 
-	/*QueueItem(const QueueItem& rhs) : 
-		Flags(rhs), done(rhs.done), downloads(rhs.downloads), target(rhs.target), 
-		size(rhs.size), priority(rhs.priority), added(rhs.added), tthRoot(rhs.tthRoot),
-		autoPriority(rhs.autoPriority), maxSegments(rhs.maxSegments), fileBegin(rhs.fileBegin),
-		sources(rhs.sources), badSources(rhs.badSources), tempTarget(rhs.tempTarget), nextPublishingTime(rhs.nextPublishingTime)
-	{ }*/
-
 	~QueueItem();
 
 	bool usesSmallSlot() const;
@@ -258,9 +251,10 @@ public:
 	IGETSET(uint8_t, maxSegments, MaxSegments, 1);
 	IGETSET(BundlePtr, bundle, Bundle, nullptr);
 	
-	QueueItemBase::Priority calculateAutoPriority() const;
+	Priority calculateAutoPriority() const;
 
 	uint64_t getAverageSpeed() const;
+	uint64_t getSecondsLeft() const;
 
 	void setTarget(const string& aTarget);
 

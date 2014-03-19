@@ -27,6 +27,7 @@
 #include "AirUtil.h"
 #include "File.h"
 #include "version.h"
+#include "StringTokenizer.h"
 
 namespace dcpp {
 
@@ -64,7 +65,7 @@ const ProfileSettingItem SettingsManager::profileSettings[SettingsManager::PROFI
 	{ SettingsManager::SEARCH_TIME, 10, ResourceManager::MINIMUM_SEARCH_INTERVAL },
 	//{ SettingsManager::AUTO_SEARCH_LIMIT, 5 },
 	{ SettingsManager::AUTO_FOLLOW, true, ResourceManager::SETTINGS_AUTO_FOLLOW },
-	{ SettingsManager::TOOLBAR_ORDER, (string)"0,-1,1,2,-1,3,4,5,-1,6,7,8,9,-1,10,11,13,-1,14,15,-1,16,17,-1,18,19,-1,21", ResourceManager::TOOLBAR_ORDER },
+	{ SettingsManager::TOOLBAR_ORDER, (string)"0,-1,1,2,-1,3,4,5,-1,6,7,8,-1,9,10,12,-1,13,14,-1,15,16,-1,17,18,-1,20", ResourceManager::TOOLBAR_ORDER },
 }, {
 	// profile RAR
 	{ SettingsManager::MULTI_CHUNK, false, ResourceManager::SEGMENTS },
@@ -77,7 +78,7 @@ const ProfileSettingItem SettingsManager::profileSettings[SettingsManager::PROFI
 	{ SettingsManager::SEARCH_TIME, 5, ResourceManager::MINIMUM_SEARCH_INTERVAL },
 	//{ SettingsManager::AUTO_SEARCH_LIMIT, 5 },
 	{ SettingsManager::AUTO_FOLLOW, false, ResourceManager::SETTINGS_AUTO_FOLLOW },
-	{ SettingsManager::TOOLBAR_ORDER, (string)"1,-1,3,4,-1,6,7,8,9,-1,10,11,13,-1,14,15,-1,16,17,-1,18,19,-1,21", ResourceManager::TOOLBAR_ORDER },
+	{ SettingsManager::TOOLBAR_ORDER, (string)"1,-1,3,4,-1,6,7,8,-1,9,10,12,-1,13,14,-1,15,16,-1,17,18,-1,20", ResourceManager::TOOLBAR_ORDER },
 }, {
 	// profile LAN
 	{ SettingsManager::MULTI_CHUNK, true, ResourceManager::SEGMENTS },
@@ -90,7 +91,7 @@ const ProfileSettingItem SettingsManager::profileSettings[SettingsManager::PROFI
 	{ SettingsManager::SEARCH_TIME, 5, ResourceManager::MINIMUM_SEARCH_INTERVAL },
 	//{ SettingsManager::AUTO_SEARCH_LIMIT, 5 },
 	{ SettingsManager::AUTO_FOLLOW, true, ResourceManager::SETTINGS_AUTO_FOLLOW },
-	{ SettingsManager::TOOLBAR_ORDER, (string)"0,-1,1,2,-1,3,4,5,-1,6,7,8,9,-1,10,11,13,-1,14,15,-1,16,17,-1,18,19,-1,21", ResourceManager::TOOLBAR_ORDER },
+	{ SettingsManager::TOOLBAR_ORDER, (string)"0,-1,1,2,-1,3,4,5,-1,6,7,8,-1,9,10,12,-1,13,14,-1,15,16,-1,17,18,-1,20", ResourceManager::TOOLBAR_ORDER },
 } 
 
 };
@@ -101,7 +102,7 @@ const string SettingsManager::settingTags[] =
 	"Nick", "UploadSpeed", "Description", "DownloadDirectory", "EMail", "ExternalIp", "ExternalIp6",
 	"Font", "TransferViewOrder", "TransferViewWidths", "HubFrameOrder", "HubFrameWidths", 
 	"LanguageFile", "SearchFrameOrder", "SearchFrameWidths", "FavoritesFrameOrder", "FavoritesFrameWidths", 
-	"HublistServers", "QueueFrameOrder", "QueueFrameWidths", "PublicHubsFrameOrder", "PublicHubsFrameWidths", 
+	"HublistServers", "QueueFrmOrder", "QueueFrmWidths", "PublicHubsFrameOrder", "PublicHubsFrameWidths", 
 	"UsersFrmOrder2", "UsersFrmWidths2", "HttpProxy", "LogDirectory", "LogFormatPostDownload", 
 	"LogFormatPostUpload", "LogFormatMainChat", "LogFormatPrivateChat", "FinishedOrder", "FinishedWidths",	 
 	"TempDownloadDirectory", "BindAddress", "BindAddress6", "SocksServer", "SocksUser", "SocksPassword", "ConfigVersion", 
@@ -151,7 +152,7 @@ const string SettingsManager::settingTags[] =
 	"MagnetAction",  "PopupType", "ShutdownAction", "MinimumSearchInterval", "MaxAutoMatchSource", "ReservedSlotColor", "IgnoredColor", "FavoriteColor","NormalColour",
 	"PasiveColor", "OpColor", "ProgressBackColor", "ProgressCompressColor", "ProgressSegmentColor", "UDPPort",
  	"UserListDoubleClick", "TransferListDoubleClick", "ChatDoubleClick", "OutgoingConnections","SocketInBuffer", "SocketOutBuffer", 
-	"ColorDownloaded", "ColorRunning", "ColorDone", "AutoRefreshTime", "AutoSearchLimit",
+	"ColorDone", "AutoRefreshTime", "AutoSearchLimit",
  	"MaxCommandLength", "TLSPort", "DownConnPerSec", "HighestPrioSize", "HighPrioSize", "NormalPrioSize", "LowPrioSize",
 
 	"BandwidthLimitStart", "BandwidthLimitEnd", "MaxDownloadSpeedRealTime",
@@ -167,9 +168,10 @@ const string SettingsManager::settingTags[] =
 	"UsersLeft", "UsersRight", "FinishedTop", "FinishedBottom", "FinishedLeft", "FinishedRight", "TextTop", "TextBottom", "TextLeft", "TextRight", "DirlistTop", "DirlistBottom",
 	"DirlistLeft", "DirlistRight", "StatsTop", "StatsBottom", "StatsLeft", "StatsRight", "MaxMCNDownloads", "MaxMCNUploads", "ListHighlightBackColor", "ListHighlightColor", "QueueColor", "TextQueueBackColor",
 	"RecentBundleHours","DisconnectMinSources", "AutoprioType", "AutoprioInterval", "AutosearchExpireDays", "DLAutoSelectMethod", "WinampBarIconSize", "TBProgressTextColor", "TLSMode", "UpdateMethod", 
-	"QueueSplitterPos", "FullListDLLimit", "ASDelayHours", "LastListProfile", "MaxHashingThreads", "HashersPerVolume", "SubtractlistSkip", "BloomMode", "FavUsersSplitterPos", "AwayIdleTime",
+	"QueueSplitterPosition", "FullListDLLimit", "ASDelayHours", "LastListProfile", "MaxHashingThreads", "HashersPerVolume", "SubtractlistSkip", "BloomMode", "FavUsersSplitterPos", "AwayIdleTime",
 	"SearchHistoryMax", "ExcludeHistoryMax", "DirectoryHistoryMax", "MinDupeCheckSize", "DbCacheSize", "DLAutoDisconnectMode", "RemovedTrees", "RemovedFiles", "MultithreadedRefresh", "MonitoringMode", 
-	"MonitoringDelay", "DelayCountMode", "MaxRunningBundles", "DefaultShareProfile", "UpdateChannel",
+	"MonitoringDelay", "DelayCountMode", "MaxRunningBundles", "DefaultShareProfile", "UpdateChannel", "ColorStatusFailed", "ColorStatusFinished", "ColorStatusHashing", "ColorStatusShared", "ProgressLighten",
+	"ConfigBuildNumber",
 	"SENTRY",
 
 	// Bools
@@ -197,7 +199,7 @@ const string SettingsManager::settingTags[] =
 	"AwayTimeStamp",
 
 	"PrivateMessageBeep", "PrivateMessageBeepOpen", "ShowProgressBars", "MDIMaxmimized", "SearchPassiveAlways", "RemoveForbidden", "ShowInfoTips", "MinimizeOnStratup", "ConfirmDelete", "ExpandQueue",
-	"FilterEnter", "SpyFrameIgnoreTthSearches", "OpenWaitingUsers", "BoldWaitingUsers", "GroupSearchResults", "TabsOnTop", "OpenPublic", "OpenFavoriteHubs", "OpenFavoriteUsers", "OpenQueue", "OpenFinishedDownloads",
+	"FilterEnter", "SpyFrameIgnoreTthSearches", "OpenWaitingUsers", "BoldWaitingUsers", "GroupSearchResults", "TabsOnTop", "OpenPublic", "OpenFavoriteHubs", "OpenFavoriteUsers", "OpenQueue",
 	"OpenFinishedUploads", "OpenSearchSpy", "OpenNotepad", "SuppressMainChat", "ProgressbaroDCStyle", "MultiChunk", "PopupAway", "PopupMinimized", "Away", "PopupHubConnected", "PopupHubDisconnected", "PopupFavoriteConnected", 
 	"PopupDownloadStart", "PopupDownloadFailed", "PopupDownloadFinished", "PopupUploadFinished", "PopupPm", "PopupNewPM", "UploadQueueFrameShowTree", "SegmentsManual", "SoundsDisabled", "ReportFoundAlternates",
 	"UseAutoPriorityByDefault", "UseOldSharingUI", "DefaultSearchFreeSlots", 
@@ -206,11 +208,11 @@ const string SettingsManager::settingTags[] =
 	"TextMyNickBold", "TextMyNickItalic", "TextFavBold", "TextFavItalic", "TextOPBold", "TextOPItalic", "TextURLBold", "TextURLItalic", "ProgressOverrideColors", "ProgressOverrideColors2", "MenubarTwoColors", "MenubarBumped", "DontBeginSegment", 
 
 	"AutoDetectionUseLimited", "LogScheduledRefreshes", "AutoCompleteBundles", "SearchSaveHubsState", "ConfirmHubExit", "ConfirmASRemove", "EnableSUDP", "NmdcMagnetWarn",
-	"UpdateIPHourly", "OpenTextOnBackground", "LockTB", "PopunderPartialList", "ShowTBStatusBar", "HorizontalQueue", "UseSlowDisconnectingDefault", "PrioListHighest", 
+	"UpdateIPHourly", "OpenTextOnBackground", "LockTB", "PopunderPartialList", "ShowTBStatusBar", "UseSlowDisconnectingDefault", "PrioListHighest", 
 	"UseFTPLogger", "QIAutoPrio", "ShowSharedDirsFav", "ReportAddedSources", "ExpandBundles", "OverlapSlowUser", "FormatDirRemoteTime", "TextQueueBold", "TextQueueItalic", "UnderlineQueue", "LogHashedFiles",
 	"UsePartialSharing", "PopupBundleDLs", "PopupBundleULs", "ListHighlightBold", "ListHighlightItalic", "ReportSkiplist", "ScanDLBundles", "MCNAutoDetect", "DLAutoDetect", "ULAutoDetect", "CheckUseSkiplist", "CheckIgnoreZeroByte", 
 	"TextDupeBold", "TextDupeItalic", "UnderlineLinks", "UnderlineDupes", "DupesInFilelists", "DupesInChat", "NoZeroByte", "CheckEmptyDirs","CheckEmptyReleases",  "CheckMissing", "CheckSfv", 
-	"CheckNfo", "CheckMp3Dir", "CheckExtraSfvNfo", "CheckExtraFiles", "CheckDupes", "SortDirs", "DecreaseRam", "WizardRunNew", "FormatRelease", "TextNormBold", "TextNormItalic", "SystemShowUploads", "SystemShowDownloads", 
+	"CheckNfo", "CheckMp3Dir", "CheckExtraSfvNfo", "CheckExtraFiles", "CheckDupes", "CheckDiskCounts", "SortDirs", "DecreaseRam", "WizardRunNew", "FormatRelease", "TextNormBold", "TextNormItalic", "SystemShowUploads", "SystemShowDownloads", 
 	"UseAdls", "DupeSearch", "passwd_protect", "passwd_protect_tray", "DisAllowConnectionToPassedHubs", "BoldHubTabsOnKick",
 	"AutoAddSource", "UseExplorerTheme", "TestWrite", "OpenSystemLog", "OpenLogsInternal", "UcSubMenu", "ShowQueueBars", "ExpandDefault",
 	"ShareSkiplistUseRegexp", "DownloadSkiplistUseRegexp", "HighestPriorityUseRegexp", "UseHighlight", "FlashWindowOnPm", "FlashWindowOnNewPm", "FlashWindowOnMyNick", "IPUpdate", "serverCommands", "ClientCommands", 
@@ -218,7 +220,7 @@ const string SettingsManager::settingTags[] =
 	"ClearDirectoryHistory", "ClearExcludeHistory", "ClearDirHistory", "NoIpOverride6", "IPUpdate6", "SearchUseExcluded", "AutoSearchBold", "ShowEmoticon", "ShowMultiline", "ShowMagnet", "WarnElevated", "SkipEmptyDirsShare", "LogShareScans",
 	"AcceptFailoversFavs", "RemoveExpiredAs", "AdcLogGroupCID", "ShareFollowSymlinks", "ScanMonitoredFolders", "FinishedNoHash", "ConfirmFileDeletions", "UseDefaultCertPaths", "StartupRefresh", "DctmpStoreDestination", "FLReportDupeFiles",
 	"FilterFLShared", "FilterFLQueued", "FilterFLInversed", "FilterFLTop", "FilterFLPartialDupes", "FilterFLResetChange", "FilterSearchShared", "FilterSearchQueued", "FilterSearchInversed", "FilterSearchTop", "FilterSearchPartialDupes", "FilterSearchResetChange",
-	"SearchAschOnlyMan", "IgnoreIndirectSR", "UseUploadBundles", "CloseMinimize", "LogIgnored", "UsersFilterIgnore", "NfoExternal", "SingleClickTray",
+	"SearchAschOnlyMan", "IgnoreIndirectSR", "UseUploadBundles", "CloseMinimize", "LogIgnored", "UsersFilterIgnore", "NfoExternal", "SingleClickTray", "QueueShowFinished", "RemoveFinishedBundles",
 	"SENTRY",
 	// Int64
 	"TotalUpload", "TotalDownload",
@@ -364,7 +366,6 @@ SettingsManager::SettingsManager()
 	setDefault(OPEN_FAVORITE_USERS, false);
 	//setDefault(OPEN_RECENT_HUBS, false);
 	setDefault(OPEN_QUEUE, false);
-	setDefault(OPEN_FINISHED_DOWNLOADS, false);
 	setDefault(OPEN_FINISHED_UPLOADS, false);
 	setDefault(OPEN_SEARCH_SPY, false);
 	setDefault(OPEN_NOTEPAD, false);
@@ -400,7 +401,7 @@ SettingsManager::SettingsManager()
 	setDefault(EXTRA_PARTIAL_SLOTS, 1);
 	setDefault(SHUTDOWN_TIMEOUT, 150);
 	setDefault(SEARCH_PASSIVE, false);
-	setDefault(TOOLBAR_ORDER, "0,-1,1,2,-1,3,4,5,-1,6,7,8,9,-1,10,11,13,-1,14,15,-1,16,17,-1,18,19,-1,21");
+	setDefault(TOOLBAR_ORDER, "0,-1,1,2,-1,3,4,5,-1,6,7,8,-1,9,10,12,-1,13,14,-1,15,16,-1,17,18,-1,20");
 	setDefault(MEDIATOOLBAR, "0,-1,1,-1,2,3,4,5,6,7,8,9,-1");
 	setDefault(AUTO_PRIORITY_DEFAULT, false);
 	setDefault(REMOVE_FORBIDDEN, true);
@@ -538,8 +539,6 @@ SettingsManager::SettingsManager()
 	setDefault(PROGRESS_BACK_COLOR, RGB(95, 95, 95));
 	setDefault(PROGRESS_COMPRESS_COLOR, RGB(222, 160, 0));
 	setDefault(PROGRESS_SEGMENT_COLOR, RGB(49, 106, 197));
-	setDefault(COLOR_RUNNING, RGB(0, 150, 0));
-	setDefault(COLOR_DOWNLOADED, RGB(255, 255, 100));
 	setDefault(COLOR_DONE, RGB(222, 160, 0));
 
 	//AirDC   
@@ -562,6 +561,11 @@ SettingsManager::SettingsManager()
 	setDefault(POPUP_BACKCOLOR, RGB(58, 122, 180));
 	setDefault(POPUP_TEXTCOLOR, RGB(0, 0, 0));
 	setDefault(POPUP_TITLE_TEXTCOLOR, RGB(0, 0, 0));
+
+	setDefault(COLOR_STATUS_FAILED, RGB(196, 85, 185));
+	setDefault(COLOR_STATUS_FINISHED, RGB(145, 183, 4));
+	setDefault(COLOR_STATUS_HASHING, RGB(139, 137, 137));
+	setDefault(COLOR_STATUS_SHARED, RGB(102, 158, 18));
 #endif
 
 	setDefault(REPORT_ALTERNATES, true);	
@@ -618,6 +622,7 @@ SettingsManager::SettingsManager()
 	setDefault(DIRECTORYLISTINGFRAME_VISIBLE, "1,1,0,1,1");	
 	setDefault(FINISHED_VISIBLE, "1,1,1,1,1,1,1,1");
 	setDefault(FINISHED_UL_VISIBLE, "1,1,1,1,1,1,1");
+	setDefault(QUEUEFRAME_VISIBLE, "1,1,1,1,1,1,1,0,1,1,1");
 	setDefault(EMOTICONS_FILE, "RadoX");
 	setDefault(GROUP_SEARCH_RESULTS, true);
 	setDefault(TABS_ON_TOP, false);
@@ -696,6 +701,7 @@ SettingsManager::SettingsManager()
 	setDefault(WIZARD_RUN_NEW, true); // run wizard on startup
 	setDefault(FORMAT_RELEASE, true);
 	setDefault(LOG_LINES, 500);
+
 	setDefault(CHECK_MISSING, true);
 	setDefault(CHECK_SFV, false);
 	setDefault(CHECK_NFO, false);
@@ -707,6 +713,8 @@ SettingsManager::SettingsManager()
 	setDefault(CHECK_EMPTY_RELEASES, true);
 	setDefault(CHECK_USE_SKIPLIST, false);
 	setDefault(CHECK_IGNORE_ZERO_BYTE, false);
+	setDefault(CHECK_DISK_COUNTS, true);
+
 	setDefault(SORT_DIRS, false);
 	setDefault(MAX_FILE_SIZE_SHARED, 0);
 	setDefault(MAX_MCN_DOWNLOADS, 1);
@@ -743,7 +751,6 @@ SettingsManager::SettingsManager()
 	setDefault(AUTOPRIO_TYPE, PRIO_BALANCED);
 	setDefault(AUTOPRIO_INTERVAL, 10);
 	setDefault(AUTOSEARCH_EXPIRE_DAYS, 5);
-	setDefault(HORIZONTAL_QUEUE, false);
 	setDefault(DL_AUTOSELECT_METHOD, 0);
 	setDefault(WTB_IMAGE_SIZE, 16);
 	setDefault(SHOW_TBSTATUS, true);
@@ -754,7 +761,7 @@ SettingsManager::SettingsManager()
 	setDefault(TLS_MODE, 1);
 	setDefault(LAST_SEARCH_DISABLED_HUBS, Util::emptyString);
 	setDefault(UPDATE_METHOD, 2);
-	setDefault(QUEUE_SPLITTER_POS, 3000);
+	setDefault(QUEUE_SPLITTER_POS, 750);
 	setDefault(UPDATE_IP_HOURLY, false);
 	setDefault(POPUNDER_TEXT, false);
 	setDefault(FULL_LIST_DL_LIMIT, 30000);
@@ -860,10 +867,14 @@ SettingsManager::SettingsManager()
 	setDefault(USERS_FILTER_IGNORE, false);
 	setDefault(NFO_EXTERNAL, false);
 	setDefault(SINGLE_CLICK_TRAY, false);
+	setDefault(QUEUE_SHOW_FINISHED, true);
+	setDefault(PROGRESS_LIGHTEN, 25);
+	setDefault(REMOVE_FINISHED_BUNDLES, false);
 
 	// not in GUI
 	setDefault(IGNORE_INDIRECT_SR, false);
 	setDefault(USE_UPLOAD_BUNDLES, true);
+	setDefault(CONFIG_BUILD_NUMBER, 2029);
 
 #ifdef _WIN32
 	setDefault(NMDC_ENCODING, Text::systemCharset);
@@ -996,6 +1007,7 @@ void SettingsManager::load(function<bool (const string& /*Message*/, bool /*isQu
 			xml.resetCurrentChild();
 
 			double prevVersion = Util::toDouble(SETTING(CONFIG_VERSION));
+			int prevBuild = SETTING(CONFIG_BUILD_NUMBER);
 			if (prevVersion < 2.41) {
 				//previous versions have saved two settings in a wrong order... fix the dupe color here (queuebars don't matter)
 				if(xml.findChild("Settings")) {
@@ -1034,6 +1046,24 @@ void SettingsManager::load(function<bool (const string& /*Message*/, bool /*isQu
 				unsetKey(SEARCHFRAME_ORDER);
 				unsetKey(SEARCHFRAME_WIDTHS);
 				unsetKey(SEARCHFRAME_VISIBLE);
+			}
+			if (prevBuild == 2029) {
+				StringTokenizer<string> t(SETTING(TOOLBAR_ORDER), ',');
+				StringList& l = t.getTokens();
+				string tmp;
+
+				bool first = true;
+				for (StringList::const_iterator k = l.begin(); k != l.end(); ++k) {
+					int i = Util::toInt(*k);
+					if (i == 7) continue;
+					if (i > 7) i -= 1;
+					
+					if (!first) tmp += ",";
+					first = false;
+					tmp += Util::toString(i);
+				}
+				set(TOOLBAR_ORDER, tmp);
+
 			}
 		
 			fire(SettingsManagerListener::Load(), xml);
@@ -1136,7 +1166,7 @@ void SettingsManager::save() {
 	
 	for(i=STR_FIRST; i<STR_LAST; i++)
 	{
-		if(i == CONFIG_VERSION) {
+		if (i == CONFIG_VERSION) {
 			xml.addTag(settingTags[i], VERSIONSTRING);
 			xml.addChildAttrib(type, curType);
 		} else if(isSet[i]) {
@@ -1148,7 +1178,11 @@ void SettingsManager::save() {
 	curType = "int";
 	for(i=INT_FIRST; i<INT_LAST; i++)
 	{
-		if(isSet[i]) {
+	
+		if (i == CONFIG_BUILD_NUMBER) {
+			xml.addTag(settingTags[i], BUILD_NUMBER);
+			xml.addChildAttrib(type, curType);
+		} else if (isSet[i]) {
 			xml.addTag(settingTags[i], get(IntSetting(i), false));
 			xml.addChildAttrib(type, curType);
 		}

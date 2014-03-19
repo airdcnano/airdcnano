@@ -112,13 +112,18 @@ void ShareManager::startup(function<void(const string&)> splashF, function<void(
 
 	setSkipList();
 
+	bool refreshed = false;
 	if(!loadCache(progressF)) {
 		if (splashF)
 			splashF(STRING(REFRESHING_SHARE));
 		refresh(false, TYPE_STARTUP_BLOCKING, progressF);
+		refreshed = true;
 	}
 
-	addAsyncTask([this] {
+	addAsyncTask([=] {
+		if (!refreshed)
+			fire(ShareManagerListener::ShareLoaded());
+
 		rebuildTotalExcludes();
 		monitor.addListener(this);
 
@@ -136,7 +141,7 @@ void ShareManager::startup(function<void(const string&)> splashF, function<void(
 		addMonitoring(monitorPaths);
 		TimerManager::getInstance()->addListener(this);
 
-		if (SETTING(STARTUP_REFRESH))
+		if (SETTING(STARTUP_REFRESH) && !refreshed)
 			refresh(false, TYPE_STARTUP_DELAYED);
 	});
 }
@@ -200,15 +205,18 @@ void ShareManager::addModifyInfo(const string& aPath, bool isDirectory, DirModif
 		//add a new modify info
 		fileModifications.emplace_front(aPath, isDirectory, aAction);
 	} else {
-		if (!isDirectory) {
-			//add the file
+		if (isDirectory && filePath == (*p).path) {
+			// update the directory action
+			p->dirAction = aAction;
+		} else {
+			// is this a parent ?
 			if (AirUtil::isSub((*p).path, filePath))
 				(*p).setPath(filePath);
 
-			p->addFile(aPath, aAction);
-		} else if (filePath == (*p).path) {
-			//update the dir action
-			p->dirAction = aAction;
+			if (!isDirectory) {
+				// add the file
+				p->addFile(aPath, aAction);
+			}
 		}
 	}
 }
@@ -513,11 +521,11 @@ void ShareManager::on(DirectoryMonitorListener::FileModified, const string& aPat
 }
 
 void ShareManager::Directory::getRenameInfoList(const string& aPath, RenameList& aRename) noexcept {
-	string path = aPath + realName.getNormal() + PATH_SEPARATOR;
 	for (const auto& f: files) {
-		aRename.emplace_back(path + f->name.getNormal(), HashedFile(f->getTTH(), f->getLastWrite(), f->getSize()));
+		aRename.emplace_back(aPath + f->name.getNormal(), HashedFile(f->getTTH(), f->getLastWrite(), f->getSize()));
 	}
 
+	string path = aPath + realName.getNormal() + PATH_SEPARATOR;
 	for (const auto& d: directories) {
 		d->getRenameInfoList(path + realName.getNormal() + PATH_SEPARATOR, aRename);
 	}
@@ -1201,6 +1209,10 @@ bool ShareManager::isRealPathShared(const string& aPath) noexcept {
 	RLock l (cs);
 	auto d = findDirectory(Util::getFilePath(aPath), false, false, true);
 	if (d) {
+		if (!aPath.empty() && aPath.back() == PATH_SEPARATOR)
+			return true;
+
+		// it's a file
 		auto it = d->files.find(Text::toLower(Util::getFileName(aPath)));
 		if(it != d->files.end()) {
 			return true;
@@ -1208,6 +1220,21 @@ bool ShareManager::isRealPathShared(const string& aPath) noexcept {
 	}
 
 	return false;
+}
+
+string ShareManager::realToVirtual(const string& aPath, ProfileToken aProfile) noexcept{
+	RLock l(cs);
+	auto d = findDirectory(Util::getFilePath(aPath), false, false, true);
+	if (d) {
+		auto vPath = d->getFullName(aProfile);
+		if (aPath.back() == PATH_SEPARATOR)
+			return vPath;
+
+		// it's a file
+		return vPath + "\\" + Util::getFileName(aPath);
+	}
+
+	return Util::emptyString;
 }
 
 string ShareManager::validateVirtual(const string& aVirt) const noexcept {
@@ -1392,7 +1419,7 @@ struct ShareManager::ShareLoader : public SimpleXMLReader::ThreadedCallBack, pub
 			try {
 				DualString name(fname);
 				HashedFile fi;
-				HashManager::getInstance()->getFileInfo(curDirPathLower + name.getLower(), curDirPath, fi);
+				HashManager::getInstance()->getFileInfo(curDirPathLower + name.getLower(), curDirPath + fname, fi);
 				auto pos = cur->files.insert_sorted(new ShareManager::Directory::File(move(name), cur, fi));
 				ShareManager::updateIndices(*cur, *pos.first, *bloom, addedSize, tthIndexNew);
 			}catch(Exception& e) {
@@ -1517,8 +1544,10 @@ bool ShareManager::loadCache(function<void(float)> progressF) noexcept{
 	mergeRefreshChanges(ll, dirNameMap, newRoots, tthIndex, hashSize, sharedSize, nullptr);
 
 	//make sure that the subprofiles are added too
-	for (auto& p: newRoots)
+	for (auto& p : newRoots)
 		rootPaths[p.first] = p.second;
+
+
 
 	//were all parents loaded?
 	StringList refreshPaths;
@@ -2592,6 +2621,12 @@ void ShareManager::runTasks(function<void (float)> progressF /*nullptr*/) noexce
 		reportTaskStatus(t.first, task->dirs, true, totalHash, task->displayName, task->type);
 
 		addMonitoring(monitoring);
+
+		if (t.first == REFRESH_ALL) {
+			fire(ShareManagerListener::ShareRefreshed(), t.first);
+		} else {
+			fire(ShareManagerListener::DirectoriesRefreshed(), t.first, task->dirs);
+		}
 	}
 
 	{
@@ -3401,6 +3436,9 @@ void ShareManager::on(QueueManagerListener::BundleAdded, const BundlePtr& aBundl
 }
 
 void ShareManager::on(QueueManagerListener::BundleStatusChanged, const BundlePtr& aBundle) noexcept {
+	if (aBundle->isFileBundle())
+		return;
+
 	if (aBundle->getStatus() == Bundle::STATUS_MOVED) {
 		//we don't want any monitoring actions for this folder...
 		string path = aBundle->getTarget();
@@ -3409,6 +3447,16 @@ void ShareManager::on(QueueManagerListener::BundleStatusChanged, const BundlePtr
 		StringList dirs;
 		dirs.push_back(aBundle->getTarget());
 		addRefreshTask(ADD_BUNDLE, dirs, TYPE_BUNDLE, aBundle->getTarget());
+	} else if (aBundle->getStatus() == Bundle::STATUS_QUEUED) {
+		// existing shared bundle directories will cause issues
+		ProfileTokenSet dirty;
+
+		{
+			WLock l(cs);
+			handleDeletedFile(aBundle->getTarget(), true, dirty);
+		}
+
+		setProfilesDirty(dirty);
 	}
 }
 

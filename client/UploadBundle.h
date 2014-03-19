@@ -41,7 +41,6 @@ public:
 	IGETSET(int64_t, totalSpeed, TotalSpeed, 0);
 	IGETSET(int64_t, actual, Actual, 0);
 	IGETSET(int64_t, uploadedSegments, UploadedSegments, 0);
-	IGETSET(uint64_t, bundleBegin, BundleBegin, 0);
 	int delayTime = 0;
 
 	GETSET(UploadList, uploads, Uploads);
@@ -76,7 +75,7 @@ public:
 private:
 	uint64_t uploaded = 0;
 	bool singleUser = true;
-	time_t start = GET_TIME();
+	time_t start = GET_TICK();
 
 	string token;
 	string target;

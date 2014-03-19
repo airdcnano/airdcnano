@@ -50,6 +50,8 @@ public:
 
 	std::string get_infobox_line(unsigned int n);
 
+	void force_share_bundle();
+	void rescan_bundle();
 	void search_bundle_alt();
 	void remove_bundle();
 	void remove_bundle_finished();

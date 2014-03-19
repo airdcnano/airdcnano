@@ -198,6 +198,16 @@ void WindowQueue::rescan_bundle() {
 }
 
 void WindowQueue::remove_bundle() {
+	auto b = get_selected_bundle();
+	if (!b)
+		return;
+
+	// no confirmation with finished bundles
+	if (b->isFinished()) {
+		QueueManager::getInstance()->removeBundle(b, false);
+		return;
+	}
+
 	set_property(PROP_REMOVE);
 }
 
@@ -277,6 +287,12 @@ void WindowQueue::on(QueueManagerListener::BundleRemoved, const BundlePtr& aBund
 void WindowQueue::on(QueueManagerListener::BundleStatusChanged, const BundlePtr& aBundle) noexcept{
 	auto ui = new UpdateInfo(aBundle->getToken());
 	ui->setStatusString(getStatusString(aBundle));
+	if (aBundle->isFinished()) {
+		// reset columns
+		ui->setPriority(aBundle->getPriority());
+		ui->setPos(aBundle->getDownloadedBytes());
+	}
+
 	speak(ui);
 }
 
@@ -383,7 +399,7 @@ void WindowQueue::handleUpdateInfo(UpdateInfo* ui, bool added) {
 		set_text(COLUMN_NAME, row, b->getName());
 	}
 	if (updateMask & UpdateInfo::MASK_PRIORITY) {
-		set_text(COLUMN_PRIORITY, row, getPrioString(b));
+		set_text(COLUMN_PRIORITY, row, b->isFinished() ? "" : getPrioString(b));
 	}
 
 	delete ui;

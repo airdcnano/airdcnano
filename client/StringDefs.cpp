@@ -1848,7 +1848,9 @@ std::string dcpp::ResourceManager::strings[] = {
 "Moving", 
 "Remove finished bundles on exit", 
 "Failed", 
+"Locations", 
 "All files", 
+"Type/Content", 
 };
 std::string dcpp::ResourceManager::names[] = {
 "Active", 
@@ -3697,5 +3699,7 @@ std::string dcpp::ResourceManager::names[] = {
 "Moving", 
 "BundlesRemoveExit", 
 "Failed", 
+"Locations", 
 "AllFiles", 
+"TypeContent", 
 };

@@ -1852,6 +1852,8 @@ enum Strings { // @DontAdd
 	MOVING, // "Moving"
 	BUNDLES_REMOVE_EXIT, // "Remove finished bundles on exit"
 	FAILED, // "Failed"
+	LOCATIONS, // "Locations"
 	ALL_FILES, // "All files"
+	TYPE_CONTENT, // "Type/Content"
 	LAST // @DontAdd
 };

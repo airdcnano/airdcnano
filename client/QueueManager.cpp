@@ -597,30 +597,26 @@ BundlePtr QueueManager::createDirectoryBundle(const string& aTarget, const Hinte
 
 	int existingFiles = 0, smallDupes=0;
 
-	vector<BundleFileInfo*> allowedFiles;
-
 	//check the files
-	for (auto i = aFiles.begin(); i != aFiles.end(); ) {
+	aFiles.erase(boost::remove_if(aFiles, [&](BundleFileInfo& bfi) {
 		try {
-			validateBundleFile(target, (*i).file, (*i).tth, (*i).prio);
-			i++;
-			continue;
+			validateBundleFile(target, bfi.file, bfi.tth, bfi.prio);
+			return false; // valid
 		} catch(QueueException& e) {
-			errors.add(e.getError(), (*i).file, false);
+			errors.add(e.getError(), bfi.file, false);
 		} catch(FileException& /*e*/) {
 			existingFiles++;
 		} catch(DupeException& e) {
-			bool isSmall = (*i).size < Util::convertSize(SETTING(MIN_DUPE_CHECK_SIZE), Util::KB);
-			errors.add(e.getError(), (*i).file, isSmall);
+			bool isSmall = bfi.size < Util::convertSize(SETTING(MIN_DUPE_CHECK_SIZE), Util::KB);
+			errors.add(e.getError(), bfi.file, isSmall);
 			if (isSmall) {
 				smallDupes++;
-				i++;
-				continue;
+				return false;
 			}
 		}
 
-		i = aFiles.erase(i);
-	}
+		return true;
+	}), aFiles.end());
 
 
 	//check the errors
@@ -2127,7 +2123,7 @@ public:
 	~QueueLoader() { }
 	void startTag(const string& name, StringPairList& attribs, bool simple);
 	void endTag(const string& name);
-	void createFile(QueueItemPtr& aQI);
+	void createFile(QueueItemPtr& aQI, bool aAddedByAutoSearch);
 	QueueItemBase::Priority validatePrio(const string& aPrio);
 	void resetBundle() {
 		curFile = nullptr;
@@ -2148,6 +2144,7 @@ private:
 	bool inFile;
 	string curToken;
 	time_t bundleDate = 0;
+	bool addedByAutosearch = false;
 
 	int version;
 	QueueManager* qm;
@@ -2230,6 +2227,7 @@ static const string sBundleToken = "BundleToken";
 static const string sFinished = "Finished";
 static const string sVersion = "Version";
 static const string sTimeFinished = "TimeFinished";
+static const string sAddedByAutoSearch = "AddedByAutoSearch";
 
 QueueItemBase::Priority QueueLoader::validatePrio(const string& aPrio) {
 	int prio = Util::toInt(aPrio);
@@ -2244,10 +2242,11 @@ QueueItemBase::Priority QueueLoader::validatePrio(const string& aPrio) {
 	return static_cast<QueueItemBase::Priority>(prio);
 }
 
-void QueueLoader::createFile(QueueItemPtr& aQI) {
+void QueueLoader::createFile(QueueItemPtr& aQI, bool aAddedByAutosearch) {
 	if (ConnectionManager::getInstance()->tokens.addToken(curToken)) {
 		curBundle = new Bundle(aQI, bundleDate, curToken, false);
 		curBundle->setBundleFinished(aQI->getFileFinished());
+		curBundle->setAddedByAutoSearch(aAddedByAutosearch);
 	} else {
 		qm->fileQueue.remove(aQI);
 		throw Exception("Duplicate token");
@@ -2260,6 +2259,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 	} else if (!inFile && name == sFile) {
 		curToken = getAttrib(attribs, sToken, 1);
 		bundleDate = Util::toInt64(getAttrib(attribs, sDate, 2));
+		addedByAutosearch = Util::toBool(Util::toInt(getAttrib(attribs, sAddedByAutoSearch, 3)));
 		inFile = true;
 		version = Util::toInt(getAttrib(attribs, sVersion, 0));
 		if (version == 0 || version > Util::toInt(FILE_BUNDLE_VERSION))
@@ -2270,12 +2270,13 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			throw Exception("Non-supported directory bundle version");
 
 		const string& bundleTarget = getAttrib(attribs, sTarget, 1);
-		const string& token = getAttrib(attribs, sToken, 1);
+		const string& token = getAttrib(attribs, sToken, 2);
 		if(token.empty())
 			throw Exception("Missing bundle token");
 
-		time_t dirDate = static_cast<time_t>(Util::toInt64(getAttrib(attribs, sDate, 2)));
-		time_t added = static_cast<time_t>(Util::toInt64(getAttrib(attribs, sAdded, 3)));
+		time_t added = static_cast<time_t>(Util::toInt64(getAttrib(attribs, sAdded, 2)));
+		time_t dirDate = static_cast<time_t>(Util::toInt64(getAttrib(attribs, sDate, 3)));
+		bool b_autoSearch = Util::toBool(Util::toInt(getAttrib(attribs, sAddedByAutoSearch, 4)));
 		const string& prio = getAttrib(attribs, sPriority, 4);
 		if(added == 0) {
 			added = GET_TIME();
@@ -2287,6 +2288,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			if (finished > 0) {
 				curBundle->setBundleFinished(finished);
 			}
+			curBundle->setAddedByAutoSearch(b_autoSearch);
 		} else {
 			throw Exception("Duplicate bundle token");
 		}
@@ -2344,7 +2346,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 					//assign bundles for the items in the old queue file
 					curBundle = new Bundle(qi, 0);
 				} else if (inFile && !curToken.empty()) {
-					createFile(qi);
+					createFile(qi, addedByAutosearch);
 				}
 			}
 			if(!simple)
@@ -2409,7 +2411,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 				//LogManager::getInstance()->message("itemtoken exists: " + bundleToken);
 				qm->bundleQueue.addBundleItem(qi, curBundle);
 			} else if (inFile && !curToken.empty()) {
-				createFile(qi);
+				createFile(qi, addedByAutosearch);
 			}
 		} else {
 			//LogManager::getInstance()->message("QUEUE LOADING ERROR");

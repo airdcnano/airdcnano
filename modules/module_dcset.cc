@@ -155,7 +155,7 @@ struct NamedSettingItem : public SettingItem {
 		return value + (v ? " (auto)" : Util::emptyString);
 	}
 
-	void setCurValue(const std::string& aValue) const {
+	bool setCurValue(const std::string& aValue) const {
 		if ((type == TYPE_CONN_V4 && SETTING(AUTO_DETECT_CONNECTION)) ||
 			(type == TYPE_CONN_V6 && SETTING(AUTO_DETECT_CONNECTION6))) {
 				display::Manager::get()->cmdMessage("Note: Connection autodetection is enabled for the edited protocol. The changed setting won't take effect before auto detection has been disabled.");
@@ -190,11 +190,20 @@ struct NamedSettingItem : public SettingItem {
 
 			SettingsManager::getInstance()->set(static_cast<SettingsManager::IntSetting>(key), static_cast<int>(Util::toInt(aValue)*multiplier));
 		} else if (key >= SettingsManager::BOOL_FIRST && key < SettingsManager::BOOL_LAST) {
-			bool val = Util::stricmp(aValue, "true") == 0 || aValue == "1" || Util::stricmp(aValue, "enabled") == 0 || Util::stricmp(aValue, "yes") == 0;
-			SettingsManager::getInstance()->set(static_cast<SettingsManager::BoolSetting>(key), val);
+			if (Util::stricmp(aValue, "true") == 0 || aValue == "1") {
+				SettingsManager::getInstance()->set(static_cast<SettingsManager::BoolSetting>(key), true);
+			} else if (Util::stricmp(aValue, "false") == 0 || aValue == "0") {
+				SettingsManager::getInstance()->set(static_cast<SettingsManager::BoolSetting>(key), false);
+			} else {
+				display::Manager::get()->cmdMessage("Allowed values for this setting: 1 or true to enable, 0 or false to disable");
+				return false;
+			}
 		} else {
 			dcassert(0);
+			return false;
 		}
+
+		return true;
 	}
 
 	bool isTitle = false;
@@ -499,8 +508,8 @@ public:
 					display::Manager::get()->cmdMessage("The current value of \"" + settings[p].name + "\" is \"" + settings[p].currentToString() + "\"");
 				} else {
 					auto val = parser.arg(1);
-					settings[p].setCurValue(val);
-					display::Manager::get()->cmdMessage("\"" + settings[p].name + "\" was set to \"" + settings[p].currentToString() + "\" (old: \"" + old + "\")");
+					if (settings[p].setCurValue(val))
+						display::Manager::get()->cmdMessage("\"" + settings[p].name + "\" was set to \"" + settings[p].currentToString() + "\" (old: \"" + old + "\")");
 
 					if (settings[p].key == SettingsManager::NICK) {
 						events::emit("nick changed");

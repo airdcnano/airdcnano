@@ -329,17 +329,19 @@ void WindowFavorites::rmfav(bool confirm)
 }
 
 void WindowFavorites::on(FavoriteManagerListener::FavoriteAdded, const FavoriteHubEntryPtr& entry) noexcept {
-    int row = insert_row();
-    set_text(0, row, entry->getConnect());
-	set_text(1, row, entry->get(HubSettings::Nick));
-    set_text(2, row, entry->getServerStr());
-    set_text(3, row, entry->getName());
-	updateTitle();
+	callAsync([=] {
+		int row = insert_row();
+		set_text(0, row, entry->getConnect());
+		set_text(1, row, entry->get(HubSettings::Nick));
+		set_text(2, row, entry->getServerStr());
+		set_text(3, row, entry->getName());
+		updateTitle();
+	});
 }
 
 void WindowFavorites::on(FavoriteManagerListener::FavoriteRemoved, const FavoriteHubEntryPtr& entry) noexcept
 {
-	delete_row(2, entry->getServerStr());
+	callAsync([=] { delete_row(2, entry->getServerStr()); });
 }
 
 WindowFavorites::~WindowFavorites()

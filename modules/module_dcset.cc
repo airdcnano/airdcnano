@@ -250,7 +250,6 @@ static NamedSettingItem settings [] = {
 	{ "new_segment_min_speed", SettingsManager::DONT_BEGIN_SEGMENT_SPEED, ResourceManager::DONT_ADD_SEGMENT_TEXT },
 	{ "allow_slow_overlap", SettingsManager::OVERLAP_SLOW_SOURCES, ResourceManager::SETTINGS_OVERLAP_SLOW_SOURCES },
 	{ "add_finished", SettingsManager::ADD_FINISHED_INSTANTLY, ResourceManager::ADD_FINISHED_INSTANTLY },
-	{ "finished_no_hash", SettingsManager::FINISHED_NO_HASH, ResourceManager::SETTINGS_FINISHED_NO_HASH },
 
 	{ ResourceManager::SETTINGS_SKIPPING_OPTIONS },
 	{ "dont_dl_shared", SettingsManager::DONT_DL_ALREADY_SHARED, ResourceManager::SETTINGS_DONT_DL_ALREADY_SHARED },
@@ -389,6 +388,7 @@ static NamedSettingItem settings [] = {
 	{ "tls_mode", SettingsManager::TLS_MODE, ResourceManager::TRANSFER_ENCRYPTION },
 	{ "bloom_mode", SettingsManager::BLOOM_MODE, ResourceManager::BLOOM_MODE },
 	{ "accept_failovers_fav", SettingsManager::ACCEPT_FAILOVERS, ResourceManager::ACCEPT_FAILOVERS_GLOBAL },
+	{ "disconnect_offline_users", SettingsManager::AUTO_KICK, ResourceManager::SETTINGS_AUTO_KICK },
 };
 
 

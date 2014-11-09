@@ -177,6 +177,7 @@ void Nanodc::handle_crash(int sig)
     std::cerr << "pid: " << getpid() <<
         ", tid: " << utils::gettid() << std::endl;
 #if USE_STACKTRACE
+    std::cerr << "Collecting crash information, please wait..." << std::endl;
     cow::StackTrace trace;
     trace.generate_frames();
     std::copy(trace.begin(), trace.end(),

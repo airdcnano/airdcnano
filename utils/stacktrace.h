@@ -135,6 +135,7 @@ private:
     StackFrame parse_line(const std::string &line);
     #if USE_ADDR2LINE
     void run_addr2line(const std::string &object, const std::string &location, std::string &function, std::string &file, int &linenum);
+    std::string get_exe_path();
     #endif
 };
 

@@ -46,6 +46,7 @@ public:
 private:
     std::string m_prompt;
     input::TextInput *m_input;
+    size_t scroll_position = 0;
 };
 
 } // namespace display

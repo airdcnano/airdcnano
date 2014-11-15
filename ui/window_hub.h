@@ -98,6 +98,9 @@ private:
 	void handleShowJoins();
 	void handleMsg();
 	void handleBrowse();
+    void handleInfo();
+
+    OnlineUserPtr getUserFromParam();
 
 	void print_help();
 	void handleNames();

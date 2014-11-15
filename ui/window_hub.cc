@@ -56,7 +56,8 @@ WindowHub::WindowHub(const std::string &address):
 		{ "fav", boost::bind(&WindowHub::handleFav, this), nullptr },
 		{ "browse", boost::bind(&WindowHub::handleBrowse, this), COMPLETION(WindowHub::complete), false },
 		{ "msg", boost::bind(&WindowHub::handleMsg, this), COMPLETION(WindowHub::complete), false },
-		{ "names", boost::bind(&WindowHub::handleNames, this), nullptr },
+        { "info", boost::bind(&WindowHub::handleInfo, this), COMPLETION(WindowHub::complete), false },
+        { "names", boost::bind(&WindowHub::handleNames, this), nullptr },
 		{ "reconnect", boost::bind(&WindowHub::handleReconnect, this), nullptr },
 		{ "showjoins", boost::bind(&WindowHub::handleShowJoins, this), nullptr }
 	})
@@ -76,24 +77,30 @@ void WindowHub::print_help() {
 	add_line(display::LineEntry("Hub context: /fav /names /reconnect /showjoins"));
 }
 
+OnlineUserPtr WindowHub::getUserFromParam() {
+    core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
+    parser.parse();
+
+    if (parser.args() < 1) {
+        display::Manager::get()->cmdMessage("Not enough parameters given");
+        return nullptr;
+     }   
+
+    auto nick = parser.arg(0);
+
+    auto p = m_users.find(nick);
+    if (p == m_users.end()) { 
+        display::Manager::get()->cmdMessage("User " + nick + " not found");
+        return nullptr; 
+    }
+
+    return p->second;
+}
+
 void WindowHub::handleBrowse() {
-	core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
-	parser.parse();
-
-	if (parser.args() < 1) {
-		display::Manager::get()->cmdMessage("Not enough parameters given");
-		return;
-	}
-
-	auto nick = parser.arg(0);
-
-	auto p = m_users.find(nick);
-	if (p == m_users.end()) {
-		display::Manager::get()->cmdMessage("User " + nick + " not found");
-		return;
-	}
-
-	auto user = p->second;
+	auto user = getUserFromParam();
+    if(!user)
+        return;
 
 	try {
 		QueueManager::getInstance()->addList(HintedUser(user->getUser(), m_client->getHubUrl()), QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_PARTIAL_LIST);
@@ -103,30 +110,88 @@ void WindowHub::handleBrowse() {
 }
 
 void WindowHub::handleMsg() {
-	core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
-	parser.parse();
+	auto user = getUserFromParam();
+    if (!user)
+        return;
 
-	if (parser.args() < 1) {
-		display::Manager::get()->cmdMessage("Not enough parameters given");
-		return;
-	}
-
-	auto nick = parser.arg(0);
-
-	auto p = m_users.find(nick);
-	if (p == m_users.end()) {
-		display::Manager::get()->cmdMessage("User " + nick + " not found");
-		return;
-	}
-
-	auto user = p->second;
 	auto pm = WindowPrivateMessage::getWindow(HintedUser(user->getUser(), user->getHubUrl()), m_client->getMyNick());
 
+    core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
+    parser.parse();
 	if (parser.args() > 1) {
 		/* all text after first argument (nick) */
 		auto line = parser.get_text(1);
 		pm->handle_line(line);
 	}
+}
+
+struct FieldName {
+    string field;
+    string name;
+    string (*convert)(const string &val);
+};
+static string formatBytes(const string& val) {
+    return Util::formatBytes(Util::toInt64(val));
+}
+
+static string formatSpeed(const string& val) {
+    return Util::formatConnectionSpeed(Util::toInt64(val));
+}
+
+static const FieldName fields[] =
+{
+    { "NI", "Nick: ", nullptr },
+    { "AW", "Away: ", nullptr },
+    { "DE", "Description: ", nullptr },
+    { "EM", "E-Mail: ", nullptr },
+    { "SS", "Shared: ", &formatBytes },
+    { "SF", "Shared files: ", nullptr },
+    { "US", "Upload speed: ", &formatSpeed },
+    { "DS", "Download speed: ", &formatSpeed },
+    { "SL", "Total slots: ", nullptr },
+    { "FS", "Free slots: ", nullptr },
+    { "HN", "Hubs (normal): ", nullptr },
+    { "HR", "Hubs (registered): ", nullptr },
+    { "HO", "Hubs (op): ", nullptr },
+    { "I4", "IP (v4): ", nullptr },
+    { "I6", "IP (v6): ", nullptr },
+    { "U4", "Search port (v4): ", nullptr },
+    { "U6", "Search port (v6): ", nullptr },
+    { "SU", "Features: ", nullptr },
+    { "VE", "Application version: ", nullptr },
+    { "AP", "Application: ", nullptr },
+    { "ID", "CID: ", nullptr },
+    { "KP", "TLS Keyprint: ", nullptr },
+    { "CO", "Connection: ", nullptr },
+    //{ "CT", "Client type: ", nullptr },
+    { "TA", "Tag: ", nullptr },
+    { "", "", 0 }
+};
+
+
+void WindowHub::handleInfo() {
+    auto user = getUserFromParam();
+    if (!user)
+        return;
+
+    //string print;
+    const auto info = user->getIdentity().getInfo();
+    for (const auto& field: fields) {
+        auto i = info.find(field.field);
+        if (i != info.end()) {
+            string print = field.name;
+            if (field.convert) {
+                print += field.convert(i->second);
+            } else {
+                print += i->second;
+            }
+
+            print += "\n";
+            display::Manager::get()->cmdMessage(print);
+        }
+    }
+
+    //display::Manager::get()->cmdMessage(print);
 }
 
 void WindowHub::handleFav() noexcept{

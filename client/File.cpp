@@ -22,6 +22,7 @@
 
 #ifdef _WIN32
 #include "w.h"
+#include <shellapi.h>
 #else
 #include <sys/stat.h>
 #include <sys/statvfs.h>

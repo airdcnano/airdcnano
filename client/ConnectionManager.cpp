@@ -31,30 +31,32 @@
 #include "UserConnection.h"
 
 namespace dcpp {
+	FastCriticalSection TokenManager::cs;
 
 	string TokenManager::getToken() noexcept {
-	Lock l(cs);
+	FastLock l(cs);
 	string token = Util::toString(Util::rand());
 	tokens.insert(token);
 	return token;
 }
 
 bool TokenManager::addToken(const string& aToken) noexcept {
-	Lock l(cs);
-	if (tokens.find(aToken) == tokens.end()) {
-		tokens.insert(aToken);
-		return true;
-	}
-	return false;
+	FastLock l(cs);
+	const auto res = tokens.insert(aToken);
+	return res.second;
 }
 
 void TokenManager::removeToken(const string& aToken) noexcept {
-	Lock l(cs);
+	FastLock l(cs);
+#ifdef _DEBUG
 	auto p = tokens.find(aToken);
 	if (p != tokens.end())
 		tokens.erase(p);
 	else
 		dcassert(0);
+#else
+	tokens.erase(aToken);
+#endif
 }
 
 ConnectionManager::ConnectionManager() : floodCounter(0), shuttingDown(false) {
@@ -535,6 +537,7 @@ void ConnectionManager::adcConnect(const OnlineUser& aUser, const string& aPort,
 	}
 
 	try {
+		// TODO: connect via both protocols when available
 		uc->connect(aUser.getIdentity().getIp(), aPort, localPort, natRole);
 		uc->setUser(aUser);
 	} catch(const Exception&) {
@@ -595,23 +598,14 @@ void ConnectionManager::on(AdcCommand::SUP, UserConnection* aSource, const AdcCo
 		return;
 	}
 
-	int mcn = 0;
-	if(aSource->isSet(UserConnection::FLAG_MCN1)) {
-		int slots = 0;
-		slots = AirUtil::getSlotsPerUser(false);
-		if (slots != 0)
-			mcn=slots;
-	}
-
 	if(aSource->isSet(UserConnection::FLAG_INCOMING)) {
 		StringList defFeatures = adcFeatures;
 		if(SETTING(COMPRESS_TRANSFERS)) {
 			defFeatures.push_back("AD" + UserConnection::FEATURE_ZLIB_GET);
 		}
 		aSource->sup(defFeatures);
-		aSource->inf(false, mcn);
 	} else {
-		aSource->inf(true, mcn);
+		aSource->inf(true, aSource->isSet(UserConnection::FLAG_MCN1) ? AirUtil::getSlotsPerUser(false) : 0);
 	}
 	aSource->setState(UserConnection::STATE_INF);
 }
@@ -875,20 +869,16 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
 		aSource->setToken(token);
 
 		// Incoming connections aren't associated with any user
-		string cid;
-
-		// Are we excepting this connection? Use the saved CID
+		// Are we excepting this connection? Use the saved CID and hubUrl
 		auto i = expectedConnections.remove(token);
 		if (i.second.empty()) {
 			aSource->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_GENERIC, "Connection not expected"));
 			putConnection(aSource);
 			return;
-		} else {
-			aSource->setHubUrl(i.second);
-			cid = i.first;
-		}
-
-		auto user = ClientManager::getInstance()->findUser(CID(cid));
+		} 
+		aSource->setHubUrl(i.second);
+	
+		auto user = ClientManager::getInstance()->findUser(CID(i.first));
 		aSource->setUser(user);
 
 		if (!aSource->getUser()) {
@@ -897,6 +887,10 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
 			putConnection(aSource);
 			return;
 		}
+
+		//http://dcpp.wordpress.com/2012/08/29/split-identify-to-support-multiple-share-profiles-in-adc/
+		aSource->inf(false, aSource->isSet(UserConnection::FLAG_MCN1) ? AirUtil::getSlotsPerUser(false) : 0);
+
 	} else {
 		dcassert(aSource->getUser());
 		token = aSource->getToken();

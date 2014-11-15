@@ -1609,7 +1609,7 @@ void QueueManager::putDownload(Download* aDownload, bool finished, bool noAccess
 						| (q->isSet(QueueItem::FLAG_MATCH_QUEUE) ? QueueItem::FLAG_MATCH_QUEUE : 0);
 				}
 
-				fire(QueueManagerListener::Finished(), q, dir, d->getHintedUser(), d->getAverageSpeed());
+				fileFinished(q, d->getHintedUser(), d->getAverageSpeed(), dir);
 				userQueue.removeQI(q);
 
 				fire(QueueManagerListener::Removed(), q, true);
@@ -1669,7 +1669,7 @@ void QueueManager::putDownload(Download* aDownload, bool finished, bool noAccess
 			moveFinishedFile(d->getTempTarget(), q->getTarget(), q);
 		}
 
-		fire(QueueManagerListener::Finished(), q, Util::emptyString, d->getHintedUser(), d->getAverageSpeed());
+		fileFinished(q, d->getHintedUser(), d->getAverageSpeed(), Util::emptyString);
 	}
 
 	for(const auto& u: getConn) {
@@ -1994,7 +1994,7 @@ void QueueManager::setQIPriority(QueueItemPtr& q, QueueItemBase::Priority p, boo
 	{
 		WLock l(cs);
 		if(q->getPriority() != p && !q->isFinished() ) {
-			if((q->isPausedPrio() && !b->isPausedPrio()) || (p == QueueItem::HIGHEST && b->getPriority() != QueueItemBase::PAUSED_FORCE)) {
+			if((q->isPausedPrio() && !b->isPausedPrio()) || (p == QueueItem::HIGHEST && b->getPriority() != QueueItemBase::PAUSED)) {
 				// Problem, we have to request connections to all these users...
 				q->getOnlineUsers(getConn);
 			}
@@ -2010,7 +2010,7 @@ void QueueManager::setQIPriority(QueueItemPtr& q, QueueItemBase::Priority p, boo
 	}
 
 	b->setDirty();
-	if(p == QueueItem::PAUSED_FORCE && running) {
+	if(p == QueueItem::PAUSED && running) {
 		DownloadManager::getInstance()->abortDownload(q->getTarget());
 	} else if (p != QueueItemBase::PAUSED) {
 		for(auto& u: getConn)
@@ -2227,6 +2227,7 @@ static const string sBundleToken = "BundleToken";
 static const string sFinished = "Finished";
 static const string sVersion = "Version";
 static const string sTimeFinished = "TimeFinished";
+static const string sLastSource = "LastSource";
 static const string sAddedByAutoSearch = "AddedByAutoSearch";
 
 QueueItemBase::Priority QueueLoader::validatePrio(const string& aPrio) {
@@ -2391,6 +2392,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			time_t added = static_cast<time_t>(Util::toInt64(getAttrib(attribs, sAdded, 2)));
 			const string& tth = getAttrib(attribs, sTTH, 3);
 			time_t finished = static_cast<time_t>(Util::toInt64(getAttrib(attribs, sTimeFinished, 4)));
+			const string& lastsource = getAttrib(attribs, sLastSource, 5);
 
 			if(size == 0 || tth.empty() || target.empty() || added == 0)
 				return;
@@ -2406,6 +2408,7 @@ void QueueLoader::startTag(const string& name, StringPairList& attribs, bool sim
 			auto& qi = ret.first;
 			qi->addFinishedSegment(Segment(0, size)); //make it complete
 			qi->setFileFinished(finished);
+			qi->setLastSource(lastsource);
 
 			if (curBundle && inBundle) {
 				//LogManager::getInstance()->message("itemtoken exists: " + bundleToken);
@@ -3610,6 +3613,7 @@ void QueueManager::removeBundle(BundlePtr& aBundle, bool removeFinished) noexcep
 	}
 
 	vector<UserPtr> sources;
+	StringList deleteFiles;
 
 	DownloadManager::getInstance()->disconnectBundle(aBundle);
 	fire(QueueManagerListener::BundleRemoved(), aBundle);
@@ -3625,7 +3629,7 @@ void QueueManager::removeBundle(BundlePtr& aBundle, bool removeFinished) noexcep
 			bundleQueue.removeBundleItem(qi, false);
 			if (removeFinished) {
 				UploadManager::getInstance()->abortUpload(qi->getTarget());
-				File::deleteFile(qi->getTarget());
+				deleteFiles.push_back(qi->getTarget());
 			}
 		}
 
@@ -3634,7 +3638,7 @@ void QueueManager::removeBundle(BundlePtr& aBundle, bool removeFinished) noexcep
 			UploadManager::getInstance()->abortUpload(qi->getTarget());
 
 			if (!qi->isRunning() && !qi->getTempTarget().empty() && qi->getTempTarget() != qi->getTarget()) {
-				File::deleteFile(qi->getTempTarget());
+				deleteFiles.push_back(qi->getTempTarget());
 			}
 
 			if (!qi->isFinished()) {
@@ -3648,6 +3652,9 @@ void QueueManager::removeBundle(BundlePtr& aBundle, bool removeFinished) noexcep
 		bundleQueue.removeBundle(aBundle);
 	}
 
+	//Delete files outside lock range, waking up disks can take a long time.
+	for_each(deleteFiles.begin(), deleteFiles.end(), &File::deleteFile);
+
 	if (!aBundle->isSet(Bundle::FLAG_MERGING))
 		LogManager::getInstance()->message(STRING_F(BUNDLE_X_REMOVED, aBundle->getName()), LogManager::LOG_INFO);
 
@@ -3659,6 +3666,9 @@ void QueueManager::removeBundle(BundlePtr& aBundle, bool removeFinished) noexcep
 		fire(QueueManagerListener::SourceFilesUpdated(), aUser);
 
 	removeBundleLists(aBundle);
+
+	if (removeFinished)
+		File::removeDirectory(aBundle->getTarget());
 }
 
 void QueueManager::removeBundleLists(BundlePtr& aBundle) noexcept{
@@ -3835,6 +3845,16 @@ void QueueManager::searchBundle(BundlePtr& aBundle, bool manual) noexcept {
 			}
 		}*/
 	}
+}
+
+void QueueManager::fileFinished(const QueueItemPtr aQi, const HintedUser& aUser, const int64_t aSpeed, const string& aDir) {
+	if (!aQi->isSet(QueueItem::FLAG_USER_LIST) || SETTING(LOG_FILELIST_TRANSFERS)) {
+		if (SETTING(SYSTEM_SHOW_DOWNLOADS)) {
+			LogManager::getInstance()->message(STRING_F(FINISHED_DOWNLOAD, aQi->getTarget() % ClientManager::getInstance()->getFormatedNicks(aUser)), LogManager::LOG_INFO);
+		}
+	}
+	aQi->setLastSource(ClientManager::getInstance()->getFormatedNicks(aUser));
+	fire(QueueManagerListener::Finished(), aQi, aDir, aUser, aSpeed);
 }
 
 void QueueManager::onUseSeqOrder(BundlePtr& b) noexcept {

@@ -164,14 +164,14 @@ void WindowPrivateMessage::on(ClientManagerListener::UserDisconnected, const Use
 }
 
 void WindowPrivateMessage::onOnlineStateChanged() {
-	auto p = ClientManager::getInstance()->getNickHubPair(m_user.user, m_user.hint);
-	if (p.second.empty() && online) {
+	auto hubs = ClientManager::getInstance()->getHubNames(m_user.user->getCID());
+	if (hubs.empty() && online) {
 		addStatusMessage("The user went offline");
 		online = false;
 	}
 
-	if (!online && !p.second.empty()) {
-		addStatusMessage("The user came online in " + p.second);
+	if (!online && !hubs.empty()) {
+		addStatusMessage("The user came online in " + hubs.front());
 		online = true;
 	}
 

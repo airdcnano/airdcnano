@@ -211,11 +211,17 @@ void ShareScannerManager::runShareScan(const StringList& aPaths) {
 
 			if (SETTING(LOG_SHARE_SCANS)) {
 				auto path = Util::validatePath(Util::formatTime(SETTING(LOG_DIRECTORY) + SETTING(LOG_SHARE_SCAN_PATH), time(nullptr)));
-				File::ensureDirectory(path);
+				try {
+					File::ensureDirectory(path);
 
-				File f(path, File::WRITE, File::OPEN | File::CREATE);
-				f.setEndPos(0);
-				f.write(total.scanMessage);
+					File f(path, File::WRITE, File::OPEN | File::CREATE);
+					f.setEndPos(0);
+					f.write(total.scanMessage);
+
+				}
+				catch (const FileException& e) {
+					LogManager::getInstance()->message(STRING_F(SAVE_FAILED_X, path % e.getError()), LogManager::LOG_ERROR);
+				}
 			}
 
 			char buf[255];
@@ -254,6 +260,7 @@ void ShareScannerManager::ScanInfo::merge(ScanInfo& collect) const {
 	collect.emptyFolders += emptyFolders;
 	collect.dupesFound += dupesFound;
 	collect.disksMissing += disksMissing;
+	collect.invalidSFVFiles += invalidSFVFiles;
 
 	collect.scanMessage += scanMessage;
 }
@@ -519,9 +526,10 @@ void ShareScannerManager::scanDir(const string& aPath, ScanInfo& aScan) noexcept
 	/* Check for missing files */
 	bool hasValidSFV = false;
 
-	int releaseFiles=0, loopMissing=0;
+	int releaseFiles = 0, loopMissing = 0;
+	StringList invalidSFV;
 
-	DirSFVReader sfv(aPath, sfvFileList);
+	DirSFVReader sfv(aPath, sfvFileList, invalidSFV);
 	sfv.read([&](const string& fileName) {
 		hasValidSFV = true;
 		releaseFiles++;
@@ -538,6 +546,13 @@ void ShareScannerManager::scanDir(const string& aPath, ScanInfo& aScan) noexcept
 
 	if (SETTING(CHECK_MISSING))
 		aScan.missingFiles += loopMissing;
+
+	if (SETTING(CHECK_INVALID_SFV)) {
+		for (auto p : invalidSFV) {
+			reportMessage(STRING(INVALID_SFV_FILE) + " " + p, aScan);
+		}
+		aScan.invalidSFVFiles += invalidSFV.size();
+	}
 
 	/* Extras in folder? */
 	releaseFiles = releaseFiles - loopMissing;
@@ -626,11 +641,19 @@ void ShareScannerManager::checkFileSFV(const string& aFileName, DirSFVReader& sf
 		scanFolderSize = scanFolderSize - size;
 
 		// Report
-		LogManager::getInstance()->message(STRING_F(CRC_FILE_DONE, 
-			(crcMatch ? STRING(CRC_OK) : STRING(CRC_FAILED)) % 
-			(sfv.getPath() + aFileName) % 
-			Util::formatBytes(speed) % 
-			Util::formatBytes(scanFolderSize)), (crcMatch ? LogManager::LOG_INFO : LogManager::LOG_ERROR));
+		if (SETTING(LOG_CRC_OK)) {
+			LogManager::getInstance()->message(STRING_F(CRC_FILE_DONE,
+				(crcMatch ? STRING(CRC_OK) : STRING(CRC_FAILED)) %
+				(sfv.getPath() + aFileName) %
+				Util::formatBytes(speed) %
+				Util::formatBytes(scanFolderSize)), (crcMatch ? LogManager::LOG_INFO : LogManager::LOG_ERROR));
+		} else if (!crcMatch) {
+				LogManager::getInstance()->message(STRING_F(CRC_FILE_FAILED,
+				(sfv.getPath() + aFileName) %
+				Util::formatBytes(speed) %
+				Util::formatBytes(scanFolderSize)), LogManager::LOG_ERROR);
+		}
+
 
 	} else if (!isDirScan || regex_match(aFileName, rarMp3Reg)) {
 		LogManager::getInstance()->message(STRING_F(CRC_NO_SFV, (sfv.getPath() + aFileName)), LogManager::LOG_WARNING);
@@ -647,8 +670,9 @@ Bundle::Status ShareScannerManager::onScanBundle(const BundlePtr& aBundle, bool 
 
 		bool hasMissing = scanner.hasMissing();
 		bool hasExtras = scanner.hasExtras();
+		bool hasInvalidSFV = scanner.invalidSFVFiles > 0;
 
-		if (finished || hasMissing || hasExtras) {
+		if (finished || hasMissing || hasExtras || hasInvalidSFV) {
 			string logMsg;
 			if (!finished) {
 				logMsg = STRING_F(SCAN_FAILED_BUNDLE_FINISHED, aBundle->getName());
@@ -656,7 +680,7 @@ Bundle::Status ShareScannerManager::onScanBundle(const BundlePtr& aBundle, bool 
 				logMsg = STRING_F(SCAN_BUNDLE_FINISHED, aBundle->getName());
 			}
 
-			if (hasMissing || hasExtras) {
+			if (hasMissing || hasExtras || hasInvalidSFV) {
 				if (finished) {
 					logMsg += " ";
 					logMsg += CSTRING(SCAN_PROBLEMS_FOUND);
@@ -674,7 +698,7 @@ Bundle::Status ShareScannerManager::onScanBundle(const BundlePtr& aBundle, bool 
 			LogManager::getInstance()->message(logMsg, (hasMissing || hasExtras) ? LogManager::LOG_ERROR : LogManager::LOG_INFO);
 			if (hasMissing && !hasExtras)
 				return Bundle::STATUS_FAILED_MISSING;
-			if (hasExtras)
+			if (hasExtras || hasInvalidSFV)
 				return Bundle::STATUS_SHARING_FAILED;
 		}
 	}
@@ -741,6 +765,11 @@ string ShareScannerManager::ScanInfo::getResults() const {
 	if (missingFiles > 0) {
 		checkFirst();
 		tmp += STRING_F(X_MISSING_RELEASE_FILES, missingFiles);
+	}
+
+	if (invalidSFVFiles > 0) {
+		checkFirst();
+		tmp += STRING_F(X_MISSING_INVALID_SFV_FILES, invalidSFVFiles);
 	}
 
 	if (missingSFV > 0) {

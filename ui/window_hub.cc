@@ -174,7 +174,7 @@ void WindowHub::handleInfo() {
     if (!user)
         return;
 
-    //string print;
+    display::Manager::get()->cmdMessage("");
     const auto info = user->getIdentity().getInfo();
     for (const auto& field: fields) {
         auto i = info.find(field.field);
@@ -191,7 +191,7 @@ void WindowHub::handleInfo() {
         }
     }
 
-    //display::Manager::get()->cmdMessage(print);
+    display::Manager::get()->cmdMessage("");
 }
 
 void WindowHub::handleFav() noexcept{

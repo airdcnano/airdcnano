@@ -171,7 +171,7 @@ void WindowPrivateMessage::onOnlineStateChanged() {
 	}
 
 	if (!online && !hubs.empty()) {
-		addStatusMessage("The user came online in " + hubs.front());
+		addStatusMessage("The user came online in " + ClientManager::getInstance()->getFormatedHubNames(m_user));
 		online = true;
 	}
 

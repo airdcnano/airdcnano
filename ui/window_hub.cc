@@ -35,6 +35,7 @@
 #include <core/events.h>
 #include <core/argparser.h>
 
+#include <client/GeoManager.h>
 #include <client/LogManager.h>
 #include <client/FavoriteManager.h>
 #include <client/HubEntry.h>
@@ -138,6 +139,13 @@ static string formatSpeed(const string& val) {
     return Util::formatConnectionSpeed(Util::toInt64(val));
 }
 
+static string formatIP(const string& val) {
+    auto country = GeoManager::getInstance()->getCountry(val);
+    if (!country.empty())
+        return val + " (" + country + ")";
+    return val;
+}
+
 static const FieldName fields[] =
 {
     { "NI", "Nick: ", nullptr },
@@ -153,8 +161,8 @@ static const FieldName fields[] =
     { "HN", "Hubs (normal): ", nullptr },
     { "HR", "Hubs (registered): ", nullptr },
     { "HO", "Hubs (op): ", nullptr },
-    { "I4", "IP (v4): ", nullptr },
-    { "I6", "IP (v6): ", nullptr },
+    { "I4", "IP (v4): ", &formatIP },
+    { "I6", "IP (v6): ", &formatIP },
     { "U4", "Search port (v4): ", nullptr },
     { "U6", "Search port (v6): ", nullptr },
     { "SU", "Features: ", nullptr },

@@ -1056,7 +1056,7 @@ std::string dcpp::ResourceManager::strings[] = {
 "%1% empty folders", 
 "%1% duplicate folders", 
 "%1% folders with disks missing", 
-"%1% Invalid SFV files", 
+"%1% invalid SFV files", 
 "INVALID SFV FILE: ", 
 "Extra files in sample folder: %1%", 
 "The following extra files have been found from a release folder %1%: %2%", 
@@ -1856,8 +1856,12 @@ std::string dcpp::ResourceManager::strings[] = {
 "In addition to incrementing numbers, you may also insert time variables in the search string. Note that the parameters can also be used in the custom matcher.", 
 "Available time variables", 
 "Remove finished bundles", 
-"Emoticons Pack", 
-"Show SFV check progress(CRC OK) in system log", 
+"Emoticons pack", 
+"Show SFV check progress (CRC OK) in system log", 
+"Open settings directory", 
+"Share hidden", 
+"Monitoring has been restored for the path %1%", 
+"Device removed", 
 };
 std::string dcpp::ResourceManager::names[] = {
 "Active", 
@@ -3716,4 +3720,8 @@ std::string dcpp::ResourceManager::names[] = {
 "RemoveFinished", 
 "EmoticonsPack", 
 "LogCrcOk", 
+"OpenSettingsDir", 
+"ShareHidden", 
+"MonitoringRestoredX", 
+"DeviceRemoved", 
 };

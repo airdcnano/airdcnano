@@ -2,6 +2,7 @@
 import os
 import commands
 import string
+import multiprocessing
 
 EnsureSConsVersion(0, 98, 1)
 
@@ -68,6 +69,7 @@ vars.AddVariables(
 # ----------------------------------------------------------------------
 
 env = Environment(ENV = os.environ, variables = vars, package = PACKAGE)
+
 
 if env.get('debug'):
 	env['mode'] = 'debug'
@@ -309,6 +311,11 @@ if not 'install' in COMMAND_LINE_TARGETS:
 # ----------------------------------------------------------------------
 # Build
 # ----------------------------------------------------------------------	
+
+	num_cpu = multiprocessing.cpu_count()
+	SetOption('num_jobs', num_cpu)
+	print 'Using %d threads for compiling' % GetOption('num_jobs')
+
 
 	build = env.Program('airdcnano', [
 		SConscript('client/SConscript', exports='env', variant_dir= env['build_path'] + 'client', duplicate=0),

@@ -86,10 +86,13 @@ void WindowPrivateMessage::updateTitles() {
 
 void WindowPrivateMessage::handle_line(const std::string &line)
 {
-	string error;
-	if (!ClientManager::getInstance()->privateMessage(m_user, line, error, false)) {
-		add_line(display::LineEntry("Failed to send the message: " + error));
-	}
+    if (line.empty())
+        return;
+
+    string error;
+    if (!ClientManager::getInstance()->privateMessage(m_user, line, error, false)) {
+        add_line(display::LineEntry("Failed to send the message: " + error));
+    }
 }
 
 void WindowPrivateMessage::get_list()

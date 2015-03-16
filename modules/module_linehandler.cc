@@ -50,9 +50,9 @@ public:
         if(key != 0xA)
             return;
 
-		auto wnd = display::Manager::get()->get_current_window();
-		auto line = display::Window::m_input.str();
-		boost::trim_right(line);
+	auto wnd = display::Manager::get()->get_current_window();
+	auto line = display::Window::m_input.str();
+	boost::trim_right(line);
 
         if(!line.empty() && line[0] == m_commandChar && wnd->allowCommands) {
             auto space = line.find(' ');

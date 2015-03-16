@@ -111,19 +111,19 @@ void WindowHub::handleBrowse() {
 }
 
 void WindowHub::handleMsg() {
-	auto user = getUserFromParam();
+    auto user = getUserFromParam();
     if (!user)
         return;
 
-	auto pm = WindowPrivateMessage::getWindow(HintedUser(user->getUser(), user->getHubUrl()), m_client->getMyNick());
+    auto pm = WindowPrivateMessage::getWindow(HintedUser(user->getUser(), user->getHubUrl()), m_client->getMyNick());
 
     core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
     parser.parse();
-	if (parser.args() > 1) {
-		/* all text after first argument (nick) */
-		auto line = parser.get_text(1);
-		pm->handle_line(line);
-	}
+    if (parser.args() > 1) {
+        /* all text after first argument (nick) */
+        auto line = parser.get_text(1);
+        pm->handle_line(line);
+    }
 }
 
 struct FieldName {
@@ -248,14 +248,17 @@ void WindowHub::update_config()
 
 void WindowHub::handle_line(const std::string &line)
 {
-	if (!m_client || !m_client->isConnected()) {
-		return;
-	}
+    if (line.empty())
+	return;
 
-	string error;
-	if (!m_client->hubMessage(Text::toUtf8(line), error)) {
-		add_line(display::LineEntry("Failed to send: " + error));
-	}
+    if (!m_client || !m_client->isConnected()) {
+        return;
+    }
+
+    string error;
+    if (!m_client->hubMessage(Text::toUtf8(line), error)) {
+        add_line(display::LineEntry("Failed to send: " + error));
+    }
 }
 
 void WindowHub::onJoinedTimer() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 AirDC++ Project
+ * Copyright (C) 2011-2015 AirDC++ Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -262,6 +262,7 @@ void AutoSearchManager::onBundleCreated(BundlePtr& aBundle, const ProfileToken a
 		aBundle->setAddedByAutoSearch(true); //yes, not the best place to modify bundle information.
 		as->addBundle(aBundle);
 		updateStatus(as, true);
+		dirty = true;
 	}
 }
 

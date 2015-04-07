@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 AirDC++ Project
+ * Copyright (C) 2011-2015 AirDC++ Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,7 +59,7 @@ Bundle::Bundle(const string& aTarget, time_t aAdded, Priority aPriority, time_t 
 	QueueItemBase(aTarget, 0, aPriority, aAdded), bundleDate(aBundleDate), fileBundle(isFileBundle), dirty(aDirty) {
 
 	if (aToken.empty()) {
-		token = ConnectionManager::getInstance()->tokens.getToken();
+		token = ConnectionManager::getInstance()->tokens.getToken(CONNECTION_TYPE_DOWNLOAD);
 	} else {
 		token = aToken;
 	}

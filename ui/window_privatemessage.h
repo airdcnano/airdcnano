@@ -26,9 +26,15 @@
 
 #include <client/stdinc.h>
 #include <client/forward.h>
-#include <client/ClientManagerListener.h>
-#include <client/HintedUser.h>
 
+#include <client/ChatMessage.h>
+#include <client/HintedUser.h>
+//#include <client/PrivateChat.h>
+#include <client/MessageManager.h>
+#include <client/PrivateChatListener.h>
+//#include <client/PrivateChat.h>
+
+#include <input/help_handler.h>
 #include <display/scrolled_window.h>
 
 using namespace dcpp;
@@ -37,9 +43,11 @@ namespace ui {
 
 class WindowPrivateMessage:
     public display::ScrolledWindow,
-	private ClientManagerListener
+    private PrivateChatListener
 {
 public:
+
+    static void onPrivateMessage(const ChatMessage& aMessage) noexcept;
 	static void openWindow(const HintedUser& user);
 	static WindowPrivateMessage* getWindow(const HintedUser& user, const std::string &mynick, bool setActive = true);
     WindowPrivateMessage(const HintedUser& user, const std::string &mynick);
@@ -57,21 +65,32 @@ public:
 
     ~WindowPrivateMessage();
 
-	void fillLogParams(ParamMap& params) const;
 	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_);
 private:
     HintedUser m_user;
     std::string m_nick;
 
-	// ClientManagerListener
-	void on(ClientManagerListener::UserConnected, const OnlineUser& aUser, bool wasOffline) noexcept;
-	void on(ClientManagerListener::UserDisconnected, const UserPtr& aUser, bool wentOffline) noexcept;
+	//virtual void on(PrivateChatListener::StatusMessage, const string& aMessage, uint8_t sev) noexcept;
+	virtual void on(PrivateChatListener::PrivateMessage, const ChatMessage& aMessage) noexcept;
+	virtual void on(PrivateChatListener::Activate, const string& msg, Client* c) noexcept;
+	virtual void on(PrivateChatListener::UserUpdated) noexcept;
+	virtual void on(PrivateChatListener::PMStatus, uint8_t aType) noexcept;
+	//virtual void on(PrivateChatListener::CCPMStatusChanged, const string& aMessage) noexcept;
+	virtual void on(PrivateChatListener::Close) noexcept;
 
 	void onOnlineStateChanged();
 	bool online = true;
-	void addStatusMessage(const string& aMsg);
+
+    void addMessage(const ChatMessage& aMessage);
+    void addStatusMessage(const string& aMsg);
 	void updateTitles();
 	void readLog();
+    void handleEncrypt();
+
+    PrivateChat* chat;
+
+    unique_ptr<HelpHandler> help;
+    HelpHandler::CommandList commands;
 };
 
 } // namespace ui

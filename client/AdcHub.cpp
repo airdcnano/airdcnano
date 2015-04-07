@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,22 +25,23 @@
 #include "ClientManager.h"
 #include "ConnectionManager.h"
 #include "ConnectivityManager.h"
-#include "FavoriteManager.h"
-#include "Localization.h"
-#include "ShareManager.h"
-#include "StringTokenizer.h"
-#include "Util.h"
-#include "UserCommand.h"
 #include "CryptoManager.h"
-#include "ResourceManager.h"
+#include "DebugManager.h"
+#include "FavoriteManager.h"
+#include "HashBloom.h"
+#include "Localization.h"
 #include "LogManager.h"
-#include "UploadManager.h"
+#include "MessageManager.h"
+#include "QueueManager.h"
+#include "ResourceManager.h"
 #include "ScopedFunctor.h"
+#include "ShareManager.h"
+#include "SSLSocket.h"
 #include "StringTokenizer.h"
 #include "ThrottleManager.h"
-#include "QueueManager.h"
-#include "HashBloom.h"
-#include "DebugManager.h"
+#include "UploadManager.h"
+#include "UserCommand.h"
+#include "Util.h"
 
 namespace dcpp {
 
@@ -62,6 +63,7 @@ const string AdcHub::ZLIF_SUPPORT("ADZLIF");
 const string AdcHub::SUD1_FEATURE("SUD1");
 const string AdcHub::HBRI_SUPPORT("ADHBRI");
 const string AdcHub::ASCH_FEATURE("ASCH");
+const string AdcHub::CCPM_FEATURE("CCPM");
 
 const vector<StringList> AdcHub::searchExts;
 
@@ -206,16 +208,6 @@ void AdcHub::handle(AdcCommand::INF, AdcCommand& c) noexcept {
 			StringTokenizer<string> addresses(fo, ',');
 			FavoriteManager::getInstance()->setFailOvers(getHubUrl(), getFavToken(), move(addresses.getTokens()));
 		}
-
-		string version;
-		if(c.getParam("VE", 0, version)) {
-			if (version.find("FlexHub") != string::npos) {
-				auto p = version.rfind(" ");
-				if (p == string::npos || Util::toInt(version.substr(p+1)) < 1417) {
-					fire(ClientListener::StatusMessage(), this, "WARNING: This hub is running on an outdated version of FlexHub, which may disable certain features in the client (at least searching in partial file lists)");
-				}
-			}
-		}
 	} else {
 		u = findUser(c.getFrom());
 	}
@@ -347,7 +339,12 @@ void AdcHub::handle(AdcCommand::MSG, AdcCommand& c) noexcept {
 	if(!message.from)
 		return;
 
+	message.thirdPerson = c.hasFlag("ME", 1);
+
 	string temp;
+	if (c.getParam("TS", 1, temp))
+		message.timestamp = Util::toInt64(temp);
+
 	if(c.getParam("PM", 1, temp)) { // add PM<group-cid> as well
 		message.to = findUser(c.getTo());
 		if(!message.to)
@@ -356,12 +353,10 @@ void AdcHub::handle(AdcCommand::MSG, AdcCommand& c) noexcept {
 		message.replyTo = findUser(AdcCommand::toSID(temp));
 		if(!message.replyTo)
 			return;
+
+		MessageManager::getInstance()->onPrivateMessage(message);
+		return;
 	}
-
-	message.thirdPerson = c.hasFlag("ME", 1);
-
-	if(c.getParam("TS", 1, temp))
-		message.timestamp = Util::toInt64(temp);
 
 	fire(ClientListener::Message(), this, message);
 }
@@ -479,7 +474,7 @@ void AdcHub::handle(AdcCommand::RCM, AdcCommand& c) noexcept {
 
 	if(getMyIdentity().isTcpActive()) {
 		//we are active the other guy is not
-    	connect(*u, token, secure, true);
+		connect(*u, token, secure, true);
 		return;
 	}
 
@@ -864,7 +859,7 @@ void AdcHub::sendHBRI(const string& aIP, const string& aPort, const string& aTok
 	bool secure = Util::strnicmp("adcs://", getHubUrl().c_str(), 7) == 0;
 	try {
 		// Create the socket
-		unique_ptr<Socket> hbri(secure ? CryptoManager::getInstance()->getClientSocket(SETTING(ALLOW_UNTRUSTED_HUBS)) : new Socket(Socket::TYPE_TCP));
+		unique_ptr<Socket> hbri(secure ? (new SSLSocket(CryptoManager::SSL_CLIENT, SETTING(ALLOW_UNTRUSTED_HUBS), Util::emptyString)) : new Socket(Socket::TYPE_TCP));
 		if (v6) {
 			hbri->setLocalIp6(SETTING(BIND_ADDRESS6));
 			hbri->setV4only(false);
@@ -1038,7 +1033,6 @@ void AdcHub::connect(const OnlineUser& user, const string& token, bool secure, b
 			LogManager::getInstance()->message(STRING(NOT_LISTENING), LogManager::LOG_ERROR);
 			return;
 		}
-
 
 		if (send(AdcCommand(AdcCommand::CMD_CTM, user.getIdentity().getSID(), AdcCommand::TYPE_DIRECT).addParam(*proto).addParam(port).addParam(token))) {
 			//we are expecting an incoming connection from these, map so we know where its coming from.
@@ -1454,6 +1448,7 @@ void AdcHub::infoImpl() {
 
 	if(CryptoManager::getInstance()->TLSOk()) {
 		su += "," + ADCS_FEATURE;
+		su += "," + CCPM_FEATURE;
 	}
 
 	if (SETTING(ENABLE_SUDP))

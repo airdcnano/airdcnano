@@ -82,11 +82,11 @@ WindowTransfers::WindowTransfers() : ListView(display::TYPE_TRANSFERS, "transfer
 	{
 		auto cm = ConnectionManager::getInstance();
 		RLock l(cm->getCS());
-		for (const auto& d : cm->getConnections(true)) {
+		for (const auto& d : cm->getTransferConnections(true)) {
 			on(ConnectionManagerListener::Added(), d);
 		}
 
-		for (const auto& u : cm->getConnections(false)) {
+		for (const auto& u : cm->getTransferConnections(false)) {
 			on(ConnectionManagerListener::Added(), u);
 		}
 	}
@@ -263,7 +263,7 @@ void WindowTransfers::handleBytes() noexcept {
 void WindowTransfers::on(ConnectionManagerListener::Added, const ConnectionQueueItem* aCqi)
     noexcept
 {
-	auto ui = new UpdateInfo(aCqi->getToken(), aCqi->getDownload());
+	auto ui = new UpdateInfo(aCqi->getToken(), aCqi->getConnType() == ConnectionType::CONNECTION_TYPE_DOWNLOAD);
 	if (ui->download) {
 		/*string aTarget, bundleToken; int64_t aSize; int aFlags;
 		if (QueueManager::getInstance()->getQueueInfo(aCqi->getHintedUser(), aTarget, aSize, aFlags, bundleToken)) {
@@ -289,7 +289,7 @@ void WindowTransfers::on(ConnectionManagerListener::Added, const ConnectionQueue
 
 void WindowTransfers::on(ConnectionManagerListener::StatusChanged, const ConnectionQueueItem *cqi) noexcept
 {
-	auto ui = new UpdateInfo(cqi->getToken(), cqi->getDownload());
+	auto ui = new UpdateInfo(cqi->getToken(), cqi->getConnType() == ConnectionType::CONNECTION_TYPE_DOWNLOAD);
 	if (cqi->getState() == ConnectionQueueItem::CONNECTING)
 		ui->setStatusString("Connecting...");
 	else
@@ -311,7 +311,7 @@ void WindowTransfers::on(ConnectionManagerListener::Removed, const ConnectionQue
 }
 
 void WindowTransfers::on(ConnectionManagerListener::UserUpdated, const ConnectionQueueItem* aCqi) noexcept{
-	auto ui = new UpdateInfo(aCqi->getToken(), aCqi->getDownload());
+	auto ui = new UpdateInfo(aCqi->getToken(), aCqi->getConnType() == ConnectionType::CONNECTION_TYPE_DOWNLOAD);
 	ui->setUser(aCqi->getHintedUser());
 	speak(ui);
 }
@@ -333,7 +333,7 @@ void WindowTransfers::on(DownloadManagerListener::Requesting, const Download* d,
 }
 
 void WindowTransfers::on(ConnectionManagerListener::Failed, const ConnectionQueueItem* aCqi, const std::string& aReason) noexcept{
-	auto ui = new UpdateInfo(aCqi->getToken(), aCqi->getDownload(), true);
+	auto ui = new UpdateInfo(aCqi->getToken(), aCqi->getConnType() == ConnectionType::CONNECTION_TYPE_DOWNLOAD, true);
 	if (aCqi->getUser()->isSet(User::OLD_CLIENT)) {
 		ui->setStatusString(STRING(SOURCE_TOO_OLD));
 	} else {

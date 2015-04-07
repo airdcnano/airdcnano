@@ -29,6 +29,7 @@
 #include <functional>
 #include <display/curses_window.h>
 #include <display/input_window.h>
+#include <display/async.h>
 #include <core/events.h>
 
 #include <client/stdinc.h>
@@ -62,7 +63,9 @@ enum Type {
 
 /** Window. */
 class Window:
-	public display::CursesWindow, boost::noncopyable
+	public CursesWindow, 
+    public boost::noncopyable, 
+    public Async
 {
 public:
     /** Constructor. */
@@ -137,9 +140,6 @@ public:
     static input::TextInput m_input;
 	const std::string& getID() const { return id; }
 
-	void callAsync(std::function<void()> aF);
-	void handleAsync();
-
 	virtual void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_) {}
 
 	// does this window have an input line for commands
@@ -172,8 +172,6 @@ private:
             unsigned int indent);
 
 	bool m_insertMode;
-
-	boost::signals2::scoped_connection asyncConn;
 };
 
 } // namespace display

@@ -25,10 +25,12 @@
 #include <core/log.h>
 #include <display/manager.h>
 #include <ui/window_privatemessage.h>
+#include <utils/utils.h>
 
 #include <client/ClientManager.h>
 #include <client/File.h>
 #include <client/LogManager.h>
+#include <client/MessageManager.h>
 #include <client/QueueManager.h>
 #include <client/QueueItemBase.h>
 #include <client/StringTokenizer.h>
@@ -43,6 +45,58 @@ void WindowPrivateMessage::openWindow(const HintedUser& user) {
 	}
 
 	getWindow(user, n);
+}
+
+void WindowPrivateMessage::onPrivateMessage(const ChatMessage& aMessage) noexcept{
+    auto dm = display::Manager::get();
+    ui::WindowPrivateMessage *pm;
+
+    bool myPM = aMessage.replyTo->getUser() == ClientManager::getInstance()->getMe();
+    const auto& user = myPM ? aMessage.to : aMessage.replyTo;
+
+    auto it = dm->find(display::TYPE_PRIVMSG, user->getUser()->getCID().toBase32());
+    if (it == dm->end()) {
+        pm = new ui::WindowPrivateMessage(HintedUser(user->getUser(), user->getHubUrl()), aMessage.from->getClient().getMyNick());
+        dm->push_back(pm);
+
+        if (AirUtil::getAway()) {
+            if (!(SETTING(NO_AWAYMSG_TO_BOTS) && user->getUser()->isSet(User::BOT))) {
+                ParamMap params;
+                user->getIdentity().getParams(params, "user", false);
+
+                string error;
+                auto awayMsg = AirUtil::getAwayMessage(SETTING(DEFAULT_AWAY_MESSAGE), params);
+                pm->handle_line(awayMsg);
+            }
+        }
+    } else {
+        pm = static_cast<ui::WindowPrivateMessage*>(*it);
+    }
+
+    pm->addMessage(aMessage);
+}
+
+void WindowPrivateMessage::addMessage(const ChatMessage& aMessage) {
+    chat->logMessage(aMessage.format());
+
+    bool myPM = aMessage.replyTo->getUser() == ClientManager::getInstance()->getMe();
+
+    auto nick = aMessage.from->getIdentity().getNick();
+    auto text = utils::escape(aMessage.text);
+
+
+    StringTokenizer<string> lines(text, '\n');
+    auto displaySender = myPM ? "%21%08<%21%08%21" + nick + "%21%21%08>%21%08" : "%21%08<%21%08" + nick + "%21%08>%21%08";
+
+    int indent = 4 + g_utf8_strlen(nick.c_str(), -1);
+    for (const auto& l : lines.getTokens()) {
+        add_line(display::LineEntry(displaySender + " " + l, indent, time(0), display::LineEntry::MESSAGE));
+    }
+
+    if (!myPM && get_state() != display::STATE_IS_ACTIVE) {
+        set_state(display::STATE_HIGHLIGHT);
+    }
+
 }
 
 WindowPrivateMessage* WindowPrivateMessage::getWindow(const HintedUser& user, const std::string &mynick, bool setActive) {
@@ -64,8 +118,14 @@ void WindowPrivateMessage::complete(const std::vector<std::string>& aArgs, int p
 }
 
 WindowPrivateMessage::WindowPrivateMessage(const HintedUser& user, const std::string &mynick) :
-m_user(user), ScrolledWindow(user.user->getCID().toBase32(), display::TYPE_PRIVMSG)
+    m_user(user), 
+    ScrolledWindow(user.user->getCID().toBase32(), display::TYPE_PRIVMSG), 
+    commands({
+                      { "encrypt", boost::bind(&WindowPrivateMessage::handleEncrypt, this), nullptr } 
+    })
 {
+    help.reset(new HelpHandler(&commands, "PM-specific", this));
+    chat = MessageManager::getInstance()->addChat(user);
     m_nick = mynick;
 	updateTitles();
     m_state = display::STATE_NO_ACTIVITY;
@@ -73,14 +133,15 @@ m_user(user), ScrolledWindow(user.user->getCID().toBase32(), display::TYPE_PRIVM
     // ^B = get file list
     m_bindings[2] = std::bind(&WindowPrivateMessage::get_list, this);
 	online = user.user->isOnline();
-	ClientManager::getInstance()->addListener(this);
+    chat->addListener(this);
 
 	readLog();
 }
 
 void WindowPrivateMessage::updateTitles() {
 	auto nicks = ClientManager::getInstance()->getFormatedNicks(m_user);
-	set_title("Conversation with " + nicks + " (" + ClientManager::getInstance()->getFormatedHubNames(m_user) + ")");
+    auto hub = chat->ccReady() ? "SECURE" : ClientManager::getInstance()->getFormatedHubNames(m_user);
+    set_title("Conversation with " + nicks + " (" + hub + ")");
 	set_name("PM:" + nicks);
 }
 
@@ -104,25 +165,11 @@ void WindowPrivateMessage::get_list()
     }
 }
 
-void WindowPrivateMessage::fillLogParams(ParamMap& params) const {
-	const CID& cid = m_user.user->getCID();
-	const string& hint = m_user.hint;
-	params["hubNI"] = [&] { return Util::listToString(ClientManager::getInstance()->getHubNames(cid)); };
-	params["hubURL"] = [&] { return Util::validateFileName(hint); };
-	params["userCID"] = [&cid] { return cid.toBase32(); };
-	params["userNI"] = [&] { return ClientManager::getInstance()->getNick(m_user.user, hint); };
-	params["myCID"] = [] { return ClientManager::getInstance()->getMe()->getCID().toBase32(); };
-}
-
 void WindowPrivateMessage::readLog() {
 	if (SETTING(SHOW_LAST_LINES_LOG) == 0) return;
 
-	ParamMap params;
-	fillLogParams(params);
-	auto path = LogManager::getInstance()->getPath(m_user.user, params);
-
 	try {
-		File f(path, File::READ, File::OPEN);
+		File f(chat->getLogPath(), File::READ, File::OPEN);
 
 		int64_t size = f.getSize();
 
@@ -151,19 +198,7 @@ void WindowPrivateMessage::readLog() {
 
 WindowPrivateMessage::~WindowPrivateMessage()
 {
-	ClientManager::getInstance()->removeListener(this);
-}
-
-void WindowPrivateMessage::on(ClientManagerListener::UserConnected, const OnlineUser& aUser, bool) noexcept{
-	if (aUser.getUser() == m_user.user) {
-		callAsync([this] { onOnlineStateChanged(); });
-	}
-}
-
-void WindowPrivateMessage::on(ClientManagerListener::UserDisconnected, const UserPtr& aUser, bool wentOffline) noexcept{
-	if (aUser == m_user.user) {
-		callAsync([this] { onOnlineStateChanged(); });
-	}
+    chat->removeListener(this);
 }
 
 void WindowPrivateMessage::onOnlineStateChanged() {
@@ -189,6 +224,95 @@ void WindowPrivateMessage::onOnlineStateChanged() {
 
 void WindowPrivateMessage::addStatusMessage(const string& aMsg) {
 	add_line(display::LineEntry(aMsg));
+}
+
+
+void WindowPrivateMessage::on(PrivateChatListener::UserUpdated) noexcept{
+	callAsync([this] { onOnlineStateChanged(); });
+}
+
+//void WindowPrivateMessage::on(PrivateChatListener::CCPMStatusChanged, const string& aMessage) noexcept{
+//	callAsync([this, aMessage] {
+		//addStatusLine(Text::toT(aMessage), LogManager::LOG_INFO);
+		//updateOnlineStatus(true);
+//	});
+//}
+
+//void WindowPrivateMessage::on(PrivateChatListener::StatusMessage, const string& aMessage, uint8_t sev) noexcept{
+//	callAsync([this, aMessage, sev] {
+		//addStatusLine(Text::toT(aMessage), sev);
+//	});
+//}
+
+void WindowPrivateMessage::on(PrivateChatListener::PMStatus, uint8_t aType) noexcept{
+	callAsync([this, aType] {
+		//updatePMInfo(aType);
+	switch (aType) {
+	case PrivateChat::CCPM_ESTABLISHED:
+		addStatusMessage(STRING(CCPM_ESTABLISHED));
+		//updateOnlineStatus(true);
+		break;
+
+	case PrivateChat::CCPM_ESTABLISHING:
+		addStatusMessage(STRING(CCPM_ESTABLISHING));
+		break;
+
+	case PrivateChat::CCPM_DISCONNECTED:
+		addStatusMessage(STRING(CCPM_DISCONNECTED));
+		//updateOnlineStatus(true);
+		break;
+
+	case PrivateChat::CCPM_CONNECTION_TIMEOUT:
+		addStatusMessage(STRING(CCPM_TIMEOUT));
+		break;
+
+	case PrivateChat::CCPM_ERROR:
+		addStatusMessage(chat->getLastCCPMError());
+		break;
+	default:
+		break;
+	}
+	});
+}
+
+void WindowPrivateMessage::on(PrivateChatListener::PrivateMessage, const ChatMessage& aMessage) noexcept{
+	callAsync([=] {
+		addMessage(aMessage);
+		//bool myPM = aMessage.replyTo->getUser() == ClientManager::getInstance()->getMe();
+
+		//auto text = Text::toT(aMessage.format());
+		//addLine(aMessage.from->getIdentity(), text);
+
+		//if (!myPM) {
+		//	handleNotifications(false, text, aMessage.from->getIdentity());
+		//	checkClientChanged(&aMessage.from->getClient(), false);
+		//} else if (!userTyping) {
+		//	addStatus(_T("[") + Text::toT(Util::getShortTimeString()) + _T("] ") + _T("Last message sent"), ResourceLoader::getSeverityIcon(LogManager::LOG_INFO));
+		//}
+
+	});
+}
+
+void WindowPrivateMessage::on(PrivateChatListener::Activate, const string& msg, Client* c) noexcept{
+	callAsync([this, msg, c] {
+		//checkClientChanged(c, true);
+		//if (::IsIconic(m_hWnd))
+		//	::ShowWindow(m_hWnd, SW_RESTORE);
+		//MDIActivate(m_hWnd);
+		//sendFrameMessage(Text::toT(msg));
+	});
+}
+
+void WindowPrivateMessage::on(PrivateChatListener::Close) noexcept {
+    
+}
+
+void WindowPrivateMessage::handleEncrypt() {
+    if (chat->ccReady()) {
+        chat->CloseCC(false, true);
+    } else {
+        chat->StartCC();
+    }
 }
 
 } // namespace ui

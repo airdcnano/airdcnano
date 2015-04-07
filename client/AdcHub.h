@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,6 +79,7 @@ public:
 	static const string SUD1_FEATURE;
 	static const string HBRI_SUPPORT;
 	static const string ASCH_FEATURE;
+	static const string CCPM_FEATURE;
 private:
 	friend class ClientManager;
 	friend class CommandHandler<AdcHub>;

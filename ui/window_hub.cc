@@ -287,14 +287,8 @@ void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
 		return;
 	}
 
-	if (m_client->get(HubSettings::LogMainChat)) {
-		ParamMap params;
-		params["message"] = aMessage.format();
-		m_client->getHubIdentity().getParams(params, "hub", false);
-		params["hubURL"] = Util::validateFileName(m_client->getHubUrl());
-		m_client->getMyIdentity().getParams(params, "my", true);
-		LOG(LogManager::CHAT, params);
-	}
+
+    m_client->logChatMessage(aMessage.format());
 
 	auto flag = display::LineEntry::MESSAGE;
 
@@ -330,86 +324,16 @@ void WindowHub::handleShowJoins() {
 	add_line(display::LineEntry(status));
 }
 
-void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
-	bool myPM = aMessage.replyTo->getUser() == ClientManager::getInstance()->getMe();
-
-	auto nick = aMessage.from->getIdentity().getNick();
-	auto text = utils::escape(aMessage.text);
-
-	auto dm = display::Manager::get();
-	ui::WindowPrivateMessage *pm;
-
-	const auto& user = myPM ? aMessage.to : aMessage.replyTo;
-
-	auto name = "PM:" + nick;
-
-	auto it = dm->find(display::TYPE_PRIVMSG, user->getUser()->getCID().toBase32());
-	if (it == dm->end()) {
-		/* don't filter if i'm the sender */
-		if (!myPM && filter_messages(nick, text)) {
-			return;
-		}
-
-		pm = new ui::WindowPrivateMessage(HintedUser(user->getUser(), user->getHubUrl()), m_client->getMyNick());
-		dm->push_back(pm);
-
-		if (AirUtil::getAway()) {
-			if (!(SETTING(NO_AWAYMSG_TO_BOTS) && user->getUser()->isSet(User::BOT))) {
-				ParamMap params;
-				user->getIdentity().getParams(params, "user", false);
-
-				string error;
-				auto awayMsg = AirUtil::getAwayMessage(SETTING(DEFAULT_AWAY_MESSAGE), params);
-				pm->handle_line(awayMsg);
-			}
-		}
-	} else {
-		pm = static_cast<ui::WindowPrivateMessage*>(*it);
-	}
-
-	if (SETTING(LOG_PRIVATE_CHAT)) {
-		ParamMap params;
-		params["message"] = aMessage.format();
-		pm->fillLogParams(params);
-		LogManager::getInstance()->log(user->getUser(), params);
-	}
-
-	//boost::replace_all(text, "\n", "\\");
-
-	StringTokenizer<string> lines(text, '\n');
-	auto displaySender = myPM ? "%21%08<%21%08%21" + nick + "%21%21%08>%21%08" : "%21%08<%21%08" + nick + "%21%08>%21%08";
-
-	int indent = 4 + g_utf8_strlen(nick.c_str(), -1);
-	for (const auto& l : lines.getTokens()) {
-		pm->add_line(display::LineEntry(displaySender + " " + l, indent, time(0), display::LineEntry::MESSAGE));
-	}
-
-	if (!myPM && pm->get_state() != display::STATE_IS_ACTIVE) {
-		pm->set_state(display::STATE_HIGHLIGHT);
-	}
-}
-
 void WindowHub::on(ClientListener::Message, const Client *, const ChatMessage& aMessage) noexcept{
 	callAsync([=] {
-		if (aMessage.to && aMessage.replyTo) {
-			onPrivateMessage(aMessage);
-		} else {
-			onChatMessage(aMessage);
-		}
+		onChatMessage(aMessage);
 	});
 }
 
 void WindowHub::on(ClientListener::StatusMessage, const Client*, const string& line, int)
     noexcept
 {
-	if (SETTING(LOG_STATUS_MESSAGES)) {
-		ParamMap params;
-		m_client->getHubIdentity().getParams(params, "hub", false);
-		params["hubURL"] = m_client->getHubUrl();
-		m_client->getMyIdentity().getParams(params, "my", true);
-		params["message"] = line;
-		LOG(LogManager::STATUS, params);
-	}
+    m_client->logStatusMessage(line);
 
 	auto tmp = utils::escape(line);
 	callAsync([=] { add_line(display::LineEntry(tmp)); });

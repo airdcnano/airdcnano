@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,6 +23,7 @@
 #include "ClientManagerListener.h"
 #include "ConnectionManagerListener.h"
 
+#include "ConnectionType.h"
 #include "CriticalSection.h"
 #include "HintedUser.h"
 #include "Singleton.h"
@@ -34,11 +35,13 @@ class SocketException;
 
 class TokenManager {
 public:
-	string getToken() noexcept;
-	bool addToken(const string& aToken) noexcept;
+	string makeToken() const noexcept;
+	string getToken(ConnectionType aConnType) noexcept;
+	bool addToken(const string& aToken, ConnectionType aConnType) noexcept;
 	void removeToken(const string& aToken) noexcept;
+	bool hasToken(const string& aToken, ConnectionType aConnType) noexcept;
 private:
-	StringSet tokens;
+	unordered_map<string, ConnectionType> tokens;
 	static FastCriticalSection cs;
 };
 
@@ -67,8 +70,8 @@ public:
 		TYPE_MCN_NORMAL
 	};
 
-	ConnectionQueueItem(const HintedUser& aUser, bool aDownload, const string& aToken) : token(aToken), type(TYPE_ANY),
-		lastAttempt(0), errors(0), state(WAITING), download(aDownload), maxConns(0), hubUrl(aUser.hint), user(aUser.user) {
+	ConnectionQueueItem(const HintedUser& aUser, ConnectionType aConntype, const string& aToken) : token(aToken), type(TYPE_ANY), connType(aConntype),
+		lastAttempt(0), errors(0), state(WAITING), maxConns(0), hubUrl(aUser.hint), user(aUser.user) {
 	}
 	
 	GETSET(string, token, Token);
@@ -77,9 +80,9 @@ public:
 	GETSET(uint64_t, lastAttempt, LastAttempt);
 	GETSET(int, errors, Errors); // Number of connection errors, or -1 after a protocol error
 	GETSET(State, state, State);
-	GETSET(bool, download, Download);
 	GETSET(uint8_t, maxConns, MaxConns);
 	GETSET(string, hubUrl, HubUrl);
+	GETSET(ConnectionType, connType, ConnType);
 
 	const UserPtr& getUser() const { return user; }
 	//UserPtr& getUser() { return user; }
@@ -144,8 +147,8 @@ public:
 	void getDownloadConnection(const HintedUser& aUser, bool smallSlot=false);
 	void force(const string& token);
 	
-	void disconnect(const UserPtr& aUser); // disconnect downloads and uploads
-	void disconnect(const UserPtr& aUser, int isDownload);
+	void disconnect(const UserPtr& aUser); // disconnect dall connections to the user
+	void disconnect(const UserPtr& aUser, ConnectionType aConnType);
 	void disconnect(const string& token);
 	bool setBundle(const string& token, const string& bundleToken);
 
@@ -165,8 +168,8 @@ public:
 	void failDownload(const string& aToken, const string& aError, bool fatalError);
 
 	SharedMutex& getCS() { return cs; }
-	const ConnectionQueueItem::List& getConnections(bool aDownloads) const {
-		return aDownloads ? downloads : uploads;
+	const ConnectionQueueItem::List& getTransferConnections(bool aDownloads) const {
+		return aDownloads ? cqis[CONNECTION_TYPE_DOWNLOAD] : cqis[CONNECTION_TYPE_UPLOAD];
 	}
 private:
 	bool allowNewMCN(const ConnectionQueueItem* aCQI);
@@ -193,8 +196,8 @@ private:
 	mutable SharedMutex cs;
 
 	/** All ConnectionQueueItems */
-	ConnectionQueueItem::List downloads;
-	ConnectionQueueItem::List uploads;
+	ConnectionQueueItem::List cqis[CONNECTION_TYPE_LAST],
+		&downloads; // shortcut
 
 	/** All active connections */
 	UserConnectionList userConnections;
@@ -224,10 +227,11 @@ private:
 
 	void addUploadConnection(UserConnection* uc);
 	void addDownloadConnection(UserConnection* uc);
+	void addPMConnection(UserConnection* uc);
 
 	void checkWaitingMCN() noexcept;
 
-	ConnectionQueueItem* getCQI(const HintedUser& aUser, bool aDownload, const string& aToken=Util::emptyString);
+	ConnectionQueueItem* getCQI(const HintedUser& aUser, ConnectionType aConnType, const string& aToken = Util::emptyString);
 	void putCQI(ConnectionQueueItem* cqi);
 
 	void accept(const Socket& sock, bool secure) noexcept;
@@ -259,6 +263,7 @@ private:
 	void on(ClientManagerListener::UserDisconnected, const UserPtr& aUser, bool) noexcept { onUserUpdated(aUser); }
 
 	void onUserUpdated(const UserPtr& aUser);
+	void attemptDownloads(uint64_t aTick, StringList& removedTokens);
 };
 
 } // namespace dcpp

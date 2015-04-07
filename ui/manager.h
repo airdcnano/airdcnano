@@ -24,6 +24,7 @@
 #ifndef _UIMANAGER_H_
 #define _UIMANAGER_H_
 
+#include <display/async.h>
 #include <display/status_bar.h>
 #include <display/window.h>
 #include <display/input_window.h>
@@ -34,6 +35,7 @@
 #include <client/TimerManager.h>
 #include <client/ClientManagerListener.h>
 #include <client/DirectoryListingManagerListener.h>
+#include <client/MessageManager.h>
 
 #include <string>
 #include <deque>
@@ -48,7 +50,9 @@ class Manager:
     public utils::Instance<ui::Manager>,
     public TimerManagerListener,
 	public ClientManagerListener,
-	public DirectoryListingManagerListener
+	public DirectoryListingManagerListener,
+    public MessageManagerListener,
+    public display::Async
 {
 public:
     Manager();
@@ -72,6 +76,7 @@ private:
 	void on(ClientManagerListener::ClientCreated, Client* c) noexcept;
 	void on(DirectoryListingManagerListener::OpenListing, DirectoryListing* aList, const std::string& aDir, const std::string& aXML) noexcept;
 	void on(TimerManagerListener::Second, uint64_t) noexcept;
+    virtual void on(MessageManagerListener::PrivateMessage, const ChatMessage& aMessage ) noexcept;
 
     uint32_t m_lastDraw;
 

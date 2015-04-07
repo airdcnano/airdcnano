@@ -1,4 +1,5 @@
 display_files = [
+    'async.cc',
     'screen.cc',
     'manager.cc',
     'curses_window.cc',

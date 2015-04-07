@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -242,6 +242,7 @@ public:
 #endif
 
 	string getLogPath();
+	bool supportsCCPM(string& _error) const;
 
 	bool isInList;
 	GETSET(Identity, identity, Identity);

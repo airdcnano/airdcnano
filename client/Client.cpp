@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -351,21 +351,42 @@ void Client::on(Line, const string& aLine) noexcept {
 	COMMAND_DEBUG(aLine, DebugManager::TYPE_HUB, DebugManager::INCOMING, getIpPort());
 }
 
-void Client::on(Second, uint64_t aTick) noexcept {
-	if(state == STATE_DISCONNECTED && getAutoReconnect() && (aTick > (getLastActivity() + getReconnDelay() * 1000)) ) {
+void Client::on(Second, uint64_t aTick) noexcept{
+	if (state == STATE_DISCONNECTED && getAutoReconnect() && (aTick > (getLastActivity() + getReconnDelay() * 1000))) {
 		// Try to reconnect...
 		connect();
 	}
 
-	if(searchQueue.hasWaitingTime(aTick)) return;
+	if (searchQueue.hasWaitingTime(aTick)) return;
 
-	if(isConnected()){
+	if (isConnected()){
 		auto s = move(searchQueue.pop());
-		if(s){
+		if (s){
 			search(move(s));
 		}
 	}
-
 }
 
-} // namespace dcpp
+void Client::logStatusMessage(const string& aMessage) {
+	if (SETTING(LOG_STATUS_MESSAGES)) {
+		ParamMap params;
+		getHubIdentity().getParams(params, "hub", false);
+		params["hubURL"] = getHubUrl();
+		getMyIdentity().getParams(params, "my", true);
+		params["message"] = aMessage;
+		LOG(LogManager::STATUS, params);
+	}
+}
+
+void Client::logChatMessage(const string& aMessage) {
+	if (get(HubSettings::LogMainChat)) {
+		ParamMap params;
+		params["message"] = aMessage;
+		getHubIdentity().getParams(params, "hub", false);
+		params["hubURL"] = getHubUrl();
+		getMyIdentity().getParams(params, "my", true);
+		LOG(LogManager::CHAT, params);
+	}
+}
+
+}

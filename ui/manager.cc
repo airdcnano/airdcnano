@@ -36,6 +36,7 @@
 #include <ui/window_favorites.h>
 #include <ui/window_transfers.h>
 #include <ui/window_log.h>
+#include <ui/window_privatemessage.h>
 #include <ui/window_publichubs.h>
 #include <ui/window_search.h>
 #include <ui/window_sharebrowser.h>
@@ -100,6 +101,7 @@ void Manager::create_windows()
 	ClientManager::getInstance()->addListener(this);
 	DirectoryListingManager::getInstance()->addListener(this);
 	TimerManager::getInstance()->addListener(this);
+    MessageManager::getInstance()->addListener(this);
 
 	try {
 		ConnectivityManager::getInstance()->setup(true, true);
@@ -129,6 +131,7 @@ Manager::~Manager() {
 	ClientManager::getInstance()->removeListener(this);
 	DirectoryListingManager::getInstance()->removeListener(this);
 	TimerManager::getInstance()->removeListener(this);
+    MessageManager::getInstance()->removeListener(this);
 }
 
 void Manager::on(ClientManagerListener::ClientCreated, Client* c) noexcept {
@@ -173,6 +176,10 @@ void Manager::on(TimerManagerListener::Second, uint64_t aTick) noexcept{
 	lastUpdate = aTick;
 	lastUp = totalUp;
 	lastDown = totalDown;
+}
+
+void Manager::on(MessageManagerListener::PrivateMessage, const ChatMessage& aMessage) noexcept{
+        callAsync([=] { WindowPrivateMessage::onPrivateMessage(aMessage); });
 }
 
 } // namespace ui

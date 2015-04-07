@@ -93,7 +93,6 @@ private:
 	void onJoinedTimer();
 	void handleFav() noexcept;
 	void onChatMessage(const ChatMessage&) noexcept;
-	void onPrivateMessage(const ChatMessage&) noexcept;
 
 	void handleShowJoins();
 	void handleMsg();

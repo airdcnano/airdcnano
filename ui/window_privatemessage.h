@@ -49,28 +49,21 @@ public:
 
     static void onPrivateMessage(const ChatMessage& aMessage) noexcept;
 	static void openWindow(const HintedUser& user);
-	static WindowPrivateMessage* getWindow(const HintedUser& user, const std::string &mynick, bool setActive = true);
-    WindowPrivateMessage(const HintedUser& user, const std::string &mynick);
+	static WindowPrivateMessage* getWindow(const HintedUser& user, bool setActive = true);
+    WindowPrivateMessage(const HintedUser& user);
 
     /** Send private message to the user */
     virtual void handle_line(const std::string &line);
 
-    /** Get my nick. */
-    std::string get_nick() const { return m_nick; }
-
     /** Get user's file list. */
     void get_list();
-
-    HintedUser get_user() { return m_user; }
 
     ~WindowPrivateMessage();
 
 	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_);
+    std::string get_my_nick() const;
 private:
-    HintedUser m_user;
-    std::string m_nick;
-
-	//virtual void on(PrivateChatListener::StatusMessage, const string& aMessage, uint8_t sev) noexcept;
+	virtual void on(PrivateChatListener::StatusMessage, const string& aMessage, uint8_t sev) noexcept;
 	virtual void on(PrivateChatListener::PrivateMessage, const ChatMessage& aMessage) noexcept;
 	virtual void on(PrivateChatListener::Activate, const string& msg, Client* c) noexcept;
 	virtual void on(PrivateChatListener::UserUpdated) noexcept;
@@ -79,7 +72,6 @@ private:
 	virtual void on(PrivateChatListener::Close) noexcept;
 
 	void onOnlineStateChanged();
-	bool online = true;
 
     void addMessage(const ChatMessage& aMessage);
     void addStatusMessage(const string& aMsg);

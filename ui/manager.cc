@@ -148,14 +148,16 @@ void Manager::on(ClientManagerListener::ClientCreated, Client* c) noexcept {
 }
 
 void Manager::on(DirectoryListingManagerListener::OpenListing, DirectoryListing* aList, const std::string& aDir, const std::string& aXML) noexcept{
-	auto mger = display::Manager::get();
-	auto it = mger->find(display::TYPE_LISTBROWSER, aList->getUser()->getCID().toBase32());
-	if (it == mger->end()) {
-		auto dl = new ui::WindowShareBrowser(aList, aDir, aXML);
-		mger->push_back(dl);
-	}
+    callAsync([=] {
+        auto mger = display::Manager::get();
+	    auto it = mger->find(display::TYPE_LISTBROWSER, aList->getUser()->getCID().toBase32());
+	    if (it == mger->end()) {
+		    auto dl = new ui::WindowShareBrowser(aList, aDir, aXML);
+		    mger->push_back(dl);
+	    }
 
-	mger->set_current(it);
+	    mger->set_current(it);
+    });
 }
 
 void Manager::on(TimerManagerListener::Second, uint64_t aTick) noexcept{
@@ -179,7 +181,7 @@ void Manager::on(TimerManagerListener::Second, uint64_t aTick) noexcept{
 }
 
 void Manager::on(MessageManagerListener::PrivateMessage, const ChatMessage& aMessage) noexcept{
-        callAsync([=] { WindowPrivateMessage::onPrivateMessage(aMessage); });
+    callAsync([=] { WindowPrivateMessage::onPrivateMessage(aMessage); });
 }
 
 } // namespace ui

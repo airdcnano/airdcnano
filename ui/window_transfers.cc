@@ -201,7 +201,7 @@ void WindowTransfers::remove_source()
 void WindowTransfers::msg()
 {
 	auto user = get_user();
-	WindowPrivateMessage::openWindow(user);
+	WindowPrivateMessage::getWindow(user);
 }
 
 void WindowTransfers::disconnect()

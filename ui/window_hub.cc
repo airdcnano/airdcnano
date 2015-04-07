@@ -115,7 +115,7 @@ void WindowHub::handleMsg() {
     if (!user)
         return;
 
-    auto pm = WindowPrivateMessage::getWindow(HintedUser(user->getUser(), user->getHubUrl()), m_client->getMyNick());
+    auto pm = WindowPrivateMessage::getWindow(HintedUser(user->getUser(), user->getHubUrl()));
 
     core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
     parser.parse();

@@ -226,7 +226,7 @@ void WindowPrivateMessage::on(PrivateChatListener::PMStatus, uint8_t aType) noex
 	switch (aType) {
 	case PrivateChat::CCPM_ESTABLISHED:
 		addStatusMessage(STRING(CCPM_ESTABLISHED));
-		//updateOnlineStatus(true);
+        updateTitles();
 		break;
 
 	case PrivateChat::CCPM_ESTABLISHING:
@@ -235,7 +235,7 @@ void WindowPrivateMessage::on(PrivateChatListener::PMStatus, uint8_t aType) noex
 
 	case PrivateChat::CCPM_DISCONNECTED:
 		addStatusMessage(STRING(CCPM_DISCONNECTED));
-		//updateOnlineStatus(true);
+		updateTitles();
 		break;
 
 	case PrivateChat::CCPM_CONNECTION_TIMEOUT:

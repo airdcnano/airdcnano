@@ -1866,6 +1866,11 @@ std::string dcpp::ResourceManager::strings[] = {
 "Start a direct encrypted channel", 
 "Monitoring has been restored for the path %1%", 
 "Device removed", 
+"User is typing...", 
+"Message seen", 
+"User closed the window", 
+"Last message sent", 
+"Last message received", 
 };
 std::string dcpp::ResourceManager::names[] = {
 "Active", 
@@ -3732,4 +3737,9 @@ std::string dcpp::ResourceManager::names[] = {
 "StartCcpm", 
 "MonitoringRestoredX", 
 "DeviceRemoved", 
+"UserTyping", 
+"MessageSeen", 
+"UserClosedWindow", 
+"LastMessageSent", 
+"LastMessageReceived", 
 };

@@ -105,8 +105,10 @@ void PrivateChat::onExit() {
 
 void PrivateChat::handleMessage(const ChatMessage& aMessage) {
 	if (aMessage.replyTo->getHubUrl() != replyTo.hint) {
-		fire(PrivateChatListener::StatusMessage(), STRING_F(MESSAGES_SENT_THROUGH_REMOTE, 
-			ClientManager::getInstance()->getHubName(aMessage.replyTo->getHubUrl())), LogManager::LOG_INFO);
+		if (!ccReady()) {
+			fire(PrivateChatListener::StatusMessage(), STRING_F(MESSAGES_SENT_THROUGH_REMOTE,
+				ClientManager::getInstance()->getHubName(aMessage.replyTo->getHubUrl())), LogManager::LOG_INFO);
+		}
 
 		setHubUrl(aMessage.replyTo->getHubUrl());
 		fire(PrivateChatListener::UserUpdated());
@@ -165,6 +167,48 @@ void PrivateChat::checkCCPMTimeout() {
 	} 
 }
 
+void PrivateChat::on(ClientManagerListener::UserDisconnected, const UserPtr& aUser, bool wentOffline) noexcept{
+	if (aUser != replyTo.user)
+		return;
+
+	setSupportsCCPM(ClientManager::getInstance()->getSupportsCCPM(replyTo, lastCCPMError));
+	if (wentOffline) {
+		delayEvents.removeEvent(USER_UPDATE);
+		closeCC(false, false);
+		allowAutoCCPM = true;
+		online = false;
+		fire(PrivateChatListener::UserUpdated());
+		fire(PrivateChatListener::StatusMessage(), STRING(USER_WENT_OFFLINE), LogManager::LOG_INFO);
+	} else {
+		delayEvents.addEvent(USER_UPDATE, [this] {
+			checkUserHub(true);
+			fire(PrivateChatListener::UserUpdated()); 
+		}, 1000);
+	}
+}
+
+void PrivateChat::checkUserHub(bool wentOffline) {
+	auto hubs = ClientManager::getInstance()->getHubs(replyTo.user->getCID());
+	dcassert(!hubs.empty());
+
+	if (find_if(hubs.begin(), hubs.end(), CompareFirst<string, string>(replyTo.hint)) == hubs.end()) {
+		if (!ccReady()) {
+			auto statusText = wentOffline ? STRING_F(USER_OFFLINE_PM_CHANGE, hubName % hubs[0].second) :
+				STRING_F(MESSAGES_SENT_THROUGH, hubs[0].second);
+
+			fire(PrivateChatListener::StatusMessage(), statusText, LogManager::LOG_INFO);
+		}
+
+		setHubUrl(hubs[0].first);
+		hubName = hubs[0].second;
+	}
+}
+
+void PrivateChat::setHubUrl(const string& hint) { 
+	replyTo.hint = hint;
+	hubName = ClientManager::getInstance()->getHubName(replyTo.hint);
+}
+
 void PrivateChat::sendPMInfo(uint8_t aType) {
 	if (ccReady() && uc && uc->isSet(UserConnection::FLAG_CPMI)) {
 		AdcCommand c(AdcCommand::CMD_PMI);
@@ -187,59 +231,40 @@ void PrivateChat::sendPMInfo(uint8_t aType) {
 		default:
 			c.addParam("\n");
 		}
-	
+
 		uc->send(c);
 	}
 }
 
-void PrivateChat::on(ClientManagerListener::UserDisconnected, const UserPtr& aUser, bool wentOffline) noexcept{
-	if (aUser != replyTo.user)
-		return;
+void PrivateChat::on(AdcCommand::PMI, UserConnection*, const AdcCommand& cmd) noexcept{
 
-	setSupportsCCPM(ClientManager::getInstance()->getSupportsCCPM(replyTo, lastCCPMError));
-	if (wentOffline) {
-		delayEvents.removeEvent(USER_UPDATE);
-		closeCC(false, false);
-		allowAutoCCPM = true;
-		online = false;
-		fire(PrivateChatListener::StatusMessage(), STRING(USER_WENT_OFFLINE), LogManager::LOG_INFO);
-		fire(PrivateChatListener::UserUpdated());
-	} else {
-		delayEvents.addEvent(USER_UPDATE, [this] {
-			checkUserHub(true);
-			fire(PrivateChatListener::UserUpdated()); 
-		}, 1000);
+	auto type = PMINFO_LAST;
+	string tmp;
+
+	//We only send one flag at a time so we can do it like this.
+	if (cmd.hasFlag("SN", 0)) {
+		type = MSG_SEEN;
 	}
-}
-
-void PrivateChat::checkUserHub(bool wentOffline) {
-	auto hubs = ClientManager::getInstance()->getHubs(replyTo.user->getCID());
-
-	dcassert(!hubs.empty());
-	if (hubs.empty())
-		return;
-
-	if (find_if(hubs.begin(), hubs.end(), CompareFirst<string, string>(replyTo.hint)) == hubs.end()) {
-		auto statusText = wentOffline ? STRING_F(USER_OFFLINE_PM_CHANGE, hubName % hubs[0].second) : 
-			STRING_F(MESSAGES_SENT_THROUGH, hubs[0].second);
-
-		fire(PrivateChatListener::StatusMessage(), statusText, LogManager::LOG_INFO);
-
-		setHubUrl(hubs[0].first);
-		hubName = hubs[0].second;
+	else if (cmd.getParam("TP", 0, tmp)) {
+		type = (tmp == "1") ? TYPING_ON : TYPING_OFF;
 	}
-}
+	else if (cmd.getParam("AC", 0, tmp)) {
+		allowAutoCCPM = tmp == "1" ? true : false;
+		type = NO_AUTOCONNECT;
+	}
+	else if (cmd.hasFlag("QU", 0)) {
+		type = QUIT;
+	}
 
-void PrivateChat::setHubUrl(const string& hint) { 
-	replyTo.hint = hint;
-	hubName = ClientManager::getInstance()->getHubName(replyTo.hint);
+	if (type != PMINFO_LAST)
+		fire(PrivateChatListener::PMStatus(), type);
 }
 
 void PrivateChat::on(ClientManagerListener::UserUpdated, const OnlineUser& aUser) noexcept{
 	if (aUser.getUser() != replyTo.user)
 		return;
 
-	setSupportsCCPM(getSupportsCCPM() || aUser.supportsCCPM(lastCCPMError));
+	setSupportsCCPM(ClientManager::getInstance()->getSupportsCCPM(replyTo, lastCCPMError));
 	delayEvents.addEvent(USER_UPDATE, [this] {
 		if (!online) {
 			auto hubNames = ClientManager::getInstance()->getFormatedHubNames(replyTo);
@@ -256,27 +281,6 @@ void PrivateChat::on(ClientManagerListener::UserUpdated, const OnlineUser& aUser
 	}, 1000);
 
 	delayEvents.addEvent(CCPM_AUTO, [this] { checkAlwaysCCPM(); }, 3000);
-}
-
-void PrivateChat::on(AdcCommand::PMI, UserConnection*, const AdcCommand& cmd) noexcept{
-	
-	auto type = PMINFO_LAST;
-	string tmp;
-
-	//We only send one flag at a time so we can do it like this.
-	if (cmd.hasFlag("SN", 0)) {
-		type = MSG_SEEN;
-	} else if (cmd.getParam("TP", 0, tmp)) {
-		type = (tmp == "1") ? TYPING_ON : TYPING_OFF;
-	} else if (cmd.getParam("AC", 0, tmp)) {
-		allowAutoCCPM = tmp == "1" ? true : false;
-		type = NO_AUTOCONNECT;
-	} else if (cmd.hasFlag("QU", 0)) {
-		type = QUIT;
-	}
-
-	if (type != PMINFO_LAST)
-		fire(PrivateChatListener::PMStatus(), type);
 }
 
 void PrivateChat::logMessage(const string& aMessage) {

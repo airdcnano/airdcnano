@@ -77,7 +77,9 @@ public:
 		FLAG_MCN1					= FLAG_RUNNING << 1,
 		FLAG_SMALL_SLOT				= FLAG_MCN1 << 1,
 		FLAG_UBN1					= FLAG_SMALL_SLOT << 1,
-		FLAG_CPMI					= FLAG_UBN1 << 1
+		FLAG_CPMI					= FLAG_UBN1 << 1,
+		FLAG_TRUSTED				= FLAG_CPMI << 1
+
 	};
 	
 	enum States {
@@ -166,7 +168,8 @@ public:
 	bool isSecure() const { return socket && socket->isSecure(); }
 	bool isTrusted() const { return socket && socket->isTrusted(); }
 	std::string getCipherName() const { return socket ? socket->getCipherName() : Util::emptyString; }
-	vector<uint8_t> getKeyprint() const { return socket ? socket->getKeyprint() : vector<uint8_t>(); }
+	ByteVector getKeyprint() const { return socket ? socket->getKeyprint() : ByteVector(); }
+	bool verifyKeyprint(const string& expKeyp, bool allowUntrusted) noexcept{ return socket ? socket->verifyKeyprint(expKeyp, allowUntrusted) : true; }
 
 	const string& getRemoteIp() const { if(socket) return socket->getIp(); else return Util::emptyString; }
 	Download* getDownload() { dcassert(isSet(FLAG_DOWNLOAD)); return download; }

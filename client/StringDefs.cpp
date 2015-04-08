@@ -1871,6 +1871,7 @@ std::string dcpp::ResourceManager::strings[] = {
 "User closed the window", 
 "Last message sent", 
 "Last message received", 
+"Note: you need to restart the client to load the new certificates", 
 };
 std::string dcpp::ResourceManager::names[] = {
 "Active", 
@@ -3742,4 +3743,5 @@ std::string dcpp::ResourceManager::names[] = {
 "UserClosedWindow", 
 "LastMessageSent", 
 "LastMessageReceived", 
+"GenerateCertsNote", 
 };

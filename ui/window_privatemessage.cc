@@ -220,37 +220,6 @@ void WindowPrivateMessage::on(PrivateChatListener::StatusMessage, const string& 
 	});
 }
 
-void WindowPrivateMessage::on(PrivateChatListener::PMStatus, uint8_t aType) noexcept{
-	callAsync([this, aType] {
-		//updatePMInfo(aType);
-	switch (aType) {
-	case PrivateChat::CCPM_ESTABLISHED:
-		addStatusMessage(STRING(CCPM_ESTABLISHED));
-        updateTitles();
-		break;
-
-	case PrivateChat::CCPM_ESTABLISHING:
-		addStatusMessage(STRING(CCPM_ESTABLISHING));
-		break;
-
-	case PrivateChat::CCPM_DISCONNECTED:
-		addStatusMessage(STRING(CCPM_DISCONNECTED));
-		updateTitles();
-		break;
-
-	case PrivateChat::CCPM_CONNECTION_TIMEOUT:
-		addStatusMessage(STRING(CCPM_TIMEOUT));
-		break;
-
-	case PrivateChat::CCPM_ERROR:
-		addStatusMessage(chat->getLastCCPMError());
-		break;
-	default:
-		break;
-	}
-	});
-}
-
 void WindowPrivateMessage::on(PrivateChatListener::PrivateMessage, const ChatMessage& aMessage) noexcept{
 	callAsync([=] {
 		addMessage(aMessage);

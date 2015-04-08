@@ -57,17 +57,17 @@ Nanodc::Nanodc(int argc, char **argv):
 int Nanodc::run()
 {
 	while (m_argc > 0) {
-		Util::addParam(Text::fromT(*m_argv));
+		Util::addStartupParam(Text::fromT(*m_argv));
 		m_argc--;
 		m_argv++;
 	}
 
-	if (Util::hasParam("-h")) {
+	if (Util::hasStartupParam("-h")) {
 		printHelp();
 		return 0;
 	}
 
-	if (Util::hasParam("-v")) {
+	if (Util::hasStartupParam("-v")) {
 		printVersion();
 		return 0;
 	}

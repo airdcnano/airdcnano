@@ -67,8 +67,10 @@ private:
 	virtual void on(PrivateChatListener::PrivateMessage, const ChatMessage& aMessage) noexcept;
 	virtual void on(PrivateChatListener::Activate, const string& msg, Client* c) noexcept;
 	virtual void on(PrivateChatListener::UserUpdated) noexcept;
-	virtual void on(PrivateChatListener::PMStatus, uint8_t aType) noexcept;
-	//virtual void on(PrivateChatListener::CCPMStatusChanged, const string& aMessage) noexcept;
+	virtual void on(PrivateChatListener::CCPMStatusUpdated) noexcept {
+        onOnlineStateChanged();
+    }
+
 	virtual void on(PrivateChatListener::Close) noexcept;
 
 	void onOnlineStateChanged();

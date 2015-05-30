@@ -50,15 +50,17 @@ public:
 
 	std::string get_infobox_line(unsigned int n);
 
-	void force_share_bundle();
-	void rescan_bundle();
-	void search_bundle_alt();
-	void remove_bundle();
-	void remove_bundle_finished();
-	void set_priority();
-	void move_bundle();
-
 	void complete(const std::vector<std::string>& aArgs, int pos, std::vector<std::string>& suggest_, bool& appendSpace_);
+
+private:
+    void force_share_bundle();
+    void rescan_bundle();
+    void search_bundle_alt();
+    void remove_bundle();
+    void remove_bundle_finished();
+    void set_priority();
+    void move_bundle();
+    void recheck_integrity();
 
 	void on(QueueManagerListener::BundleMoved, const BundlePtr& aBundle) noexcept;
 	void on(QueueManagerListener::BundleMerged, const BundlePtr& aBundle, const string& oldTarget) noexcept;
@@ -70,7 +72,7 @@ public:
 
 	void on(DownloadManagerListener::BundleTick, const BundleList& tickBundles, uint64_t aTick) noexcept;
 	void on(DownloadManagerListener::BundleWaiting, const BundlePtr aBundle) noexcept;
-private:
+
 	enum Columns {
 		COLUMN_ID,
 		COLUMN_NAME,

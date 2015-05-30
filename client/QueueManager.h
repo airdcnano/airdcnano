@@ -209,7 +209,8 @@ public:
 	SharedMutex& getCS() { return cs; }
 	const Bundle::StringBundleMap& getBundles() const { return bundleQueue.getBundles(); }
 	const QueueItem::StringMap& getFileQueue() const { return fileQueue.getQueue(); }
-	void recheckFile(const string& aPath) noexcept;
+	void recheckFiles(QueueItemList aQL) noexcept;
+	void recheckBundle(const string& aBundleToken) noexcept;
 private:
 	friend class QueueLoader;
 	friend class Singleton<QueueManager>;
@@ -232,6 +233,9 @@ private:
 
 	/** File lists not to delete */
 	StringList protectedFileLists;
+
+	bool recheckFileImpl(const string& aPath, bool isBundleCheck, int64_t& failedBytes_) noexcept;
+	void handleFailedRecheckItems(const QueueItemList& ql) noexcept;
 
 	void connectBundleSources(BundlePtr& aBundle) noexcept;
 	bool allowStartQI(const QueueItemPtr& aQI, const StringSet& runningBundles, string& lastError_, bool mcn = false) noexcept;
@@ -291,8 +295,6 @@ private:
 	void pickMatch(QueueItemPtr qi) noexcept;
 	void matchBundle(QueueItemPtr& aQI, const SearchResultPtr& aResult) noexcept;
 
-	void moveStuckFile(QueueItemPtr& qi);
-	void rechecked(QueueItemPtr& qi);
 	void onFileHashed(const string& aPath, HashedFile& aFileInfo, bool failed) noexcept;
 	void hashBundle(BundlePtr& aBundle) noexcept;
 	bool scanBundle(BundlePtr& aBundle) noexcept;

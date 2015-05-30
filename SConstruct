@@ -312,9 +312,9 @@ if not 'install' in COMMAND_LINE_TARGETS:
 # Build
 # ----------------------------------------------------------------------	
 
-	num_cpu = multiprocessing.cpu_count()
-	SetOption('num_jobs', num_cpu)
-	print 'Using %d threads for compiling' % GetOption('num_jobs')
+	#num_cpu = multiprocessing.cpu_count()
+	#SetOption('num_jobs', num_cpu)
+	print 'Using %d threads for compiling (change with -j<number_of_threads>)' % GetOption('num_jobs')
 
 
 	build = env.Program('airdcnano', [

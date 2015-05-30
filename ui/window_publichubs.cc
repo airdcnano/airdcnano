@@ -31,6 +31,7 @@
 #include <ui/window_publichubs.h>
 #include <utils/utils.h>
 #include <client/StringTokenizer.h>
+#include <client/ShareManager.h>
 
 namespace ui {
 
@@ -100,8 +101,9 @@ void WindowHubs::favorite()
     if(FavoriteManager::getInstance()->getFavoriteHubEntry(address)) {
         set_prompt_timed("Hub already exists as a favorite");
     }  else {
-        FavoriteHubEntryPtr entry;
+        FavoriteHubEntryPtr entry = new FavoriteHubEntry() ;
         entry->setServerStr(address);
+        entry->setShareProfile(ShareManager::getInstance()->getShareProfile(SETTING(DEFAULT_SP)));
         FavoriteManager::getInstance()->addFavorite(entry);
         FavoriteManager::getInstance()->save();
     }

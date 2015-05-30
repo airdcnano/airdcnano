@@ -85,6 +85,7 @@ WindowQueue::WindowQueue() : ListView(display::TYPE_QUEUE, "queue") {
 	m_bindings['m'] = std::bind(&WindowQueue::move_bundle, this);
 	m_bindings['F'] = std::bind(&WindowQueue::force_share_bundle, this);
 	m_bindings['S'] = std::bind(&WindowQueue::rescan_bundle, this);
+    m_bindings['i'] = std::bind(&WindowQueue::recheck_integrity, this);
 
 	// add the existing bundles
 	{
@@ -195,6 +196,13 @@ void WindowQueue::rescan_bundle() {
 	if (b) {
 		QueueManager::getInstance()->shareBundle(b, false);
 	}
+}
+
+void WindowQueue::recheck_integrity() {
+    auto b = get_selected_bundle();
+    if (b) {
+        QueueManager::getInstance()->recheckBundle(b->getToken());
+    }
 }
 
 void WindowQueue::remove_bundle() {

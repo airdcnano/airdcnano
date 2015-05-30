@@ -206,6 +206,8 @@ void Bundle::getItems(const UserPtr& aUser, QueueItemList& ql) const noexcept {
 }
 
 bool Bundle::addFinishedItem(QueueItemPtr& qi, bool finished) noexcept {
+	dcassert(qi->isSet(QueueItem::FLAG_FINISHED) && qi->getFileFinished() > 0);
+
 	finishedFiles.push_back(qi);
 	if (!finished) {
 		qi->setFlag(QueueItem::FLAG_MOVED);
@@ -229,7 +231,7 @@ bool Bundle::removeFinishedItem(QueueItemPtr& qi) noexcept {
 		if (fqi == qi) {
 			//qi->setBundle(nullptr);
 			decreaseSize(qi->getSize());
-			removeFinishedSegment(qi->getSize());
+			removeFinishedSegment(qi->getDownloadedSegments());
 			swap(finishedFiles[pos], finishedFiles[finishedFiles.size()-1]);
 			finishedFiles.pop_back();
 
@@ -251,10 +253,14 @@ bool Bundle::addQueue(QueueItemPtr& qi) noexcept {
 		return addFinishedItem(qi, false);
 	}
 
+	dcassert(qi->getFileFinished() == 0);
+	dcassert(!qi->isSet(QueueItem::FLAG_FINISHED) && !qi->isSet(QueueItem::FLAG_MOVED));
 	dcassert(find(queueItems, qi) == queueItems.end());
+
 	qi->setBundle(this);
 	queueItems.push_back(qi);
 	increaseSize(qi->getSize());
+	addFinishedSegment(qi->getDownloadedSegments());
 
 	auto& bd = bundleDirs[qi->getFilePath()];
 	bd.first++;
@@ -266,7 +272,7 @@ bool Bundle::addQueue(QueueItemPtr& qi) noexcept {
 }
 
 bool Bundle::removeQueue(QueueItemPtr& qi, bool finished) noexcept {
-	if (!finished && qi->isFinished()) {
+	if (!finished && qi->isSet(QueueItem::FLAG_FINISHED)) {
 		return removeFinishedItem(qi);
 	}
 
@@ -590,7 +596,7 @@ multimap<QueueItemPtr, pair<int64_t, double>> Bundle::getQIBalanceMaps() noexcep
 					qiSources += 2;
 				}
 			}
-			speedSourceMap.insert(make_pair(q, make_pair(qiSpeed, qiSources)));
+			speedSourceMap.emplace(q, make_pair(qiSpeed, qiSources));
 		}
 	}
 	return speedSourceMap;
@@ -638,7 +644,7 @@ bool Bundle::allowAutoSearch() const noexcept {
 
 void Bundle::getSearchItems(map<string, QueueItemPtr>& searches, bool manual) const noexcept {
 	if (fileBundle || queueItems.size() == 1) {
-		searches.insert(make_pair(Util::emptyString, queueItems.front()));
+		searches.emplace(Util::emptyString, queueItems.front());
 		return;
 	}
 
@@ -678,7 +684,7 @@ void Bundle::getSearchItems(map<string, QueueItemPtr>& searches, bool manual) co
 		}
 
 		if (searchItem) {
-			searches.insert(make_pair(dir, searchItem));
+			searches.emplace(dir, searchItem);
 		}
 	}
 }

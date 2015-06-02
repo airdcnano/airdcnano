@@ -131,7 +131,7 @@ if not 'install' in COMMAND_LINE_TARGETS:
 			 print 'Compiler version check failed. Supported compilers: clang 3.3 or later, g++ 4.7 or later'
 			 Exit(1)
 
-	elif not conf.CheckCXXVersion(env['CXX'], 4, 7):
+	elif not conf.CheckCXXVersion(env['CXX'], 4, 8):
 		 print 'Compiler version check failed. Supported compilers: clang 3.3 or later, g++ 4.7 or later'
 		 Exit(1)
 

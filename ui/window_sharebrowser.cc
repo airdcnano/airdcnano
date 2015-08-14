@@ -181,7 +181,7 @@ void WindowShareBrowser::handle_line(const std::string &line) {
 
 		auto d = dl->findDirectory(m_path);
 		if (d)
-			insertItems(d, nullptr);
+			insertItems(d, boost::none);
 	}
 
 	setInsertMode(false);

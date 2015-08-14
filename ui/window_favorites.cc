@@ -183,7 +183,7 @@ void WindowFavorites::handle_line(const std::string &line)
     /* ask one question at a time */
     m_editState++;
 
-	optional<ProfileToken> token = nullptr;
+	optional<ProfileToken> token;
 	ShareProfilePtr profile = nullptr;
     switch(m_editState) {
         case EDIT_START:

@@ -47,6 +47,7 @@ static string getStatusString(const BundlePtr& aBundle) {
 	case Bundle::STATUS_NEW:
 	case Bundle::STATUS_QUEUED: return STRING(QUEUED);
 	case Bundle::STATUS_DOWNLOADED:
+	case Bundle::STATUS_RECHECK: return "Rechecking";
 	case Bundle::STATUS_MOVED: return "Downloaded";
 	case Bundle::STATUS_FAILED_MISSING:
 	case Bundle::STATUS_SHARING_FAILED: return "Failed";

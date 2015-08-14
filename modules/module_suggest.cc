@@ -58,7 +58,7 @@ namespace modules {
 
 		optional<string> next() noexcept {
 			if (m_items.size() == 0)
-				return nullptr;
+				return boost::none;
 
 			if (++m_currentItem > static_cast<int>(m_items.size() - 1) || m_currentItem == -1)
 				m_currentItem = 0;

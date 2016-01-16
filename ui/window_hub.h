@@ -93,11 +93,13 @@ private:
 	void onJoinedTimer();
 	void handleFav() noexcept;
 	void onChatMessage(const ChatMessage&) noexcept;
-	void onPrivateMessage(const ChatMessage&) noexcept;
 
 	void handleShowJoins();
 	void handleMsg();
 	void handleBrowse();
+    void handleInfo();
+
+    OnlineUserPtr getUserFromParam();
 
 	void print_help();
 	void handleNames();

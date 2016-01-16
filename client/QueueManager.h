@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -175,7 +175,7 @@ public:
 
 	void handleSlowDisconnect(const UserPtr& aUser, const string& aTarget, const BundlePtr& aBundle) noexcept;
 
-	void searchBundle(BundlePtr& aBundle, bool manual) noexcept;
+	void searchBundle(BundlePtr& aBundle, bool manual, uint64_t aTick = GET_TICK()) noexcept;
 
 	/* Info collecting */
 	int getBundleItemCount(const BundlePtr& aBundle) const noexcept;
@@ -202,7 +202,6 @@ public:
 	DispatcherQueue tasks;
 
 	void shareBundle(BundlePtr aBundle, bool skipScan) noexcept;
-	void runAltSearch() noexcept;
 
 	void setMatchers() noexcept;
 	void shutdown();
@@ -210,7 +209,8 @@ public:
 	SharedMutex& getCS() { return cs; }
 	const Bundle::StringBundleMap& getBundles() const { return bundleQueue.getBundles(); }
 	const QueueItem::StringMap& getFileQueue() const { return fileQueue.getQueue(); }
-	void recheckFile(const string& aPath) noexcept;
+	void recheckFiles(QueueItemList aQL) noexcept;
+	void recheckBundle(const string& aBundleToken) noexcept;
 private:
 	friend class QueueLoader;
 	friend class Singleton<QueueManager>;
@@ -233,6 +233,9 @@ private:
 
 	/** File lists not to delete */
 	StringList protectedFileLists;
+
+	bool recheckFileImpl(const string& aPath, bool isBundleCheck, int64_t& failedBytes_) noexcept;
+	void handleFailedRecheckItems(const QueueItemList& ql) noexcept;
 
 	void connectBundleSources(BundlePtr& aBundle) noexcept;
 	bool allowStartQI(const QueueItemPtr& aQI, const StringSet& runningBundles, string& lastError_, bool mcn = false) noexcept;
@@ -292,8 +295,6 @@ private:
 	void pickMatch(QueueItemPtr qi) noexcept;
 	void matchBundle(QueueItemPtr& aQI, const SearchResultPtr& aResult) noexcept;
 
-	void moveStuckFile(QueueItemPtr& qi);
-	void rechecked(QueueItemPtr& qi);
 	void onFileHashed(const string& aPath, HashedFile& aFileInfo, bool failed) noexcept;
 	void hashBundle(BundlePtr& aBundle) noexcept;
 	bool scanBundle(BundlePtr& aBundle) noexcept;
@@ -306,6 +307,8 @@ private:
 	void removeFileSource(QueueItemPtr& qi, const UserPtr& aUser, Flags::MaskType reason, bool removeConn = true) noexcept;
 
 	string getListPath(const HintedUser& user) const noexcept;
+
+	void fileFinished(const QueueItemPtr aQi, const HintedUser& aUser, const int64_t aSpeed, const string& aDir);
 
 	StringMatch highPrioFiles;
 	StringMatch skipList;

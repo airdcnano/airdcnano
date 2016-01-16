@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 AirDC++ Project
+ * Copyright (C) 2011-2015 AirDC++ Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -87,6 +87,7 @@ public:
 	enum Status {
 		STATUS_NEW, // not added in queue yet
 		STATUS_QUEUED,
+		STATUS_RECHECK,
 		STATUS_DOWNLOADED, // no queued files
 		STATUS_MOVED, // all files moved
 		STATUS_FAILED_MISSING,
@@ -130,7 +131,7 @@ public:
 	struct SortOrder {
 		bool operator()(const BundlePtr& left, const BundlePtr& right) const {
 			if (left->getPriority() == right->getPriority()) {
-				return left->getAdded() < right->getAdded();
+				return left->getTimeAdded() < right->getTimeAdded();
 			} else {
 				return left->getPriority() > right->getPriority();
 			}

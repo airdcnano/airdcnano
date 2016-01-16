@@ -1,6 +1,6 @@
 
 /* 
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -285,7 +285,7 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 					DirectoryListing::Directory::TYPE_NORMAL, listDate, (partialList && checkDupe), size, Util::toUInt32(date));
 				cur->directories.push_back(d);
 				if (updating && !incomp)
-					list->baseDirs[baseLower + Text::toLower(n) + '/'] = make_pair(d, true); //recursive partial lists
+					list->baseDirs[baseLower + Text::toLower(n) + '/'] = { d, true }; //recursive partial lists
 			} else {
 				if(!incomp) {
 					d->setComplete();
@@ -312,12 +312,12 @@ void ListLoader::startTag(const string& name, StringPairList& attribs, bool simp
 			const string& date = getAttrib(attribs, sBaseDate, 3);
 
 			StringList sl = StringTokenizer<string>(base.substr(1), '/').getTokens();
-			for(const auto& name: sl) {
-				auto s = find_if(cur->directories, [&name](const DirectoryListing::Directory::Ptr& dir) { return dir->getName() == name; });
+			for(const auto& curDirName: sl) {
+				auto s = find_if(cur->directories, [&curDirName](const DirectoryListing::Directory::Ptr& dir) { return dir->getName() == curDirName; });
 				if (s == cur->directories.end()) {
-					auto d = new DirectoryListing::Directory(cur, name, DirectoryListing::Directory::TYPE_INCOMPLETE_CHILD, listDate, true);
+					auto d = new DirectoryListing::Directory(cur, curDirName, DirectoryListing::Directory::TYPE_INCOMPLETE_CHILD, listDate, true);
 					cur->directories.push_back(d);
-					list->baseDirs[Text::toLower(Util::toAdcFile(d->getPath()))] = make_pair(d, false);
+					list->baseDirs[Text::toLower(Util::toAdcFile(d->getPath()))] = { d, false };
 					cur = d;
 				} else {
 					cur = (*s).get();
@@ -500,8 +500,8 @@ int64_t DirectoryListing::getDirSize(const string& aDir) const noexcept {
 	return 0;
 }
 
-void DirectoryListing::openFile(const File* aFile, bool isClientView) const throw(/*QueueException,*/ FileException) {
-	QueueManager::getInstance()->addOpenedItem(aFile->getName(), aFile->getSize(), aFile->getTTH(), hintedUser, isClientView);
+void DirectoryListing::openFile(const File* aFile, bool aIsClientView) const throw(/*QueueException,*/ FileException) {
+	QueueManager::getInstance()->addOpenedItem(aFile->getName(), aFile->getSize(), aFile->getTTH(), hintedUser, aIsClientView);
 }
 
 DirectoryListing::Directory::Ptr DirectoryListing::findDirectory(const string& aName, const Directory::Ptr& current) const noexcept {
@@ -854,7 +854,7 @@ int DirectoryListing::run() {
 		try {
 			if (t.first == CLOSE) {
 				fire(DirectoryListingListener::Close());
-				return 0;
+				break;
 			} else if (t.first == ASYNC && !closing) {
 				static_cast<AsyncTask*>(t.second)->f();
 			}
@@ -1138,6 +1138,9 @@ void DirectoryListing::changeDir(bool reload) noexcept {
 			}
 		} else {
 			try {
+				if (path.back() != PATH_SEPARATOR)
+					path = Util::getFilePath(path);
+
 				QueueManager::getInstance()->addList(hintedUser, QueueItem::FLAG_PARTIAL_LIST | QueueItem::FLAG_CLIENT_VIEW, path);
 			} catch (...) { }
 		}

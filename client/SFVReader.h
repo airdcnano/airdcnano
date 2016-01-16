@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ class DirSFVReader {
 public:
 	DirSFVReader();
 	DirSFVReader(const string& aPath);
-	DirSFVReader(const string& aPath, const StringList& aSfvFiles);
+	DirSFVReader(const string& aPath, const StringList& aSfvFiles, StringList& invalidSFV);
 
 	/**
 	 * Search for a CRC32 file in all .sfv files in the directory of fileName.
@@ -65,7 +65,7 @@ private:
 	/* File name + crc */
 	unordered_map<string, uint32_t> content;
 
-	void load() noexcept;
+	void load(StringList& invalidSFV) noexcept;
 };
 
 } // namespace dcpp

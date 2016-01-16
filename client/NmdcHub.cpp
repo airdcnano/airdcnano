@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@
 #include "ZUtils.h"
 #include "ThrottleManager.h"
 #include "UploadManager.h"
+#include "MessageManager.h"
 
 namespace dcpp {
 
@@ -530,51 +531,51 @@ void NmdcHub::onLine(const string& aLine) noexcept {
 		}
 		
 		string senderNick;
-		string port;
+		string senderPort;
 
 		i = param.find(' ', j+1);
 		if(i == string::npos) {
-			port = param.substr(j+1);
+			senderPort = param.substr(j+1);
 		} else {
 			senderNick = param.substr(i+1);
-			port = param.substr(j+1, i-j-1);
+			senderPort = param.substr(j+1, i-j-1);
 		}
 
-		bool secure = false;
-		if(port[port.size() - 1] == 'S') {
-			port.erase(port.size() - 1);
+		bool connectSecure = false;
+		if(senderPort[senderPort.size() - 1] == 'S') {
+			senderPort.erase(senderPort.size() - 1);
 			if(CryptoManager::getInstance()->TLSOk()) {
-				secure = true;
+				connectSecure = true;
 			}
 		}
 
-		if(port[port.size() - 1] == 'N') {
+		if(senderPort[senderPort.size() - 1] == 'N') {
 			if(senderNick.empty())
 				return;
 
-			port.erase(port.size() - 1);
+			senderPort.erase(senderPort.size() - 1);
 
 			// Trigger connection attempt sequence locally ...
-			ConnectionManager::getInstance()->nmdcConnect(server, port, Util::toString(sock->getLocalPort()), 
-				BufferedSocket::NAT_CLIENT, getMyNick(), getHubUrl(), get(HubSettings::NmdcEncoding), getStealth(), secure && !getStealth());
+			ConnectionManager::getInstance()->nmdcConnect(server, senderPort, Util::toString(sock->getLocalPort()),
+				BufferedSocket::NAT_CLIENT, getMyNick(), getHubUrl(), get(HubSettings::NmdcEncoding), getStealth(), connectSecure && !getStealth());
 
 			// ... and signal other client to do likewise.
-			send("$ConnectToMe " + senderNick + " " + localIp + ":" + Util::toString(sock->getLocalPort()) + (secure ? "RS" : "R") + "|");
+			send("$ConnectToMe " + senderNick + " " + localIp + ":" + Util::toString(sock->getLocalPort()) + (connectSecure ? "RS" : "R") + "|");
 			return;
-		} else if(port[port.size() - 1] == 'R') {
-			port.erase(port.size() - 1);
+		} else if(senderPort[senderPort.size() - 1] == 'R') {
+			senderPort.erase(senderPort.size() - 1);
 				
 			// Trigger connection attempt sequence locally
-			ConnectionManager::getInstance()->nmdcConnect(server, port, Util::toString(sock->getLocalPort()), 
-				BufferedSocket::NAT_SERVER, getMyNick(), getHubUrl(), get(HubSettings::NmdcEncoding), getStealth(), secure);
+			ConnectionManager::getInstance()->nmdcConnect(server, senderPort, Util::toString(sock->getLocalPort()),
+				BufferedSocket::NAT_SERVER, getMyNick(), getHubUrl(), get(HubSettings::NmdcEncoding), getStealth(), connectSecure);
 			return;
 		}
 		
-		if(port.empty())
+		if(senderPort.empty())
 			return;
 			
 		// For simplicity, we make the assumption that users on a hub have the same character encoding
-		ConnectionManager::getInstance()->nmdcConnect(server, port, getMyNick(), getHubUrl(), get(HubSettings::NmdcEncoding), getStealth(), secure);
+		ConnectionManager::getInstance()->nmdcConnect(server, senderPort, getMyNick(), getHubUrl(), get(HubSettings::NmdcEncoding), getStealth(), connectSecure);
 	} else if(cmd == "RevConnectToMe") {
 		if(state != STATE_NORMAL) {
 			return;
@@ -592,10 +593,10 @@ void NmdcHub::onLine(const string& aLine) noexcept {
 		if(isActive()) {
 			connectToMe(*u);
 		} else if(u->getIdentity().getStatus() & Identity::NAT) {
-			bool secure = CryptoManager::getInstance()->TLSOk() && u->getUser()->isSet(User::TLS) && !getStealth();
+			bool connectSecure = CryptoManager::getInstance()->TLSOk() && u->getUser()->isSet(User::TLS) && !getStealth();
 			// NMDC v2.205 supports "$ConnectToMe sender_nick remote_nick ip:port", but many NMDC hubsofts block it
 			// sender_nick at the end should work at least in most used hubsofts
-			send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + " " + localIp + ":" + Util::toString(sock->getLocalPort()) + (secure ? "NS " : "N ") + fromUtf8(getMyNick()) + "|");
+			send("$ConnectToMe " + fromUtf8(u->getIdentity().getNick()) + " " + localIp + ":" + Util::toString(sock->getLocalPort()) + (connectSecure ? "NS " : "N ") + fromUtf8(getMyNick()) + "|");
 		} else {
 			if(!u->getUser()->isSet(User::PASSIVE)) {
 				u->getUser()->setFlag(User::PASSIVE);
@@ -885,7 +886,7 @@ void NmdcHub::onLine(const string& aLine) noexcept {
 			message.text = message.text.substr(4);
 		}
 
-		fire(ClientListener::Message(), this, message);
+		MessageManager::getInstance()->onPrivateMessage(message);
 	} else if(cmd == "GetPass") {
 		OnlineUser& ou = getUser(getMyNick());
 		ou.getIdentity().set("RG", "1");
@@ -923,9 +924,9 @@ void NmdcHub::connectToMe(const OnlineUser& aUser) {
 	string nick = fromUtf8(aUser.getIdentity().getNick());
 	ConnectionManager::getInstance()->nmdcExpect(nick, getMyNick(), getHubUrl());
 	
-	bool secure = CryptoManager::getInstance()->TLSOk() && aUser.getUser()->isSet(User::TLS) && !getStealth();
-	string port = secure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
-	send("$ConnectToMe " + nick + " " + localIp + ":" + port + (secure ? "S" : "") + "|");
+	bool connectSecure = CryptoManager::getInstance()->TLSOk() && aUser.getUser()->isSet(User::TLS) && !getStealth();
+	string ownPort = connectSecure ? ConnectionManager::getInstance()->getSecurePort() : ConnectionManager::getInstance()->getPort();
+	send("$ConnectToMe " + nick + " " + localIp + ":" + ownPort + (connectSecure ? "S" : "") + "|");
 }
 
 void NmdcHub::revConnectToMe(const OnlineUser& aUser) {
@@ -1102,7 +1103,7 @@ bool NmdcHub::privateMessage(const OnlineUserPtr& aUser, const string& aMessage,
 	OnlineUserPtr ou = findUser(getMyNick());
 	if(ou) {
 		ChatMessage message = { aMessage, ou, aUser, ou };
-		fire(ClientListener::Message(), this, message);
+		MessageManager::getInstance()->onPrivateMessage(message);
 		return true;
 	}
 	error_ = STRING(USER_OFFLINE);

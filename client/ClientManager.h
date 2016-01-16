@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 #include "TimerManager.h"
 #include "ClientManagerListener.h"
 
+#include "ConnectionType.h"
 #include "CID.h"
 #include "Client.h"
 #include "CriticalSection.h"
@@ -59,6 +60,7 @@ public:
 	OrderedStringSet getHubSet(const CID& cid) const noexcept;
 	StringList getHubUrls(const CID& cid) const noexcept;
 	StringList getHubNames(const CID& cid) const noexcept;
+	string getHubName(const string& aHubUrl) const noexcept;
 	StringList getNicks(const CID& cid, bool allowCID = true) const noexcept;
 	pair<int64_t, int> getShareInfo(const HintedUser& user) const noexcept;
 	void getUserInfoList(const UserPtr& user, User::UserInfoList& aList_) const noexcept;
@@ -66,8 +68,6 @@ public:
 	StringList getNicks(const HintedUser& user) const noexcept { return getNicks(user.user->getCID()); }
 	StringList getHubNames(const HintedUser& user) const noexcept { return getHubNames(user.user->getCID()); }
 	StringList getHubUrls(const HintedUser& user) const noexcept { return getHubUrls(user.user->getCID()); }
-
-	StringPair getNickHubPair(const UserPtr& user, string& hint) const noexcept;
 
 	template<class NameOperator>
 	string formatUserList(const HintedUser& user, bool removeDuplicates) const noexcept {
@@ -99,7 +99,8 @@ public:
 	map<string, Identity> getIdentities(const UserPtr &u) const noexcept;
 	
 	string getNick(const UserPtr& u, const string& hintUrl, bool allowFallback = true) const noexcept;
-	StringPairList getNickHubPair(const CID& cid, string& hint) const noexcept;
+
+	bool getSupportsCCPM(const UserPtr& user, string& _error);
 
 	string getDLSpeed(const CID& cid) const noexcept;
 	uint8_t getSlots(const CID& cid) const noexcept;
@@ -120,6 +121,7 @@ public:
 
 	// usage needs to be locked!
 	const UserMap& getUsers() const { return users; }
+	OnlineUserPtr getUsers(const HintedUser& aUser, OnlineUserList& users) const noexcept;
 
 	string findHub(const string& ipPort, bool nmdc) const noexcept;
 	const string& findHubEncoding(const string& aUrl) const noexcept;
@@ -164,7 +166,7 @@ public:
 	
 	bool sendUDP(AdcCommand& c, const CID& to, bool noCID = false, bool noPassive = false, const string& encryptionKey = Util::emptyString, const string& aHubUrl = Util::emptyString) noexcept;
 
-	bool connect(const UserPtr& aUser, const string& aToken, bool allowUrlChange, string& lastError_, string& hubHint_, bool& isProtocolError) noexcept;
+	bool connect(const UserPtr& aUser, const string& aToken, bool allowUrlChange, string& lastError_, string& hubHint_, bool& isProtocolError, ConnectionType type = CONNECTION_TYPE_LAST) noexcept;
 	bool privateMessage(const HintedUser& user, const string& msg, string& error_, bool thirdPerson) noexcept;
 	void userCommand(const HintedUser& user, const UserCommand& uc, ParamMap& params, bool compatibility) noexcept;
 
@@ -222,8 +224,6 @@ private:
 	//Note; Lock usage
 	void updateUser(const OnlineUser& user, bool wentOffline) noexcept;
 
-	OnlineUserPtr getUsers(const HintedUser& aUser, OnlineUserList& users) const noexcept;
-		
 	/// @return OnlineUser* found by CID and hint; discard any user that doesn't match the hint.
 	OnlineUser* findOnlineUserHint(const CID& cid, const string& hintUrl) const noexcept {
 		OnlinePairC p;

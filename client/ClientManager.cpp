@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,7 +38,6 @@
 
 #include <openssl/aes.h>
 #include <openssl/rand.h>
-
 
 namespace dcpp {
 
@@ -159,6 +158,16 @@ StringPairList ClientManager::getHubs(const CID& cid) const noexcept {
 	return lst;
 }
 
+string ClientManager::getHubName(const string& aHubUrl) const noexcept{
+	RLock l(cs);
+	auto i = clients.find(const_cast<string*>(&aHubUrl));
+	if (i != clients.end()) {
+		return i->second->getHubName();
+	}
+
+	return Util::emptyString;
+}
+
 StringList ClientManager::getNicks(const CID& cid, bool allowCID/*true*/) const noexcept {
 	set<string> ret;
 
@@ -188,7 +197,7 @@ map<string, Identity> ClientManager::getIdentities(const UserPtr &u) const noexc
 	auto op = onlineUsers.equal_range(const_cast<CID*>(&u->getCID()));
 	auto ret = map<string, Identity>();
 	for(auto i = op.first; i != op.second; ++i) {
-		ret.insert(make_pair(i->second->getHubUrl(), i->second->getIdentity()));
+		ret.emplace(i->second->getHubUrl(), i->second->getIdentity());
 	}
 
 	return ret;
@@ -254,52 +263,13 @@ string ClientManager::getFormatedHubNames(const HintedUser& user) const noexcept
 	return ret.empty() ? STRING(OFFLINE) : ret;
 }
 
-//get nick,hubname combination same with formatUserList() but updates the hint and returns both infos with one lookup.
-StringPair ClientManager::getNickHubPair(const UserPtr& user, string& hint) const noexcept {
-	OnlineUserList ouList;
-
-	RLock l(cs);
-	auto hinted = getUsers(HintedUser(user, hint), ouList);
-	if(!ouList.empty() && !hinted) { //set the hint to match the first nick
-		auto i = ouList.begin();
-		hinted = *i;
-		ouList.erase(i);
-		hint = hinted->getHubUrl();
-	}
-
-	string hubs = hinted ? OnlineUser::HubName()(hinted) + " " : Util::emptyString;
-	if (!ouList.empty())
-		hubs += Util::listToStringT<OnlineUserList, OnlineUser::HubName>(ouList, hinted ? true : false, hinted ? false : true);
-
-	ouList.erase(unique(ouList.begin(), ouList.end(), [](const OnlineUserPtr& a, const OnlineUserPtr& b) { return compare(OnlineUser::Nick()(a), OnlineUser::Nick()(b)) == 0; }), ouList.end());
-	if (hinted) {
-		//erase users with the hinted nick
-		auto p = equal_range(ouList.begin(), ouList.end(), hinted, OnlineUser::NickSort());
-		ouList.erase(p.first, p.second);
-	}
-
-	string nick = hinted ? OnlineUser::Nick()(hinted) + " " : Util::emptyString;
-	if (!ouList.empty())
-		nick += Util::listToStringT<OnlineUserList, OnlineUser::Nick>(ouList, hinted ? true : false, hinted ? false : true);
-		
-	if (nick.empty()) {
-		//offline
-		auto i = offlineUsers.find(const_cast<CID*>(&user->getCID()));
-		if(i != offlineUsers.end()) {
-			nick = i->second.getNick();
-		}
-	}
-
-	return { nick, hubs };
-}
-
 optional<OfflineUser> ClientManager::getOfflineUser(const CID& cid) {
 	RLock l(cs);
 	auto i = offlineUsers.find(const_cast<CID*>(&cid));
 	if (i != offlineUsers.end()) {
 		return i->second;
 	}
-	return nullptr;
+	return boost::none;
 }
 
 string ClientManager::getField(const CID& cid, const string& hint, const char* field) const noexcept {
@@ -352,13 +322,7 @@ bool ClientManager::hasClient(const string& aUrl) const noexcept{
 string ClientManager::findHub(const string& ipPort, bool nmdc) const noexcept {
 	string ip;
 	string port = "411";
-	string::size_type i = ipPort.rfind(':');
-	if(i == string::npos) {
-		ip = ipPort;
-	} else {
-		ip = ipPort.substr(0, i);
-		port = ipPort.substr(i+1);
-	}
+	Util::parseIpPort(ipPort, ip, port);
 
 	string url;
 
@@ -580,7 +544,7 @@ optional<ProfileToken> ClientManager::findProfile(UserConnection& p, const strin
 		}
 
 		//don't accept invalid SIDs
-		return nullptr;
+		return optional<ProfileToken>();
 	}
 
 	//no SID specified, find with hint.
@@ -595,7 +559,7 @@ optional<ProfileToken> ClientManager::findProfile(UserConnection& p, const strin
 		return op.first->second->getClient().getShareProfile();
 	}
 
-	return nullptr;
+	return boost::none;
 }
 
 bool ClientManager::isActive() const noexcept {
@@ -655,7 +619,7 @@ pair<int64_t, int> ClientManager::getShareInfo(const HintedUser& user) const noe
 	RLock l (cs);
 	auto ou = findOnlineUser(user);
 	if (ou) {
-		return make_pair(Util::toInt64(ou->getIdentity().getShareSize()), Util::toInt(ou->getIdentity().getSharedFiles()));
+		return { Util::toInt64(ou->getIdentity().getShareSize()), Util::toInt(ou->getIdentity().getSharedFiles()) };
 	}
 
 	return { 0, 0 };
@@ -670,6 +634,31 @@ void ClientManager::getUserInfoList(const UserPtr& user, User::UserInfoList& aLi
 		aList_.emplace_back(ou->getHubUrl(), ou->getClient().getHubName(), Util::toInt64(ou->getIdentity().getShareSize()));
 	}
 }
+
+bool ClientManager::getSupportsCCPM(const UserPtr& aUser, string& _error) {
+	if (!aUser->isOnline()) {
+		_error = STRING(USER_OFFLINE);
+		return false;
+	}
+	else if (aUser->isNMDC()) {
+		_error = STRING(CCPM_NOT_SUPPORTED_NMDC);
+		return false;
+	}
+	else if (aUser->isSet(User::BOT)) {
+		_error = STRING(CCPM_NOT_SUPPORTED);
+		return false;
+	}
+
+
+	RLock l(cs);
+	OnlinePair op = onlineUsers.equal_range(const_cast<CID*>(&aUser->getCID()));
+	for (auto u : op | map_values) {
+		if (u->supportsCCPM(_error))
+			return true;
+	}
+	return false;
+}
+
 
 OnlineUser* ClientManager::findOnlineUser(const HintedUser& user) const noexcept {
 	return findOnlineUser(user.user->getCID(), user.hint);
@@ -688,12 +677,19 @@ OnlineUser* ClientManager::findOnlineUser(const CID& cid, const string& hintUrl)
 	return p.first->second;
 }
 
-bool ClientManager::connect(const UserPtr& aUser, const string& aToken, bool allowUrlChange, string& lastError_, string& hubHint_, bool& isProtocolError) noexcept {
+bool ClientManager::connect(const UserPtr& aUser, const string& aToken, bool allowUrlChange, string& lastError_, string& hubHint_, bool& isProtocolError, ConnectionType aConnType) noexcept {
 	RLock l(cs);
 	OnlinePairC op = onlineUsers.equal_range(const_cast<CID*>(&aUser->getCID()));
 
 	auto connectUser = [&] (OnlineUser* ou) -> bool {
 		isProtocolError = false;
+		if (aConnType == CONNECTION_TYPE_PM) {
+			if (!ou->supportsCCPM(lastError_)) {
+				isProtocolError = true;
+				return false;
+			}
+		}
+
 		auto ret = ou->getClientBase().connect(*ou, aToken, lastError_);
 		if (ret == AdcCommand::SUCCESS) {
 			return true;
@@ -731,8 +727,8 @@ bool ClientManager::connect(const UserPtr& aUser, const string& aToken, bool all
 
 	//connect via any available hub
 	for(auto i = op.first; i != op.second; ++i) {
-		if (connectUser(p->second)) {
-			hubHint_ = p->second->getHubUrl();
+		if (connectUser(i->second)) {
+			hubHint_ = i->second->getHubUrl();
 			return true;
 		}
 	}
@@ -899,9 +895,9 @@ void ClientManager::on(NmdcSearch, Client* aClient, const string& aSeeker, int a
 			
 		} else {
 			try {
-				string ip, file, proto, query, fragment, port;
+				string ip, port;
 
-				Util::decodeUrl(aSeeker, proto, ip, port, file, query, fragment);
+				Util::parseIpPort(aSeeker, ip, port);
 				ip = Socket::resolve(ip);
 				
 				if(port.empty()) 
@@ -926,8 +922,11 @@ void ClientManager::on(NmdcSearch, Client* aClient, const string& aSeeker, int a
 			return;
 		}
 		
-		string ip, file, proto, query, fragment, port;
-		Util::decodeUrl(aSeeker, proto, ip, port, file, query, fragment);
+		string ip, port;
+		Util::parseIpPort(aSeeker, ip, port);
+
+		if (port.empty())
+			return;
 		
 		try {
 			AdcCommand cmd = SearchManager::getInstance()->toPSR(true, aClient->getMyNick(), aClient->getIpPort(), aTTH.toBase32(), partialInfo);
@@ -946,9 +945,9 @@ void ClientManager::onSearch(const Client* c, const AdcCommand& adc, OnlineUser&
 	bool isUdpActive = from.getIdentity().isUdpActive();
 	if (isUdpActive) {
 		//check that we have a common IP protocol available (we don't want to send responses via wrong hubs)
-		const auto& me = c->getMyIdentity();
-		if (me.getIp4().empty() || !from.getIdentity().isUdp4Active()) {
-			if (me.getIp6().empty() || !from.getIdentity().isUdp6Active()) {
+		const auto& myIdentity = c->getMyIdentity();
+		if (myIdentity.getIp4().empty() || !from.getIdentity().isUdp4Active()) {
+			if (myIdentity.getIp6().empty() || !from.getIdentity().isUdp6Active()) {
 				return;
 			}
 		}
@@ -1015,7 +1014,7 @@ string ClientManager::getClientStats() const noexcept {
 	RLock l(cs);
 	map<CID, OnlineUser*> uniqueUserMap;
 	for(const auto& ou: onlineUsers | map_values) {
-		uniqueUserMap.insert(make_pair(ou->getUser()->getCID(), ou));
+		uniqueUserMap.emplace(ou->getUser()->getCID(), ou);
 	}
 
 	int allUsers = onlineUsers.size();
@@ -1230,9 +1229,9 @@ bool ClientManager::connectADCSearchResult(const CID& aCID, string& token_, stri
 	if(slash == string::npos) { return false; }
 
 	auto uniqueId = Util::toUInt32(token_.substr(0, slash));
-	auto i = find_if(clients | map_values, [uniqueId](const Client* client) { return client->getUniqueId() == uniqueId; });
-	if(i.base() == clients.end()) { return false; }
-	hubUrl_ = (*i)->getHubUrl();
+	auto client = find_if(clients | map_values, [uniqueId](const Client* client) { return client->getUniqueId() == uniqueId; });
+	if(client.base() == clients.end()) { return false; }
+	hubUrl_ = (*client)->getHubUrl();
 
 	token_.erase(0, slash + 1);
 

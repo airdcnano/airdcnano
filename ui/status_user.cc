@@ -44,7 +44,7 @@ void StatusUser::update()
 			m_text = static_cast<ui::WindowHub*>(window)->get_nick();
             break;
         case display::TYPE_PRIVMSG:
-            m_text = static_cast<ui::WindowPrivateMessage*>(window)->get_nick();
+            m_text = static_cast<ui::WindowPrivateMessage*>(window)->get_my_nick();
             break;
         default:
 			m_text = SETTING(NICK);

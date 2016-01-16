@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -200,7 +200,7 @@ void Client::connect() {
 	try {
 		sock = BufferedSocket::getSocket(separator, v4only());
 		sock->addListener(this);
-		sock->connect(address, port, secure, SETTING(ALLOW_UNTRUSTED_HUBS), true);
+		sock->connect(address, port, secure, SETTING(ALLOW_UNTRUSTED_HUBS), true, keyprint);
 	} catch(const Exception& e) {
 		state = STATE_DISCONNECTED;
 		fire(ClientListener::Failed(), hubUrl, e.getError());
@@ -226,20 +226,6 @@ void Client::on(Connected) noexcept {
 	updateActivity(); 
 	ip = sock->getIp();
 	localIp = sock->getLocalIp();
-
-	if(sock->isSecure() && keyprint.compare(0, 7, "SHA256/") == 0) {
-		auto kp = sock->getKeyprint();
-		if(!kp.empty()) {
-			vector<uint8_t> kp2v(kp.size());
-			Encoder::fromBase32(keyprint.c_str() + 7, &kp2v[0], kp2v.size());
-			if(!std::equal(kp.begin(), kp.end(), kp2v.begin())) {
-				state = STATE_DISCONNECTED;
-				sock->removeListener(this);
-				fire(ClientListener::Failed(), hubUrl, "Keyprint mismatch");
-				return;
-			}
-		}
-	}
 	
 	fire(ClientListener::Connected(), this);
 	state = STATE_PROTOCOL;
@@ -351,21 +337,42 @@ void Client::on(Line, const string& aLine) noexcept {
 	COMMAND_DEBUG(aLine, DebugManager::TYPE_HUB, DebugManager::INCOMING, getIpPort());
 }
 
-void Client::on(Second, uint64_t aTick) noexcept {
-	if(state == STATE_DISCONNECTED && getAutoReconnect() && (aTick > (getLastActivity() + getReconnDelay() * 1000)) ) {
+void Client::on(Second, uint64_t aTick) noexcept{
+	if (state == STATE_DISCONNECTED && getAutoReconnect() && (aTick > (getLastActivity() + getReconnDelay() * 1000))) {
 		// Try to reconnect...
 		connect();
 	}
 
-	if(searchQueue.hasWaitingTime(aTick)) return;
+	if (searchQueue.hasWaitingTime(aTick)) return;
 
-	if(isConnected()){
+	if (isConnected()){
 		auto s = move(searchQueue.pop());
-		if(s){
+		if (s){
 			search(move(s));
 		}
 	}
-
 }
 
-} // namespace dcpp
+void Client::logStatusMessage(const string& aMessage) {
+	if (SETTING(LOG_STATUS_MESSAGES)) {
+		ParamMap params;
+		getHubIdentity().getParams(params, "hub", false);
+		params["hubURL"] = getHubUrl();
+		getMyIdentity().getParams(params, "my", true);
+		params["message"] = aMessage;
+		LOG(LogManager::STATUS, params);
+	}
+}
+
+void Client::logChatMessage(const string& aMessage) {
+	if (get(HubSettings::LogMainChat)) {
+		ParamMap params;
+		params["message"] = aMessage;
+		getHubIdentity().getParams(params, "hub", false);
+		params["hubURL"] = getHubUrl();
+		getMyIdentity().getParams(params, "my", true);
+		LOG(LogManager::CHAT, params);
+	}
+}
+
+}

@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,6 +62,48 @@ FavoriteManager::~FavoriteManager() {
 }
 
 UserCommand FavoriteManager::addUserCommand(int type, int ctx, Flags::MaskType flags, const string& name, const string& command, const string& to, const string& hub) {
+	
+	// The following management is to protect users against malicious hubs or clients.
+	// Hubs (or clients) can send an arbitrary amount of user commands, which means that there is a possibility that
+	// the client will need to manage thousands and thousands of user commands.
+	// This can naturally cause problems with memory etc, so the client may even crash at some point.
+	// The following management tries to remedy this problem by doing two things;
+	// a) Replaces previous user commands (if they have the same name etc)
+	// b) Restricts the amount of user commands that pertain to a particlar hub
+	// Note that this management only cares about externally created user commands, 
+	// which means that the user themselves can create however large user commands.
+	if (flags == UserCommand::FLAG_NOSAVE)
+	{
+		const int maximumUCs = 5000; // Completely arbitrary
+		int externalCommands = 0; // Used to count the number of external commands
+		RLock l(cs);
+		for (auto& uc : userCommands) {
+			if ((uc.isSet(UserCommand::FLAG_NOSAVE)) &&	// Only care about external commands...
+				(uc.getHub() == hub))	// ... and those pertaining to this particular hub.
+			{
+				++externalCommands;
+
+				// If the UC is generally identical otherwise, change the command
+				if ((uc.getName() == name) &&
+					(uc.getCtx() == ctx) &&
+					(uc.getType() == type) &&
+					(uc.isSet(flags)) &&
+					(uc.getTo() == to))
+				{
+					uc.setCommand(command);
+					return uc;
+				}
+			}
+
+		}
+
+		// Validate if there's too many user commands
+		if (maximumUCs <= externalCommands)
+		{
+			return userCommands.back();
+		}
+	}
+	
 	// No dupes, add it...
 	auto cmd = UserCommand(lastId++, type, ctx, flags, name, command, to, hub);
 
@@ -144,13 +186,10 @@ void FavoriteManager::removeUserCommand(int cid) {
 }
 void FavoriteManager::removeUserCommand(const string& srv) {
 	WLock l(cs);
-	for(auto i = userCommands.begin(); i != userCommands.end(); ) {
-		if((i->getHub() == srv) && i->isSet(UserCommand::FLAG_NOSAVE)) {
-			i = userCommands.erase(i);
-		} else {
-			++i;
-		}
-	}
+	userCommands.erase(std::remove_if(userCommands.begin(), userCommands.end(), [&](const UserCommand& uc) {
+		return uc.getHub() == srv && uc.isSet(UserCommand::FLAG_NOSAVE);
+	}), userCommands.end());
+
 }
 
 void FavoriteManager::removeHubUserCommands(int ctx, const string& hub) {
@@ -362,8 +401,8 @@ class XmlListLoader : public SimpleXMLReader::CallBack {
 public:
 	XmlListLoader(HubEntryList& lst) : publicHubs(lst) { }
 	~XmlListLoader() { }
-	void startTag(const string& name, StringPairList& attribs, bool) {
-		if(name == "Hub") {
+	void startTag(const string& aName, StringPairList& attribs, bool) {
+		if(aName == "Hub") {
 			const string& name = getAttrib(attribs, "Name", 0);
 			const string& server = getAttrib(attribs, "Address", 1);
 			const string& description = getAttrib(attribs, "Description", 2);
@@ -953,7 +992,7 @@ optional<string> FavoriteManager::getFailOverUrl(ProfileToken aToken, const stri
 	//removeUserCommand(hubAddress_);
 
 	if (aToken == 0)
-		return nullptr;
+		return boost::none;
 
 	RLock l (cs);
 	auto p = getFavoriteHub(aToken);
@@ -978,7 +1017,7 @@ optional<string> FavoriteManager::getFailOverUrl(ProfileToken aToken, const stri
 		}
 	}
 
-	return nullptr;
+	return boost::none;
 }
 
 bool FavoriteManager::blockFailOverUrl(ProfileToken aToken, string& hubAddress_) {

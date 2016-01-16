@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@
 #include "DirectoryListingManager.h"
 #include "UpdateManager.h"
 #include "ThrottleManager.h"
-#include "IgnoreManager.h"
+#include "MessageManager.h"
 #include "HighlightManager.h"
 
 #include "StringTokenizer.h"
@@ -85,6 +85,7 @@ void startup(function<void(const string&)> stepF, function<bool(const string& /*
 	SearchManager::newInstance();
 	ClientManager::newInstance();
 	ConnectionManager::newInstance();
+	MessageManager::newInstance();
 	DownloadManager::newInstance();
 	UploadManager::newInstance();
 	ThrottleManager::newInstance();
@@ -101,7 +102,6 @@ void startup(function<void(const string&)> stepF, function<bool(const string& /*
 	GeoManager::newInstance();
 	DirectoryListingManager::newInstance();
 	UpdateManager::newInstance();
-	IgnoreManager::newInstance();
 	HighlightManager::newInstance();
 
 	SettingsManager::getInstance()->load(messageF);
@@ -183,7 +183,6 @@ void shutdown(function<void (const string&)> stepF, function<void (float)> progr
 	announce(STRING(SHUTTING_DOWN));
 
 	HighlightManager::deleteInstance();
-	IgnoreManager::deleteInstance();
 	UpdateManager::deleteInstance();
 	GeoManager::deleteInstance();
 	ConnectivityManager::deleteInstance();
@@ -200,6 +199,7 @@ void shutdown(function<void (const string&)> stepF, function<void (float)> progr
 	DownloadManager::deleteInstance();
 	UploadManager::deleteInstance();
 	ShareScannerManager::deleteInstance();
+	MessageManager::deleteInstance();
 	ConnectionManager::deleteInstance();
 	SearchManager::deleteInstance();
 	FavoriteManager::deleteInstance();

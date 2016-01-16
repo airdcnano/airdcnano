@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 AirDC++ Project
+ * Copyright (C) 2011-2015 AirDC++ Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@ public:
 
 	GETSET(Priority, priority, Priority);
 	GETSET(bool, autoPriority, AutoPriority);
-	GETSET(time_t, added, Added);
+	GETSET(time_t, timeAdded, TimeAdded);
 	IGETSET(time_t, fileFinished, FileFinished, 0);
 	GETSET(string, target, Target);
 	GETSET(DownloadList, downloads, Downloads);

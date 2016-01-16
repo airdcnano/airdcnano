@@ -30,7 +30,7 @@ using namespace dcpp;
 
 namespace input {
 
-	bool Comparator::operator()(const string& p) {
+	bool Comparator::operator()(const string& p) const {
 		return dcpp::Util::strnicmp(p.c_str(), a.c_str(), a.length()) == 0;
 	}
 
@@ -48,7 +48,7 @@ namespace input {
 	}
 
 	PrefixComparator::PrefixComparator(const string& compareTo) : input::Comparator(stripNick(compareTo)) {}
-	bool PrefixComparator::operator()(const string& p) {
+	bool PrefixComparator::operator()(const string& p) const {
 		return dcpp::Util::strnicmp(stripNick(p).c_str(), a.c_str(), a.length()) == 0;
 	}
 

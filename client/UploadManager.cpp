@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -222,7 +222,8 @@ checkslots:
 			} else if(partialFree) {
 				slotType = UserConnection::PARTIALSLOT;
 			} else {
-				if (aSource.isSet(UserConnection::FLAG_MCN1) && isUploading(aSource.getUser())) {
+				bool isUploadingLocked = [&] { RLock l(cs); return isUploading(aSource.getUser()); }();
+				if (aSource.isSet(UserConnection::FLAG_MCN1) && isUploadingLocked) {
 					//don't queue MCN requests for existing uploaders
 					aSource.maxedOut();
 				} else {
@@ -601,7 +602,7 @@ void UploadManager::createBundle(const AdcCommand& cmd) {
 	if (bundleToken.empty() || name.empty() || size <= 0 || token.empty()) {
 		//LogManager::getInstance()->message("INVALID UBD1", LogManager::LOG_ERROR);
 		return;
-	} else if (!ConnectionManager::getInstance()->tokens.addToken(bundleToken)) {
+	} else if (!ConnectionManager::getInstance()->tokens.addToken(bundleToken, CONNECTION_TYPE_DOWNLOAD)) {
 		return;
 	}
 
@@ -826,7 +827,7 @@ bool UploadManager::getAutoSlot() {
 	if(AirUtil::getSpeedLimit(false) == 0)
 		return false;
 	/** Max slots */
-	if(getSlots() + AirUtil::getMaxAutoOpened() < running)
+	if(getSlots() + AirUtil::getMaxAutoOpened() <= running)
 		return false;		
 	/** Only grant one slot per 30 sec */
 	if(GET_TICK() < getLastGrant() + 30*1000)
@@ -1149,7 +1150,7 @@ void UploadManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcept {
 		
 	for(auto& u: disconnects) {
 		LogManager::getInstance()->message(STRING(DISCONNECTED_USER) + " " + Util::listToString(ClientManager::getInstance()->getNicks(u->getCID())), LogManager::LOG_INFO);
-		ConnectionManager::getInstance()->disconnect(u, false);
+		ConnectionManager::getInstance()->disconnect(u, CONNECTION_TYPE_UPLOAD);
 	}
 
 	int freeSlots = getFreeSlots();

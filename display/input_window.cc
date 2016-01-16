@@ -26,6 +26,8 @@
 #include <utils/utils.h>
 #include <core/log.h>
 
+#include <glib.h>
+
 namespace display {
 
 InputWindow::InputWindow():
@@ -39,9 +41,30 @@ InputWindow::InputWindow():
 void InputWindow::redraw() {
     int len = m_prompt.length()+1;
     auto line = m_prompt + " ";
+    auto width = get_width();
     if(m_input) {
-        len += m_input->get_pos();
-        line += m_input->str();
+        auto pos = m_input->get_pos();
+        if (scroll_position > pos) {
+            scroll_position = std::min(scroll_position < 5 ? 0 : scroll_position-5, pos);
+        } else if ((pos-scroll_position) + len > width-5) {
+            scroll_position += 5;
+        }
+
+        const gchar *message_start = (gchar *) m_input->str().data();
+        if (scroll_position > 0) {
+            const auto start = g_utf8_offset_to_pointer(message_start, scroll_position);
+            auto realPos = start-message_start;
+            line += m_input->str().substr(realPos, m_input->str().length() - realPos);
+        } else {
+            line += m_input->str();
+        }
+
+        if (line.length() > width) {
+            line.substr(0, width);
+        }
+
+
+        len += m_input->get_pos()-scroll_position;
     }
 
     erase();

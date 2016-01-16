@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -226,7 +226,7 @@ public:
 	Segment checkOverlaps(int64_t blockSize, int64_t lastSpeed, const PartialSource::Ptr partialSource, bool allowOverlap) const;
 	
 	void addFinishedSegment(const Segment& segment);
-	void resetDownloaded() { done.clear(); }
+	void resetDownloaded();
 	
 	bool isFinished() const;
 
@@ -250,6 +250,7 @@ public:
 	IGETSET(uint64_t, nextPublishingTime, NextPublishingTime, 0);
 	IGETSET(uint8_t, maxSegments, MaxSegments, 1);
 	IGETSET(BundlePtr, bundle, Bundle, nullptr);
+	IGETSET(string, lastSource, LastSource, Util::emptyString);
 	
 	Priority calculateAutoPriority() const;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@ pair<QueueItemPtr, bool> FileQueue::add(const string& aTarget, int64_t aSize, Fl
 
 	QueueItemPtr qi = new QueueItem(aTarget, aSize, p, aFlags, aAdded, root, aTempTarget);
 	auto ret = add(qi);
-	return make_pair((ret.second ? qi : ret.first->second), ret.second);
+	return { (ret.second ? qi : ret.first->second), ret.second };
 }
 
 pair<QueueItem::StringMap::const_iterator, bool> FileQueue::add(QueueItemPtr& qi) noexcept {
@@ -147,7 +147,7 @@ void FileQueue::findPFSSources(PFSSourceList& sl) noexcept {
 			if(	(*j).isSet(QueueItem::Source::FLAG_PARTIAL) && (*j).getPartialSource()->getNextQueryTime() <= now &&
 				(*j).getPartialSource()->getPendingQueryCount() < 10 && !(*j).getPartialSource()->getUdpPort().empty())
 			{
-				buffer.insert(make_pair((*j).getPartialSource()->getNextQueryTime(), make_pair(j, q)));
+				buffer.emplace((*j).getPartialSource()->getNextQueryTime(), make_pair(j, q));
 			}
 		}
 
@@ -156,7 +156,7 @@ void FileQueue::findPFSSources(PFSSourceList& sl) noexcept {
 				(*j).getPartialSource()->getNextQueryTime() <= now && (*j).getPartialSource()->getPendingQueryCount() < 10 &&
 				!(*j).getPartialSource()->getUdpPort().empty())
 			{
-				buffer.insert(make_pair((*j).getPartialSource()->getNextQueryTime(), make_pair(j, q)));
+				buffer.emplace((*j).getPartialSource()->getNextQueryTime(), make_pair(j, q));
 			}
 		}
 	}

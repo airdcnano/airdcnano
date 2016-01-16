@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -217,7 +217,7 @@ void HashManager::getFileTTH(const string& aFile, int64_t aSize, bool addStore, 
 		tth_ = tt.getRoot();
 
 		if (addStore && !aCancel) {
-			auto fi = HashedFile(tth_, timestamp, aSize);
+			fi = HashedFile(tth_, timestamp, aSize);
 			store.addHashedFile(pathLower, tt, fi);
 		}
 	} else {
@@ -608,7 +608,6 @@ void HashManager::HashStore::optimize(bool doVerify) noexcept {
 		missingTrees = usedRoots.size() - failedTrees;
 		if (usedRoots.size() > 0) {
 			try {
-				HashedFile fi;
 				fileDb->remove_if([&](void* /*aKey*/, size_t /*key_len*/, void* aValue, size_t valueLen) {
 					loadFileInfo(aValue, valueLen, fi);
 					if (usedRoots.find(fi.getRoot()) != usedRoots.end()) {
@@ -1119,6 +1118,7 @@ int HashManager::Hasher::run() {
 			break;
 		}
 		
+		int64_t originalSize = 0;
 		bool failed = true;
 		bool dirChanged = false;
 		string curDevID, pathLower;
@@ -1130,6 +1130,7 @@ int HashManager::Hasher::run() {
 				currentFile = fname = move(wi.filePath);
 				curDevID = move(wi.devID);
 				pathLower = move(wi.filePathLower);
+				originalSize = wi.fileSize;
 				dcassert(!curDevID.empty());
 				w.pop_front();
 			} else {
@@ -1140,6 +1141,7 @@ int HashManager::Hasher::run() {
 
 		HashedFile fi;
 		if(!fname.empty()) {
+			int64_t sizeLeft = originalSize;
 			try {
 				if (initialDir.empty()) {
 					initialDir = Util::getFilePath(fname);
@@ -1149,10 +1151,14 @@ int HashManager::Hasher::run() {
 					sfv.loadPath(Util::getFilePath(fname));
 				uint64_t start = GET_TICK();
 				File f(fname, File::READ, File::OPEN);
+
+				// size changed since adding?
 				int64_t size = f.getSize();
+				sizeLeft = size;
+				totalBytesLeft += size - originalSize;
+
 				int64_t bs = max(TigerTree::calcBlockSize(size, 10), MIN_BLOCK_SIZE);
 				uint64_t timestamp = f.getLastModified();
-				int64_t sizeLeft = size;
 				TigerTree tt(bs);
 
 				CRC32Filter crc32;
@@ -1163,8 +1169,8 @@ int HashManager::Hasher::run() {
  
                 FileReader fr(true);
 				fr.read(fname, [&](const void* buf, size_t n) -> bool {
-					uint64_t now = GET_TICK();
 					if(SETTING(MAX_HASH_SPEED)> 0) {
+						uint64_t now = GET_TICK();
 						uint64_t minTime = n * 1000LL / Util::convertSize(SETTING(MAX_HASH_SPEED), Util::MB);
  
 						if(lastRead + minTime > now) {
@@ -1180,11 +1186,12 @@ int HashManager::Hasher::run() {
 						crc32(buf, n);
 
 					sizeLeft -= n;
+					uint64_t end = GET_TICK();
 
 					if(totalBytesLeft > 0)
 						totalBytesLeft -= n;
-					if(now > start)
-						lastSpeed = (size - sizeLeft)*1000 / (now -start);
+					if(end > start)
+						lastSpeed = (size - sizeLeft)*1000 / (end -start);
 
 					return !closing;
 				});
@@ -1220,6 +1227,7 @@ int HashManager::Hasher::run() {
 					//tth = tt.getRoot();
 				}
 			} catch(const FileException& e) {
+				totalBytesLeft -= sizeLeft;
 				getInstance()->log(STRING(ERROR_HASHING) + " " + fname + ": " + e.getError(), hasherID, true, true);
 				getInstance()->fire(HashManagerListener::HashFailed(), fname, fi);
 				failed = true;

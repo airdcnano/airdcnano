@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -332,6 +332,23 @@ string OnlineUser::getLogPath() {
 
 	return LogManager::getInstance()->getPath(getUser(), params);
 }
+
+bool OnlineUser::supportsCCPM(string& _error) const {
+	if (getUser()->isNMDC()) {
+		_error = STRING(CCPM_NOT_SUPPORTED_NMDC);
+		return false;
+	}
+	else if (!getIdentity().supports(AdcHub::CCPM_FEATURE)) {
+		_error = STRING(CCPM_NOT_SUPPORTED);
+		return false;
+	}
+	else if (!getClient().isSecure()) {
+		_error = STRING(CCPM_NOT_SUPPORTED_SECURE);
+		return false;
+	}
+	return true;
+}
+
 
 uint8_t UserInfoBase::getImage(const Identity& identity, const Client* c) {
 

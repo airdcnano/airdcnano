@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -107,7 +107,7 @@ void ShareManager::startup(function<void(const string&)> splashF, function<void(
 		}
 	}
 
-	ShareProfilePtr hidden = ShareProfilePtr(new ShareProfile("Hidden", SP_HIDDEN));
+	ShareProfilePtr hidden = ShareProfilePtr(new ShareProfile(STRING(SHARE_HIDDEN), SP_HIDDEN));
 	shareProfiles.push_back(hidden);
 
 	setSkipList();
@@ -181,20 +181,20 @@ optional<pair<string, bool>> ShareManager::checkModifiedPath(const string& aPath
 	FileFindIter f(aPath);
 	if (f != FileFindIter()) {
 		if (!SETTING(SHARE_HIDDEN) && f->isHidden())
-			return nullptr;
+			return boost::none;
 
 		if (!SETTING(SHARE_FOLLOW_SYMLINKS) && f->isLink())
-			return nullptr;
+			return boost::none;
 
 		bool isDir = f->isDirectory();
 		auto path = isDir ? aPath + PATH_SEPARATOR : aPath;
 		if (!checkSharedName(path, Text::toLower(path), isDir, true, f->getSize()))
-			return nullptr;
+			return boost::none;
 
 		return make_pair(path, isDir);
 	}
 
-	return nullptr;
+	return boost::none;
 }
 
 void ShareManager::addModifyInfo(const string& aPath, bool isDirectory, DirModifyInfo::ActionType aAction) noexcept {
@@ -734,7 +734,7 @@ void ShareManager::abortRefresh() noexcept {
 
 void ShareManager::shutdown(function<void(float)> progressF) noexcept {
 	monitor.removeListener(this);
-	saveXmlList(false, progressF);
+	saveXmlList(progressF);
 
 	try {
 		RLock l (cs);
@@ -1017,7 +1017,7 @@ pair<int64_t, string> ShareManager::getFileListInfo(const string& virtualFile, P
 
 	if(virtualFile == Transfer::USER_LIST_NAME_BZ || virtualFile == Transfer::USER_LIST_NAME) {
 		FileList* fl = generateXmlList(aProfile);
-		return make_pair(fl->getBzXmlListLen(), fl->getFileName());
+		return { fl->getBzXmlListLen(), fl->getFileName() };
 	}
 
 	throw ShareException(UserConnection::FILE_NOT_AVAILABLE);
@@ -1225,7 +1225,7 @@ bool ShareManager::isRealPathShared(const string& aPath) noexcept {
 string ShareManager::realToVirtual(const string& aPath, ProfileToken aProfile) noexcept{
 	RLock l(cs);
 	auto d = findDirectory(Util::getFilePath(aPath), false, false, true);
-	if (d) {
+	if (d && d->hasProfile(aProfile)) {
 		auto vPath = d->getFullName(aProfile);
 		if (aPath.back() == PATH_SEPARATOR)
 			return vPath;
@@ -1347,7 +1347,7 @@ optional<ProfileToken> ShareManager::getProfileByName(const string& aName) const
 
 	auto p = find_if(shareProfiles, [&](const ShareProfilePtr& aProfile) { return Util::stricmp(aProfile->getPlainName(), aName) == 0; });
 	if (p == shareProfiles.end())
-		return nullptr;
+		return boost::none;
 	return (*p)->getToken();
 }
 
@@ -1378,8 +1378,8 @@ struct ShareManager::ShareLoader : public SimpleXMLReader::ThreadedCallBack, pub
 	}
 
 
-	void startTag(const string& name, StringPairList& attribs, bool simple) {
-		if(compare(name, SDIRECTORY) == 0) {
+	void startTag(const string& aName, StringPairList& attribs, bool simple) {
+		if(compare(aName, SDIRECTORY) == 0) {
 			const string& name = getAttrib(attribs, SNAME, 0);
 			const string& date = getAttrib(attribs, DATE, 1);
 
@@ -1409,7 +1409,7 @@ struct ShareManager::ShareLoader : public SimpleXMLReader::ThreadedCallBack, pub
 					cur = cur->getParent();
 				}
 			}
-		} else if (cur && compare(name, SFILE) == 0) {
+		} else if (cur && compare(aName, SFILE) == 0) {
 			const string& fname = getAttrib(attribs, SNAME, 0);
 			if(fname.empty()) {
 				dcdebug("Invalid file found: %s\n", fname.c_str());
@@ -1426,7 +1426,7 @@ struct ShareManager::ShareLoader : public SimpleXMLReader::ThreadedCallBack, pub
 				hashSize += File::getSize(curDirPath + fname);
 				dcdebug("Error loading file list %s \n", e.getError().c_str());
 			}
-		} else if (compare(name, SHARE) == 0) {
+		} else if (compare(aName, SHARE) == 0) {
 			int version = Util::toInt(getAttrib(attribs, SVERSION, 0));
 			if (version > Util::toInt(SHARE_CACHE_VERSION))
 				throw("Newer cache version"); //don't load those...
@@ -2710,6 +2710,15 @@ void ShareManager::on(TimerManagerListener::Minute, uint64_t tick) noexcept {
 	}
 
 	handleChangedFiles(tick, false);
+
+	restoreFailedMonitoredPaths();
+}
+
+void ShareManager::restoreFailedMonitoredPaths() {
+	auto restored = monitor.restoreFailedPaths();
+	for (const auto& dir : restored) {
+		LogManager::getInstance()->message(STRING_F(MONITORING_RESTORED_X, dir), LogManager::LOG_INFO);
+	}
 }
 
 void ShareManager::getShares(ShareDirInfo::Map& aDirs) const noexcept {
@@ -2725,13 +2734,13 @@ void ShareManager::getShares(ShareDirInfo::Map& aDirs) const noexcept {
 
 }
 		
-void ShareManager::getBloom(HashBloom& bloom) const noexcept {
+void ShareManager::getBloom(HashBloom& bloom_) const noexcept {
 	RLock l(cs);
 	for(const auto tth: tthIndex | map_keys)
-		bloom.add(*tth);
+		bloom_.add(*tth);
 
 	for(const auto& tth: tempShares | map_keys)
-		bloom.add(tth);
+		bloom_.add(tth);
 }
 
 string ShareManager::generateOwnList(ProfileToken aProfile) throw(ShareException) {
@@ -2756,7 +2765,7 @@ FileList* ShareManager::generateXmlList(ProfileToken aProfile, bool forced /*fal
 
 
 	{
-		Lock l(fl->cs);
+		Lock lFl(fl->cs);
 		if (fl->allowGenerateNew(forced)) {
 			auto tmpName = fl->getFileName().substr(0, fl->getFileName().length() - 4);
 			try {
@@ -3028,7 +3037,7 @@ string ShareManager::ProfileDirectory::getCacheXmlPath() const noexcept {
 
 #define LITERAL(n) n, sizeof(n)-1
 
-void ShareManager::saveXmlList(bool verbose /*false*/, function<void(float)> progressF /*nullptr*/) noexcept {
+void ShareManager::saveXmlList(function<void(float)> progressF /*nullptr*/) noexcept {
 
 	if(xml_saving)
 		return;
@@ -3077,7 +3086,7 @@ void ShareManager::saveXmlList(bool verbose /*false*/, function<void(float)> pro
 					File::deleteFile(path);
 					File::renameFile(path + ".tmp", path);
 				} catch (Exception& e) {
-					LogManager::getInstance()->message("Error saving " + path + ": " + e.getError(), LogManager::LOG_WARNING);
+					LogManager::getInstance()->message(STRING_F(SAVE_FAILED_X, path % e.getError()), LogManager::LOG_WARNING);
 				}
 
 				d->getProfileDir()->setCacheDirty(false);
@@ -3093,8 +3102,6 @@ void ShareManager::saveXmlList(bool verbose /*false*/, function<void(float)> pro
 
 	xml_saving = false;
 	lastSave = GET_TICK();
-	if (verbose)
-		LogManager::getInstance()->message("Share cache saved.", LogManager::LOG_INFO);
 }
 
 void ShareManager::Directory::toXmlList(OutputStream& xmlFile, string&& path, string& indent, string& tmp) {
@@ -3373,8 +3380,8 @@ void ShareManager::search(SearchResultList& results, SearchQuery& srch, ProfileT
 
 
 	// pick the results to return
-	for (auto l = resultInfos.begin(); (l != resultInfos.end()) && (results.size() < srch.maxResults); ++l) {
-		auto& info = *l;
+	for (auto i = resultInfos.begin(); (i != resultInfos.end()) && (results.size() < srch.maxResults); ++i) {
+		auto& info = *i;
 		if (info.getType() == Directory::SearchResultInfo::DIRECTORY) {
 			addDirResult(info.directory->getFullName(aProfile), results, aProfile, srch);
 		} else {
@@ -3770,6 +3777,10 @@ void ShareManager::setSkipList() {
 	skipList.pattern = SETTING(SKIPLIST_SHARE);
 	skipList.setMethod(SETTING(SHARE_SKIPLIST_USE_REGEXP) ? StringMatch::REGEX : StringMatch::WILDCARD);
 	skipList.prepare();
+}
+
+void ShareManager::deviceRemoved(const string& aDrive) {
+	monitor.deviceRemoved(aDrive);
 }
 
 } // namespace dcpp

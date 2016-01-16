@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,9 +73,9 @@ public:
 			Thread::sleep(100);
 	}
 
-	void accept(const Socket& srv, bool secure, bool allowUntrusted);
-	void connect(const string& aAddress, const string& aPort, bool secure, bool allowUntrusted, bool proxy);
-	void connect(const string& aAddress, const string& aPort, const string& localPort, NatRoles natRole, bool secure, bool allowUntrusted, bool proxy);
+	void accept(const Socket& srv, bool secure, bool allowUntrusted, const string& expKP = Util::emptyString);
+	void connect(const string& aAddress, const string& aPort, bool secure, bool allowUntrusted, bool proxy, const string& expKP = Util::emptyString);
+	void connect(const string& aAddress, const string& aPort, const string& localPort, NatRoles natRole, bool secure, bool allowUntrusted, bool proxy, const string& expKP = Util::emptyString);
 
 	/** Sets data mode for aBytes bytes. Must be called within onLine. */
 	void setDataMode(int64_t aBytes = -1) { mode = MODE_DATA; dataBytes = aBytes; }
@@ -92,7 +92,8 @@ public:
 	bool isSecure() const { return sock->isSecure(); }
 	bool isTrusted() const { return sock->isTrusted(); }
 	std::string getCipherName() const { return sock->getCipherName(); }
-	vector<uint8_t> getKeyprint() const { return sock->getKeyprint(); }
+	ByteVector getKeyprint() const { return sock->getKeyprint(); }
+	bool verifyKeyprint(const string& expKeyp, bool allowUntrusted) noexcept{ return sock->verifyKeyprint(expKeyp, allowUntrusted); };
 
 	void write(const string& aData) { write(aData.data(), aData.length()); }
 	void write(const char* aBuf, size_t aLen) noexcept;

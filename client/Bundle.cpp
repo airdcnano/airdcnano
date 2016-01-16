@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 AirDC++ Project
+ * Copyright (C) 2011-2015 AirDC++ Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@ using boost::accumulate;
 using boost::range::copy;
 	
 Bundle::Bundle(QueueItemPtr& qi, time_t aFileDate, const string& aToken /*empty*/, bool aDirty /*true*/) noexcept :
-	Bundle(qi->getTarget(), qi->getAdded(), qi->getPriority(), aFileDate, aToken, aDirty, true) {
+	Bundle(qi->getTarget(), qi->getTimeAdded(), qi->getPriority(), aFileDate, aToken, aDirty, true) {
 
 
 	if (qi->isFinished()) {
@@ -59,7 +59,7 @@ Bundle::Bundle(const string& aTarget, time_t aAdded, Priority aPriority, time_t 
 	QueueItemBase(aTarget, 0, aPriority, aAdded), bundleDate(aBundleDate), fileBundle(isFileBundle), dirty(aDirty) {
 
 	if (aToken.empty()) {
-		token = ConnectionManager::getInstance()->tokens.getToken();
+		token = ConnectionManager::getInstance()->tokens.getToken(CONNECTION_TYPE_DOWNLOAD);
 	} else {
 		token = aToken;
 	}
@@ -206,6 +206,8 @@ void Bundle::getItems(const UserPtr& aUser, QueueItemList& ql) const noexcept {
 }
 
 bool Bundle::addFinishedItem(QueueItemPtr& qi, bool finished) noexcept {
+	dcassert(qi->isSet(QueueItem::FLAG_FINISHED) && qi->getFileFinished() > 0);
+
 	finishedFiles.push_back(qi);
 	if (!finished) {
 		qi->setFlag(QueueItem::FLAG_MOVED);
@@ -229,7 +231,7 @@ bool Bundle::removeFinishedItem(QueueItemPtr& qi) noexcept {
 		if (fqi == qi) {
 			//qi->setBundle(nullptr);
 			decreaseSize(qi->getSize());
-			removeFinishedSegment(qi->getSize());
+			removeFinishedSegment(qi->getDownloadedSegments());
 			swap(finishedFiles[pos], finishedFiles[finishedFiles.size()-1]);
 			finishedFiles.pop_back();
 
@@ -251,10 +253,14 @@ bool Bundle::addQueue(QueueItemPtr& qi) noexcept {
 		return addFinishedItem(qi, false);
 	}
 
+	dcassert(qi->getFileFinished() == 0);
+	dcassert(!qi->isSet(QueueItem::FLAG_FINISHED) && !qi->isSet(QueueItem::FLAG_MOVED));
 	dcassert(find(queueItems, qi) == queueItems.end());
+
 	qi->setBundle(this);
 	queueItems.push_back(qi);
 	increaseSize(qi->getSize());
+	addFinishedSegment(qi->getDownloadedSegments());
 
 	auto& bd = bundleDirs[qi->getFilePath()];
 	bd.first++;
@@ -266,7 +272,7 @@ bool Bundle::addQueue(QueueItemPtr& qi) noexcept {
 }
 
 bool Bundle::removeQueue(QueueItemPtr& qi, bool finished) noexcept {
-	if (!finished && qi->isFinished()) {
+	if (!finished && qi->isSet(QueueItem::FLAG_FINISHED)) {
 		return removeFinishedItem(qi);
 	}
 
@@ -353,20 +359,20 @@ bool Bundle::addUserQueue(QueueItemPtr& qi, const HintedUser& aUser, bool isBad 
 	}
 }
 
-QueueItemPtr Bundle::getNextQI(const UserPtr& aUser, const OrderedStringSet& onlineHubs, string& aLastError, Priority minPrio, int64_t wantedSize, int64_t lastSpeed, QueueItemBase::DownloadType aType, bool allowOverlap) noexcept {
+QueueItemPtr Bundle::getNextQI(const UserPtr& aUser, const OrderedStringSet& aOnlineHubs, string& aLastError, Priority aMinPrio, int64_t aWantedSize, int64_t aLastSpeed, QueueItemBase::DownloadType aType, bool aAllowOverlap) noexcept {
 	int p = QueueItem::LAST - 1;
 	do {
 		auto i = userQueue[p].find(aUser);
 		if(i != userQueue[p].end()) {
 			dcassert(!i->second.empty());
 			for(auto& qi: i->second) {
-				if (qi->hasSegment(aUser, onlineHubs, aLastError, wantedSize, lastSpeed, aType, allowOverlap)) {
+				if (qi->hasSegment(aUser, aOnlineHubs, aLastError, aWantedSize, aLastSpeed, aType, aAllowOverlap)) {
 					return qi;
 				}
 			}
 		}
 		p--;
-	} while(p >= minPrio);
+	} while(p >= aMinPrio);
 
 	return nullptr;
 }
@@ -590,7 +596,7 @@ multimap<QueueItemPtr, pair<int64_t, double>> Bundle::getQIBalanceMaps() noexcep
 					qiSources += 2;
 				}
 			}
-			speedSourceMap.insert(make_pair(q, make_pair(qiSpeed, qiSources)));
+			speedSourceMap.emplace(q, make_pair(qiSpeed, qiSources));
 		}
 	}
 	return speedSourceMap;
@@ -638,7 +644,7 @@ bool Bundle::allowAutoSearch() const noexcept {
 
 void Bundle::getSearchItems(map<string, QueueItemPtr>& searches, bool manual) const noexcept {
 	if (fileBundle || queueItems.size() == 1) {
-		searches.insert(make_pair(Util::emptyString, queueItems.front()));
+		searches.emplace(Util::emptyString, queueItems.front());
 		return;
 	}
 
@@ -678,7 +684,7 @@ void Bundle::getSearchItems(map<string, QueueItemPtr>& searches, bool manual) co
 		}
 
 		if (searchItem) {
-			searches.insert(make_pair(dir, searchItem));
+			searches.emplace(dir, searchItem);
 		}
 	}
 }
@@ -957,7 +963,7 @@ void Bundle::save() throw(FileException) {
 		f.write(LIT("\" Token=\""));
 		f.write(token);
 		f.write(LIT("\" Added=\""));
-		f.write(Util::toString(getAdded()));
+		f.write(Util::toString(getTimeAdded()));
 		f.write(LIT("\" Date=\""));
 		f.write(Util::toString(bundleDate));
 		f.write(LIT("\" AddedByAutoSearch=\""));

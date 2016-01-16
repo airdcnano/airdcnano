@@ -35,6 +35,7 @@
 #include <core/events.h>
 #include <core/argparser.h>
 
+#include <client/GeoManager.h>
 #include <client/LogManager.h>
 #include <client/FavoriteManager.h>
 #include <client/HubEntry.h>
@@ -56,7 +57,8 @@ WindowHub::WindowHub(const std::string &address):
 		{ "fav", boost::bind(&WindowHub::handleFav, this), nullptr },
 		{ "browse", boost::bind(&WindowHub::handleBrowse, this), COMPLETION(WindowHub::complete), false },
 		{ "msg", boost::bind(&WindowHub::handleMsg, this), COMPLETION(WindowHub::complete), false },
-		{ "names", boost::bind(&WindowHub::handleNames, this), nullptr },
+        { "info", boost::bind(&WindowHub::handleInfo, this), COMPLETION(WindowHub::complete), false },
+        { "names", boost::bind(&WindowHub::handleNames, this), nullptr },
 		{ "reconnect", boost::bind(&WindowHub::handleReconnect, this), nullptr },
 		{ "showjoins", boost::bind(&WindowHub::handleShowJoins, this), nullptr }
 	})
@@ -76,24 +78,30 @@ void WindowHub::print_help() {
 	add_line(display::LineEntry("Hub context: /fav /names /reconnect /showjoins"));
 }
 
+OnlineUserPtr WindowHub::getUserFromParam() {
+    core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
+    parser.parse();
+
+    if (parser.args() < 1) {
+        display::Manager::get()->cmdMessage("Not enough parameters given");
+        return nullptr;
+     }   
+
+    auto nick = parser.arg(0);
+
+    auto p = m_users.find(nick);
+    if (p == m_users.end()) { 
+        display::Manager::get()->cmdMessage("User " + nick + " not found");
+        return nullptr; 
+    }
+
+    return p->second;
+}
+
 void WindowHub::handleBrowse() {
-	core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
-	parser.parse();
-
-	if (parser.args() < 1) {
-		display::Manager::get()->cmdMessage("Not enough parameters given");
-		return;
-	}
-
-	auto nick = parser.arg(0);
-
-	auto p = m_users.find(nick);
-	if (p == m_users.end()) {
-		display::Manager::get()->cmdMessage("User " + nick + " not found");
-		return;
-	}
-
-	auto user = p->second;
+	auto user = getUserFromParam();
+    if(!user)
+        return;
 
 	try {
 		QueueManager::getInstance()->addList(HintedUser(user->getUser(), m_client->getHubUrl()), QueueItem::FLAG_CLIENT_VIEW | QueueItem::FLAG_PARTIAL_LIST);
@@ -103,30 +111,95 @@ void WindowHub::handleBrowse() {
 }
 
 void WindowHub::handleMsg() {
-	core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
-	parser.parse();
+    auto user = getUserFromParam();
+    if (!user)
+        return;
 
-	if (parser.args() < 1) {
-		display::Manager::get()->cmdMessage("Not enough parameters given");
-		return;
-	}
+    auto pm = WindowPrivateMessage::getWindow(HintedUser(user->getUser(), user->getHubUrl()));
 
-	auto nick = parser.arg(0);
+    core::ArgParser parser(events::args() > 0 ? events::arg<std::string>(0) : "");
+    parser.parse();
+    if (parser.args() > 1) {
+        /* all text after first argument (nick) */
+        auto line = parser.get_text(1);
+        pm->handle_line(line);
+    }
+}
 
-	auto p = m_users.find(nick);
-	if (p == m_users.end()) {
-		display::Manager::get()->cmdMessage("User " + nick + " not found");
-		return;
-	}
+struct FieldName {
+    string field;
+    string name;
+    string (*convert)(const string &val);
+};
+static string formatBytes(const string& val) {
+    return Util::formatBytes(Util::toInt64(val));
+}
 
-	auto user = p->second;
-	auto pm = WindowPrivateMessage::getWindow(HintedUser(user->getUser(), user->getHubUrl()), m_client->getMyNick());
+static string formatSpeed(const string& val) {
+    return Util::formatConnectionSpeed(Util::toInt64(val));
+}
 
-	if (parser.args() > 1) {
-		/* all text after first argument (nick) */
-		auto line = parser.get_text(1);
-		pm->handle_line(line);
-	}
+static string formatIP(const string& val) {
+    auto country = GeoManager::getInstance()->getCountry(val);
+    if (!country.empty())
+        return val + " (" + country + ")";
+    return val;
+}
+
+static const FieldName fields[] =
+{
+    { "NI", "Nick: ", nullptr },
+    { "AW", "Away: ", nullptr },
+    { "DE", "Description: ", nullptr },
+    { "EM", "E-Mail: ", nullptr },
+    { "SS", "Shared: ", &formatBytes },
+    { "SF", "Shared files: ", nullptr },
+    { "US", "Upload speed: ", &formatSpeed },
+    { "DS", "Download speed: ", &formatSpeed },
+    { "SL", "Total slots: ", nullptr },
+    { "FS", "Free slots: ", nullptr },
+    { "HN", "Hubs (normal): ", nullptr },
+    { "HR", "Hubs (registered): ", nullptr },
+    { "HO", "Hubs (op): ", nullptr },
+    { "I4", "IP (v4): ", &formatIP },
+    { "I6", "IP (v6): ", &formatIP },
+    { "U4", "Search port (v4): ", nullptr },
+    { "U6", "Search port (v6): ", nullptr },
+    { "SU", "Features: ", nullptr },
+    { "VE", "Application version: ", nullptr },
+    { "AP", "Application: ", nullptr },
+    { "ID", "CID: ", nullptr },
+    { "KP", "TLS Keyprint: ", nullptr },
+    { "CO", "Connection: ", nullptr },
+    //{ "CT", "Client type: ", nullptr },
+    { "TA", "Tag: ", nullptr },
+    { "", "", 0 }
+};
+
+
+void WindowHub::handleInfo() {
+    auto user = getUserFromParam();
+    if (!user)
+        return;
+
+    display::Manager::get()->cmdMessage("");
+    const auto info = user->getIdentity().getInfo();
+    for (const auto& field: fields) {
+        auto i = info.find(field.field);
+        if (i != info.end()) {
+            string print = field.name;
+            if (field.convert) {
+                print += field.convert(i->second);
+            } else {
+                print += i->second;
+            }
+
+            print += "\n";
+            display::Manager::get()->cmdMessage(print);
+        }
+    }
+
+    display::Manager::get()->cmdMessage("");
 }
 
 void WindowHub::handleFav() noexcept{
@@ -175,14 +248,17 @@ void WindowHub::update_config()
 
 void WindowHub::handle_line(const std::string &line)
 {
-	if (!m_client || !m_client->isConnected()) {
-		return;
-	}
+    if (line.empty())
+	return;
 
-	string error;
-	if (!m_client->hubMessage(Text::toUtf8(line), error)) {
-		add_line(display::LineEntry("Failed to send: " + error));
-	}
+    if (!m_client || !m_client->isConnected()) {
+        return;
+    }
+
+    string error;
+    if (!m_client->hubMessage(Text::toUtf8(line), error)) {
+        add_line(display::LineEntry("Failed to send: " + error));
+    }
 }
 
 void WindowHub::onJoinedTimer() {
@@ -211,14 +287,8 @@ void WindowHub::onChatMessage(const ChatMessage& aMessage) noexcept{
 		return;
 	}
 
-	if (m_client->get(HubSettings::LogMainChat)) {
-		ParamMap params;
-		params["message"] = aMessage.format();
-		m_client->getHubIdentity().getParams(params, "hub", false);
-		params["hubURL"] = Util::validateFileName(m_client->getHubUrl());
-		m_client->getMyIdentity().getParams(params, "my", true);
-		LOG(LogManager::CHAT, params);
-	}
+
+    m_client->logChatMessage(aMessage.format());
 
 	auto flag = display::LineEntry::MESSAGE;
 
@@ -254,86 +324,16 @@ void WindowHub::handleShowJoins() {
 	add_line(display::LineEntry(status));
 }
 
-void WindowHub::onPrivateMessage(const ChatMessage& aMessage) noexcept{
-	bool myPM = aMessage.replyTo->getUser() == ClientManager::getInstance()->getMe();
-
-	auto nick = aMessage.from->getIdentity().getNick();
-	auto text = utils::escape(aMessage.text);
-
-	auto dm = display::Manager::get();
-	ui::WindowPrivateMessage *pm;
-
-	const auto& user = myPM ? aMessage.to : aMessage.replyTo;
-
-	auto name = "PM:" + nick;
-
-	auto it = dm->find(display::TYPE_PRIVMSG, user->getUser()->getCID().toBase32());
-	if (it == dm->end()) {
-		/* don't filter if i'm the sender */
-		if (!myPM && filter_messages(nick, text)) {
-			return;
-		}
-
-		pm = new ui::WindowPrivateMessage(HintedUser(user->getUser(), user->getHubUrl()), m_client->getMyNick());
-		dm->push_back(pm);
-
-		if (AirUtil::getAway()) {
-			if (!(SETTING(NO_AWAYMSG_TO_BOTS) && user->getUser()->isSet(User::BOT))) {
-				ParamMap params;
-				user->getIdentity().getParams(params, "user", false);
-
-				string error;
-				auto awayMsg = AirUtil::getAwayMessage(SETTING(DEFAULT_AWAY_MESSAGE), params);
-				pm->handle_line(awayMsg);
-			}
-		}
-	} else {
-		pm = static_cast<ui::WindowPrivateMessage*>(*it);
-	}
-
-	if (SETTING(LOG_PRIVATE_CHAT)) {
-		ParamMap params;
-		params["message"] = aMessage.format();
-		pm->fillLogParams(params);
-		LogManager::getInstance()->log(user->getUser(), params);
-	}
-
-	//boost::replace_all(text, "\n", "\\");
-
-	StringTokenizer<string> lines(text, '\n');
-	auto displaySender = myPM ? "%21%08<%21%08%21" + nick + "%21%21%08>%21%08" : "%21%08<%21%08" + nick + "%21%08>%21%08";
-
-	int indent = 4 + g_utf8_strlen(nick.c_str(), -1);
-	for (const auto& l : lines.getTokens()) {
-		pm->add_line(display::LineEntry(displaySender + " " + l, indent, time(0), display::LineEntry::MESSAGE));
-	}
-
-	if (!myPM && pm->get_state() != display::STATE_IS_ACTIVE) {
-		pm->set_state(display::STATE_HIGHLIGHT);
-	}
-}
-
 void WindowHub::on(ClientListener::Message, const Client *, const ChatMessage& aMessage) noexcept{
 	callAsync([=] {
-		if (aMessage.to && aMessage.replyTo) {
-			onPrivateMessage(aMessage);
-		} else {
-			onChatMessage(aMessage);
-		}
+		onChatMessage(aMessage);
 	});
 }
 
 void WindowHub::on(ClientListener::StatusMessage, const Client*, const string& line, int)
     noexcept
 {
-	if (SETTING(LOG_STATUS_MESSAGES)) {
-		ParamMap params;
-		m_client->getHubIdentity().getParams(params, "hub", false);
-		params["hubURL"] = m_client->getHubUrl();
-		m_client->getMyIdentity().getParams(params, "my", true);
-		params["message"] = line;
-		LOG(LogManager::STATUS, params);
-	}
+    m_client->logStatusMessage(line);
 
 	auto tmp = utils::escape(line);
 	callAsync([=] { add_line(display::LineEntry(tmp)); });

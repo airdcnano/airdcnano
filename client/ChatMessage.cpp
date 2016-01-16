@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,7 +49,7 @@ DupeType ChatLink::updateDupeType(const UserPtr& aUser) {
 	} else if (type == TYPE_MAGNET) {
 		Magnet m = Magnet(url);
 		dupe = m.getDupeType();
-		if (dupe == DUPE_NONE && ShareManager::getInstance()->ShareManager::getInstance()->isTempShared(aUser ? aUser->getCID().toBase32() : Util::emptyString, m.getTTH())) {
+		if (dupe == DUPE_NONE && ShareManager::getInstance()->isTempShared(aUser ? aUser->getCID().toBase32() : Util::emptyString, m.getTTH())) {
 			dupe = DUPE_SHARE;
 		}
 	}

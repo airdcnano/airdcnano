@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,33 +31,51 @@
 #include "UserConnection.h"
 
 namespace dcpp {
+	FastCriticalSection TokenManager::cs;
 
-	string TokenManager::getToken() noexcept {
-	Lock l(cs);
-	string token = Util::toString(Util::rand());
-	tokens.insert(token);
+string TokenManager::makeToken() const noexcept {
+	string token;
+
+	FastLock l(cs);
+	do { token = Util::toString(Util::rand()); } while (tokens.find(token) != tokens.end());
+
 	return token;
 }
 
-bool TokenManager::addToken(const string& aToken) noexcept {
-	Lock l(cs);
-	if (tokens.find(aToken) == tokens.end()) {
-		tokens.insert(aToken);
-		return true;
-	}
-	return false;
+
+string TokenManager::getToken(ConnectionType aConnType) noexcept{
+	string token = move(makeToken());
+	FastLock l(cs);
+	tokens.emplace(token, aConnType);
+	return token;
+}
+
+bool TokenManager::addToken(const string& aToken, ConnectionType aConnType) noexcept{
+	FastLock l(cs);
+	const auto res = tokens.emplace(aToken, aConnType);
+	return res.second;
+}
+
+bool TokenManager::hasToken(const string& aToken, ConnectionType aConnType) noexcept{
+	FastLock l(cs);
+	const auto res = tokens.find(aToken);
+	return res != tokens.end() && res->second == aConnType;
 }
 
 void TokenManager::removeToken(const string& aToken) noexcept {
-	Lock l(cs);
+	FastLock l(cs);
+#ifdef _DEBUG
 	auto p = tokens.find(aToken);
 	if (p != tokens.end())
 		tokens.erase(p);
 	else
 		dcassert(0);
+#else
+	tokens.erase(aToken);
+#endif
 }
 
-ConnectionManager::ConnectionManager() : floodCounter(0), shuttingDown(false) {
+ConnectionManager::ConnectionManager() : downloads(cqis[CONNECTION_TYPE_DOWNLOAD]), floodCounter(0), shuttingDown(false) {
 	TimerManager::getInstance()->addListener(this);
 	ClientManager::getInstance()->addListener(this);
 
@@ -74,7 +92,8 @@ ConnectionManager::ConnectionManager() : floodCounter(0), shuttingDown(false) {
 		"AD" + UserConnection::FEATURE_ADC_BASE,
 		"AD" + UserConnection::FEATURE_ADC_BZIP,
 		"AD" + UserConnection::FEATURE_ADC_TIGR,
-		"AD" + UserConnection::FEATURE_ADC_MCN1 
+		"AD" + UserConnection::FEATURE_ADC_MCN1, 
+		"AD" + UserConnection::FEATURE_ADC_CPMI
 	};
 
 	if (SETTING(USE_UPLOAD_BUNDLES))
@@ -94,6 +113,7 @@ void ConnectionManager::listen() {
 bool ConnectionQueueItem::allowNewConnections(int running) const {
 	return (running < AirUtil::getSlotsPerUser(true) || AirUtil::getSlotsPerUser(true) == 0) && (running < maxConns || maxConns == 0);
 }
+
 
 /**
  * Request a connection for downloading.
@@ -128,7 +148,7 @@ void ConnectionManager::getDownloadConnection(const HintedUser& aUser, bool smal
 						} else {
 							running++;
 						}
-					} else if (cqi->getType() == ConnectionQueueItem::TYPE_SMALL_CONF) {
+					} else if (cqi->getDownloadType() == ConnectionQueueItem::TYPE_SMALL_CONF) {
 						supportMcn = true;
 						//no need to continue with small slot if an item with the same type exists already (no mather whether it's running or not)
 						if (smallSlot) {
@@ -151,21 +171,17 @@ void ConnectionManager::getDownloadConnection(const HintedUser& aUser, bool smal
 
 			//WLock l (cs);
 			dcdebug("Get cqi");
-			cqi = getCQI(aUser, true);
+			cqi = getCQI(aUser, CONNECTION_TYPE_DOWNLOAD);
 			if (smallSlot)
-				cqi->setType(supportMcn ? ConnectionQueueItem::TYPE_SMALL_CONF : ConnectionQueueItem::TYPE_SMALL);
+				cqi->setDownloadType(supportMcn ? ConnectionQueueItem::TYPE_SMALL_CONF : ConnectionQueueItem::TYPE_SMALL);
 		}
 	}
 }
 
-ConnectionQueueItem* ConnectionManager::getCQI(const HintedUser& aUser, bool aDownload, const string& aToken) {
-	ConnectionQueueItem* cqi = new ConnectionQueueItem(aUser, aDownload, !aToken.empty() ? aToken : tokens.getToken());
-
-	if(aDownload) {
-		downloads.push_back(cqi);
-	} else {
-		uploads.push_back(cqi);
-	}
+ConnectionQueueItem* ConnectionManager::getCQI(const HintedUser& aUser, ConnectionType aConnType, const string& aToken) {
+	auto& container = cqis[aConnType];
+	auto cqi = new ConnectionQueueItem(aUser, aConnType, !aToken.empty() ? aToken : tokens.getToken(aConnType));
+	container.emplace_back(cqi);
 
 	fire(ConnectionManagerListener::Added(), cqi);
 	return cqi;
@@ -175,14 +191,13 @@ void ConnectionManager::putCQI(ConnectionQueueItem* cqi) {
 	//allways called from inside lock
 
 	fire(ConnectionManagerListener::Removed(), cqi);
-	if(cqi->getDownload()) {
-		dcassert(find(downloads.begin(), downloads.end(), cqi) != downloads.end());
-		downloads.erase(remove(downloads.begin(), downloads.end(), cqi), downloads.end());
+	
+	auto& container = cqis[cqi->getConnType()];
+	dcassert(find(container.begin(), container.end(), cqi) != container.end());
+	container.erase(remove(container.begin(), container.end(), cqi), container.end());
+
+	if (cqi->getConnType() == CONNECTION_TYPE_DOWNLOAD)
 		delayedTokens[cqi->getToken()] = GET_TICK();
-	} else {
-		dcassert(find(uploads.begin(), uploads.end(), cqi) != uploads.end());
-		uploads.erase(remove(uploads.begin(), uploads.end(), cqi), uploads.end());
-	}
 
 	tokens.removeToken(cqi->getToken());
 	delete cqi;
@@ -210,13 +225,13 @@ void ConnectionManager::putConnection(UserConnection* aConn) {
 
 void ConnectionManager::onUserUpdated(const UserPtr& aUser) {
 	RLock l(cs);
-	for(const auto& cqi: downloads) {
-		if(cqi->getUser() == aUser) {
+	for (const auto& cqi : downloads) {
+		if (cqi->getUser() == aUser) {
 			fire(ConnectionManagerListener::UserUpdated(), cqi);
 		}
 	}
 
-	for(const auto& cqi: uploads) {
+	for (const auto& cqi : cqis[CONNECTION_TYPE_UPLOAD]) {
 		if(cqi->getUser() == aUser) {
 			fire(ConnectionManagerListener::UserUpdated(), cqi);
 		}
@@ -226,89 +241,7 @@ void ConnectionManager::onUserUpdated(const UserPtr& aUser) {
 void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcept {
 	StringList removedTokens;
 
-	{
-		RLock l(cs);
-		int attemptLimit = SETTING(DOWNCONN_PER_SEC);
-		uint16_t attempts = 0;
-		for(auto cqi: downloads) {
-			if(cqi->getState() != ConnectionQueueItem::ACTIVE && cqi->getState() != ConnectionQueueItem::RUNNING) {
-				if(!cqi->getUser()->isOnline() || cqi->isSet(ConnectionQueueItem::FLAG_REMOVE)) {
-					removedTokens.push_back(cqi->getToken());
-					continue;
-				}
-
-				if(cqi->getErrors() == -1 && cqi->getLastAttempt() != 0) {
-					// protocol error, don't reconnect except after a forced attempt
-					continue;
-				}
-
-				if((cqi->getLastAttempt() == 0 && attempts < attemptLimit*2) || ((attemptLimit == 0 || attempts < attemptLimit) &&
-					cqi->getLastAttempt() + 60 * 1000 * max(1, cqi->getErrors()) < aTick))
-				{
-					// TODO: no one can understand this code, fix!
-					cqi->setLastAttempt(aTick);
-
-					string bundleToken, lastError, hubHint = cqi->getHubUrl();
-					bool allowUrlChange = true;
-					bool hasDownload = false;
-
-					auto type = cqi->getType() == ConnectionQueueItem::TYPE_SMALL || cqi->getType() == ConnectionQueueItem::TYPE_SMALL_CONF ? QueueItem::TYPE_SMALL : cqi->getType() == ConnectionQueueItem::TYPE_MCN_NORMAL ? QueueItem::TYPE_MCN_NORMAL : QueueItem::TYPE_ANY;
-
-					//we'll also validate the hubhint (and that the user is online) before making any connection attempt
-					auto startDown = QueueManager::getInstance()->startDownload(cqi->getUser(), hubHint, type, bundleToken, allowUrlChange, hasDownload, lastError);
-					if (!hasDownload && cqi->getType() == ConnectionQueueItem::TYPE_SMALL && count_if(downloads.begin(), downloads.end(), [&](const ConnectionQueueItem* aCQI) { return aCQI != cqi && aCQI->getUser() == cqi->getUser(); }) == 0) {
-						//the small file finished already? try with any type
-						cqi->setType(ConnectionQueueItem::TYPE_ANY);
-						startDown = QueueManager::getInstance()->startDownload(cqi->getUser(), hubHint, QueueItem::TYPE_ANY, 
-							bundleToken, allowUrlChange, hasDownload, lastError);
-					} else if (cqi->getType() == ConnectionQueueItem::TYPE_ANY && startDown.first == QueueItem::TYPE_SMALL && 
-						 count_if(downloads.begin(), downloads.end(), [&](const ConnectionQueueItem* aCQI) { 
-							 return aCQI->getUser() == cqi->getUser() && (cqi->getType() == ConnectionQueueItem::TYPE_SMALL || cqi->getType() == ConnectionQueueItem::TYPE_SMALL_CONF); 
-						}) == 0) {
-							// a small file has been added after the CQI was created
-							cqi->setType(ConnectionQueueItem::TYPE_SMALL);
-					}
-
-
-					if (!hasDownload) {
-						removedTokens.push_back(cqi->getToken());
-						continue;
-					}
-
-					cqi->setLastBundle(bundleToken);
-					cqi->setHubUrl(hubHint);
-
-					if(cqi->getState() == ConnectionQueueItem::WAITING) {
-						if(startDown.second) {
-							cqi->setState(ConnectionQueueItem::CONNECTING);
-							bool protocolError = false;
-
-							if (!ClientManager::getInstance()->connect(cqi->getUser(), cqi->getToken(), allowUrlChange, lastError, hubHint, protocolError)) {
-								cqi->setState(ConnectionQueueItem::WAITING);
-								cqi->setErrors(protocolError ? -1 : (cqi->getErrors() + 1)); // protocol error
-								dcassert(!lastError.empty());
-								fire(ConnectionManagerListener::Failed(), cqi, lastError);
-							} else {
-								cqi->setHubUrl(hubHint);
-								fire(ConnectionManagerListener::StatusChanged(), cqi);
-								attempts++;
-							}
-						} else {
-							fire(ConnectionManagerListener::Failed(), cqi, lastError);
-						}
-					}
-				} else if(cqi->getState() == ConnectionQueueItem::CONNECTING && cqi->getLastAttempt() + 50*1000 < aTick) {
-
-					cqi->setErrors(cqi->getErrors() + 1);
-					fire(ConnectionManagerListener::Failed(), cqi, STRING(CONNECTION_TIMEOUT));
-					cqi->setState(ConnectionQueueItem::WAITING);
-				}
-			} else if (cqi->isSet(ConnectionQueueItem::FLAG_REMOVE)) {
-				cqi->unsetFlag(ConnectionQueueItem::FLAG_REMOVE);
-			}
-		}
-	}
-
+	attemptDownloads(aTick, removedTokens);
 	if (!removedTokens.empty()) {
 		WLock l (cs);
 		for(auto& m: removedTokens) {
@@ -319,6 +252,95 @@ void ConnectionManager::on(TimerManagerListener::Second, uint64_t aTick) noexcep
 		}
 	}
 }
+
+void ConnectionManager::attemptDownloads(uint64_t aTick, StringList& removedTokens) {
+	RLock l(cs);
+	int attemptLimit = SETTING(DOWNCONN_PER_SEC);
+	uint16_t attempts = 0;
+	for (auto cqi : downloads) {
+		if (cqi->getState() != ConnectionQueueItem::ACTIVE && cqi->getState() != ConnectionQueueItem::RUNNING) {
+			if (!cqi->getUser()->isOnline() || cqi->isSet(ConnectionQueueItem::FLAG_REMOVE)) {
+				removedTokens.push_back(cqi->getToken());
+				continue;
+			}
+
+			if (cqi->getErrors() == -1 && cqi->getLastAttempt() != 0) {
+				// protocol error, don't reconnect except after a forced attempt
+				continue;
+			}
+
+			if ((cqi->getLastAttempt() == 0 && attempts < attemptLimit * 2) || ((attemptLimit == 0 || attempts < attemptLimit) &&
+				cqi->getLastAttempt() + 60 * 1000 * max(1, cqi->getErrors()) < aTick))
+			{
+				// TODO: no one can understand this code, fix!
+				cqi->setLastAttempt(aTick);
+
+				string bundleToken, lastError, hubHint = cqi->getHubUrl();
+				bool allowUrlChange = true;
+				bool hasDownload = false;
+
+				auto type = cqi->getDownloadType() == ConnectionQueueItem::TYPE_SMALL || cqi->getDownloadType() == ConnectionQueueItem::TYPE_SMALL_CONF ? QueueItem::TYPE_SMALL : cqi->getDownloadType() == ConnectionQueueItem::TYPE_MCN_NORMAL ? QueueItem::TYPE_MCN_NORMAL : QueueItem::TYPE_ANY;
+
+				//we'll also validate the hubhint (and that the user is online) before making any connection attempt
+				auto startDown = QueueManager::getInstance()->startDownload(cqi->getUser(), hubHint, type, bundleToken, allowUrlChange, hasDownload, lastError);
+				if (!hasDownload && cqi->getDownloadType() == ConnectionQueueItem::TYPE_SMALL && count_if(downloads.begin(), downloads.end(), [&](const ConnectionQueueItem* aCQI) { return aCQI != cqi && aCQI->getUser() == cqi->getUser(); }) == 0) {
+					//the small file finished already? try with any type
+					cqi->setDownloadType(ConnectionQueueItem::TYPE_ANY);
+					startDown = QueueManager::getInstance()->startDownload(cqi->getUser(), hubHint, QueueItem::TYPE_ANY,
+						bundleToken, allowUrlChange, hasDownload, lastError);
+				}
+				else if (cqi->getDownloadType() == ConnectionQueueItem::TYPE_ANY && startDown.first == QueueItem::TYPE_SMALL &&
+					count_if(downloads.begin(), downloads.end(), [&](const ConnectionQueueItem* aCQI) {
+					return aCQI->getUser() == cqi->getUser() && (cqi->getDownloadType() == ConnectionQueueItem::TYPE_SMALL || cqi->getDownloadType() == ConnectionQueueItem::TYPE_SMALL_CONF);
+				}) == 0) {
+					// a small file has been added after the CQI was created
+					cqi->setDownloadType(ConnectionQueueItem::TYPE_SMALL);
+				}
+
+
+				if (!hasDownload) {
+					removedTokens.push_back(cqi->getToken());
+					continue;
+				}
+
+				cqi->setLastBundle(bundleToken);
+				cqi->setHubUrl(hubHint);
+
+				if (cqi->getState() == ConnectionQueueItem::WAITING) {
+					if (startDown.second) {
+						cqi->setState(ConnectionQueueItem::CONNECTING);
+						bool protocolError = false;
+
+						if (!ClientManager::getInstance()->connect(cqi->getUser(), cqi->getToken(), allowUrlChange, lastError, hubHint, protocolError)) {
+							cqi->setState(ConnectionQueueItem::WAITING);
+							cqi->setErrors(protocolError ? -1 : (cqi->getErrors() + 1)); // protocol error
+							dcassert(!lastError.empty());
+							fire(ConnectionManagerListener::Failed(), cqi, lastError);
+						}
+						else {
+							cqi->setHubUrl(hubHint);
+							fire(ConnectionManagerListener::StatusChanged(), cqi);
+							attempts++;
+						}
+					}
+					else {
+						fire(ConnectionManagerListener::Failed(), cqi, lastError);
+					}
+				}
+			}
+			else if (cqi->getState() == ConnectionQueueItem::CONNECTING && cqi->getLastAttempt() + 50 * 1000 < aTick) {
+
+				cqi->setErrors(cqi->getErrors() + 1);
+				fire(ConnectionManagerListener::Failed(), cqi, STRING(CONNECTION_TIMEOUT));
+				cqi->setState(ConnectionQueueItem::WAITING);
+			}
+		}
+		else if (cqi->isSet(ConnectionQueueItem::FLAG_REMOVE)) {
+			cqi->unsetFlag(ConnectionQueueItem::FLAG_REMOVE);
+		}
+	}
+}
+
 
 void ConnectionManager::addRunningMCN(const UserConnection *aSource) noexcept {
 	{
@@ -339,13 +361,13 @@ void ConnectionManager::addRunningMCN(const UserConnection *aSource) noexcept {
 
 bool ConnectionManager::allowNewMCN(const ConnectionQueueItem* aCQI) {
 	//we need to check if we have queued something also while the small file connection was being established
-	if (!aCQI->isSet(ConnectionQueueItem::FLAG_MCN1) && aCQI->getType() != ConnectionQueueItem::TYPE_SMALL_CONF)
+	if (!aCQI->isSet(ConnectionQueueItem::FLAG_MCN1) && aCQI->getDownloadType() != ConnectionQueueItem::TYPE_SMALL_CONF)
 		return false;
 
 	//count the running MCN connections
 	int running = 0;
 	for(const auto& cqi: downloads) {
-		if (cqi->getUser() == aCQI->getUser() && cqi->getType() != ConnectionQueueItem::TYPE_SMALL_CONF && !cqi->isSet(ConnectionQueueItem::FLAG_REMOVE)) {
+		if (cqi->getUser() == aCQI->getUser() && cqi->getDownloadType() != ConnectionQueueItem::TYPE_SMALL_CONF && !cqi->isSet(ConnectionQueueItem::FLAG_REMOVE)) {
 			if (cqi->getState() != ConnectionQueueItem::RUNNING && cqi->getState() != ConnectionQueueItem::ACTIVE) {
 				return false;
 			}
@@ -353,7 +375,7 @@ bool ConnectionManager::allowNewMCN(const ConnectionQueueItem* aCQI) {
 		}
 	}
 
-	if (running > 0 && aCQI->getType() == ConnectionQueueItem::TYPE_SMALL_CONF)
+	if (running > 0 && aCQI->getDownloadType() == ConnectionQueueItem::TYPE_SMALL_CONF)
 		return false;
 
 	if (!aCQI->allowNewConnections(running) && !aCQI->isSet(ConnectionQueueItem::FLAG_REMOVE))
@@ -371,9 +393,9 @@ void ConnectionManager::createNewMCN(const HintedUser& aUser) {
 		ClientManager::getInstance()->getHubSet(aUser.user->getCID()), QueueItem::TYPE_MCN_NORMAL, 0, lastError); // don't overlap...
 	if (start) {
 		WLock l (cs);
-		ConnectionQueueItem* cqiNew = getCQI(aUser, true);
+		ConnectionQueueItem* cqiNew = getCQI(aUser, CONNECTION_TYPE_DOWNLOAD);
 		cqiNew->setFlag(ConnectionQueueItem::FLAG_MCN1);
-		cqiNew->setType(ConnectionQueueItem::TYPE_MCN_NORMAL);
+		cqiNew->setDownloadType(ConnectionQueueItem::TYPE_MCN_NORMAL);
 	}
 }
 
@@ -387,7 +409,16 @@ void ConnectionManager::on(TimerManagerListener::Minute, uint64_t aTick) noexcep
 	}
 
 	for(auto j: userConnections) {
-		if((j->getLastActivity() + 180*1000) < aTick) { //hmm 3 minutes?
+
+		if (j->isSet(UserConnection::FLAG_PM)) {
+			//Send a write check to the socket to detect half connected state, a good interval?
+			if ((j->getLastActivity() + 180 * 1000) < aTick) {
+				AdcCommand c(AdcCommand::CMD_PMI);
+				c.addParam("\n");
+				j->send(c);
+			}
+		}
+		else if ((j->getLastActivity() + 180 * 1000) < aTick) {
 			j->disconnect(true);
 		}
 	}
@@ -533,8 +564,13 @@ void ConnectionManager::adcConnect(const OnlineUser& aUser, const string& aPort,
 	if(aUser.getIdentity().isOp()) {
 		uc->setFlag(UserConnection::FLAG_OP);
 	}
+	
+	if (tokens.hasToken(aToken, CONNECTION_TYPE_PM)) {
+		uc->setFlag(UserConnection::FLAG_PM);
+	}
 
 	try {
+		// TODO: connect via both protocols when available
 		uc->connect(aUser.getIdentity().getIp(), aPort, localPort, natRole);
 		uc->setUser(aUser);
 	} catch(const Exception&) {
@@ -584,6 +620,8 @@ void ConnectionManager::on(AdcCommand::SUP, UserConnection* aSource, const AdcCo
 				aSource->setFlag(UserConnection::FLAG_MCN1);
 			} else if(feat == UserConnection::FEATURE_ADC_UBN1) {
 				aSource->setFlag(UserConnection::FLAG_UBN1);
+			} else if (feat == UserConnection::FEATURE_ADC_CPMI) {
+				aSource->setFlag(UserConnection::FLAG_CPMI);
 			}
 		}
 	}
@@ -595,23 +633,14 @@ void ConnectionManager::on(AdcCommand::SUP, UserConnection* aSource, const AdcCo
 		return;
 	}
 
-	int mcn = 0;
-	if(aSource->isSet(UserConnection::FLAG_MCN1)) {
-		int slots = 0;
-		slots = AirUtil::getSlotsPerUser(false);
-		if (slots != 0)
-			mcn=slots;
-	}
-
 	if(aSource->isSet(UserConnection::FLAG_INCOMING)) {
 		StringList defFeatures = adcFeatures;
 		if(SETTING(COMPRESS_TRANSFERS)) {
 			defFeatures.push_back("AD" + UserConnection::FEATURE_ZLIB_GET);
 		}
 		aSource->sup(defFeatures);
-		aSource->inf(false, mcn);
 	} else {
-		aSource->inf(true, mcn);
+		aSource->inf(true, aSource->isSet(UserConnection::FLAG_MCN1) ? AirUtil::getSlotsPerUser(false) : 0);
 	}
 	aSource->setState(UserConnection::STATE_INF);
 }
@@ -621,11 +650,6 @@ void ConnectionManager::on(AdcCommand::STA, UserConnection*, const AdcCommand& /
 }
 
 void ConnectionManager::on(UserConnectionListener::Connected, UserConnection* aSource) noexcept {
-	if(aSource->isSecure() && !aSource->isTrusted() && !SETTING(ALLOW_UNTRUSTED_CLIENTS)) {
-		putConnection(aSource);
-		//QueueManager::getInstance()->removeSource(aSource->getUser(), QueueItem::Source::FLAG_UNTRUSTED);
-		return;
-	}
 
 	if(SETTING(TLS_MODE) == SettingsManager::TLS_FORCED && !aSource->isSet(UserConnection::FLAG_NMDC) && !aSource->isSecure()) {
 		putConnection(aSource);
@@ -772,6 +796,28 @@ void ConnectionManager::on(UserConnectionListener::Direction, UserConnection* aS
 	aSource->setState(UserConnection::STATE_KEY);
 }
 
+
+void ConnectionManager::addPMConnection(UserConnection* uc) {
+	{
+		WLock l(cs);
+		auto& container = cqis[CONNECTION_TYPE_PM];
+		auto i = find(container.begin(), container.end(), uc->getUser());
+		if (i == container.end()) {
+			uc->setFlag(UserConnection::FLAG_ASSOCIATED);
+			auto cqi = getCQI(uc->getHintedUser(), CONNECTION_TYPE_PM, uc->getToken());
+			cqi->setState(ConnectionQueueItem::ACTIVE);
+			uc->setToken(cqi->getToken());
+
+			fire(ConnectionManagerListener::Connected(), cqi, uc);
+
+			dcdebug("ConnectionManager::addPMConnection, PM handler\n");
+			return;
+		}
+	}
+	putConnection(uc);
+}
+
+
 void ConnectionManager::addDownloadConnection(UserConnection* uc) {
 	dcassert(uc->isSet(UserConnection::FLAG_DOWNLOAD));
 	bool addConn = false;
@@ -783,11 +829,11 @@ void ConnectionManager::addDownloadConnection(UserConnection* uc) {
 			if(cqi->getState() == ConnectionQueueItem::WAITING || cqi->getState() == ConnectionQueueItem::CONNECTING) {
 				cqi->setState(ConnectionQueueItem::ACTIVE);
 				if (uc->isSet(UserConnection::FLAG_MCN1)) {
-					if (cqi->getType() == ConnectionQueueItem::TYPE_SMALL || cqi->getType() == ConnectionQueueItem::TYPE_SMALL_CONF) {
+					if (cqi->getDownloadType() == ConnectionQueueItem::TYPE_SMALL || cqi->getDownloadType() == ConnectionQueueItem::TYPE_SMALL_CONF) {
 						uc->setFlag(UserConnection::FLAG_SMALL_SLOT);
-						cqi->setType(ConnectionQueueItem::TYPE_SMALL_CONF);
+						cqi->setDownloadType(ConnectionQueueItem::TYPE_SMALL_CONF);
 					} else {
-						cqi->setType(ConnectionQueueItem::TYPE_MCN_NORMAL);
+						cqi->setDownloadType(ConnectionQueueItem::TYPE_MCN_NORMAL);
 						cqi->setFlag(ConnectionQueueItem::FLAG_MCN1);
 					}
 				}
@@ -795,7 +841,7 @@ void ConnectionManager::addDownloadConnection(UserConnection* uc) {
 				uc->setToken(cqi->getToken()); // sync for NMDC users
 				uc->setHubUrl(cqi->getHubUrl()); //set the correct hint for the uc, it might not even have a hint at first.
 				uc->setFlag(UserConnection::FLAG_ASSOCIATED);
-				fire(ConnectionManagerListener::Connected(), cqi);
+				fire(ConnectionManagerListener::Connected(), cqi, uc);
 				dcdebug("ConnectionManager::addDownloadConnection, leaving to downloadmanager\n");
 				addConn = true;
 			}
@@ -815,18 +861,19 @@ void ConnectionManager::addUploadConnection(UserConnection* uc) {
 
 	{
 		WLock l(cs);
+		auto &uploads = cqis[CONNECTION_TYPE_UPLOAD];
 		if (!uc->isSet(UserConnection::FLAG_MCN1) && find(uploads.begin(), uploads.end(), uc->getUser()) != uploads.end()) {
 			//one connection per CID for non-mcn users
 			allowAdd=false;
 		}
 
 		if (allowAdd) {
-			allowAdd = tokens.addToken(uc->getToken());
+			allowAdd = tokens.addToken(uc->getToken(), CONNECTION_TYPE_UPLOAD);
 			if (allowAdd) {
 				uc->setFlag(UserConnection::FLAG_ASSOCIATED);
-				ConnectionQueueItem* cqi = getCQI(uc->getHintedUser(), false, uc->getToken());
+				ConnectionQueueItem* cqi = getCQI(uc->getHintedUser(), CONNECTION_TYPE_UPLOAD, uc->getToken());
 				cqi->setState(ConnectionQueueItem::ACTIVE);
-				fire(ConnectionManagerListener::Connected(), cqi);
+				fire(ConnectionManagerListener::Connected(), cqi, uc);
 			}
 		}
 	}
@@ -865,6 +912,7 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
 	}
 
 	string token;
+
 	if (aSource->isSet(UserConnection::FLAG_INCOMING)) {
 		if (!cmd.getParam("TO", 0, token)) {
 			aSource->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_GENERIC, "TO missing"));
@@ -875,20 +923,16 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
 		aSource->setToken(token);
 
 		// Incoming connections aren't associated with any user
-		string cid;
-
-		// Are we excepting this connection? Use the saved CID
+		// Are we expecting this connection? Use the saved CID and hubUrl
 		auto i = expectedConnections.remove(token);
 		if (i.second.empty()) {
 			aSource->send(AdcCommand(AdcCommand::SEV_FATAL, AdcCommand::ERROR_GENERIC, "Connection not expected"));
 			putConnection(aSource);
 			return;
-		} else {
-			aSource->setHubUrl(i.second);
-			cid = i.first;
-		}
+		} 
+		aSource->setHubUrl(i.second);
 
-		auto user = ClientManager::getInstance()->findUser(CID(cid));
+		auto user = ClientManager::getInstance()->findUser(CID(i.first));
 		aSource->setUser(user);
 
 		if (!aSource->getUser()) {
@@ -897,6 +941,14 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
 			putConnection(aSource);
 			return;
 		}
+
+		// set the PM flag now in order to send a INF with PM1
+		if ((tokens.hasToken(token, CONNECTION_TYPE_PM) || cmd.hasFlag("PM", 0)) && !aSource->isSet(UserConnection::FLAG_PM)) {
+			aSource->setFlag(UserConnection::FLAG_PM);
+		}
+
+		aSource->inf(false, aSource->isSet(UserConnection::FLAG_MCN1) ? AirUtil::getSlotsPerUser(false) : 0);
+
 	} else {
 		dcassert(aSource->getUser());
 		token = aSource->getToken();
@@ -907,8 +959,13 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
 		putConnection(aSource);
 		return;
 	}
+	//Cache the trusted state after keyprint verification
+	if (aSource->isTrusted())
+		aSource->setFlag(UserConnection::FLAG_TRUSTED);
 
 	dcassert(!token.empty());
+
+	bool delayedToken = false;
 	{
 		RLock l(cs);
 		auto i = find(downloads.begin(), downloads.end(), token);
@@ -922,14 +979,22 @@ void ConnectionManager::on(AdcCommand::INF, UserConnection* aSource, const AdcCo
 			}
 			cqi->setErrors(0);
 			aSource->setFlag(UserConnection::FLAG_DOWNLOAD);
-		} else if (delayedTokens.find(token) == delayedTokens.end()) {
-			aSource->setFlag(UserConnection::FLAG_UPLOAD);
+		} else {
+			delayedToken = delayedTokens.find(token) != delayedTokens.end();
 		}
 	}
 
-	if(aSource->isSet(UserConnection::FLAG_DOWNLOAD)) {
+	if (aSource->isSet(UserConnection::FLAG_DOWNLOAD)) {
 		addDownloadConnection(aSource);
-	} else if(aSource->isSet(UserConnection::FLAG_UPLOAD)) {
+	}
+	else if (aSource->isSet(UserConnection::FLAG_PM) || cmd.hasFlag("PM", 0)) {
+		if (!aSource->isSet(UserConnection::FLAG_PM)) 
+			aSource->setFlag(UserConnection::FLAG_PM);
+		addPMConnection(aSource);
+	}
+	else if (!delayedToken) {
+		if (!aSource->isSet(UserConnection::FLAG_UPLOAD))
+			aSource->setFlag(UserConnection::FLAG_UPLOAD);
 		addUploadConnection(aSource);
 	} else {
 		putConnection(aSource);
@@ -948,32 +1013,11 @@ void ConnectionManager::force(const string& aToken) {
 bool ConnectionManager::checkKeyprint(UserConnection *aSource) {
 	dcassert(aSource->getUser());
 
-	auto kp = aSource->getKeyprint();
-	if(kp.empty()) {
+	if (!aSource->isSecure() || aSource->isTrusted())
 		return true;
-	}
 
-	auto kp2 = ClientManager::getInstance()->getField(aSource->getUser()->getCID(), aSource->getHubUrl(), "KP");
-	if(kp2.empty()) {
-		// TODO false probably
-		return true;
-	}
-
-	if(kp2.compare(0, 7, "SHA256/") != 0) {
-		// Unsupported hash
-		return true;
-	}
-
-	//dcdebug("Keyprint: %s vs %s\n", Encoder::toBase32(&kp[0], kp.size()).c_str(), kp2.c_str() + 7);
-
-	vector<uint8_t> kp2v(kp.size());
-	Encoder::fromBase32(&kp2[7], &kp2v[0], kp2v.size());
-	if(!std::equal(kp.begin(), kp.end(), kp2v.begin())) {
-		dcdebug("Keyprint Not equal...\n");
-		return false;
-	}
-
-	return true;
+	string kp = ClientManager::getInstance()->getField(aSource->getUser()->getCID(), aSource->getHubUrl(), "KP");
+	return aSource->verifyKeyprint(kp, SETTING(ALLOW_UNTRUSTED_CLIENTS));
 }
 
 void ConnectionManager::failDownload(const string& aToken, const string& aError, bool fatalError) {
@@ -992,7 +1036,7 @@ void ConnectionManager::failDownload(const string& aToken, const string& aError,
 			if (cqi->isSet(ConnectionQueueItem::FLAG_MCN1) && !cqi->isSet(ConnectionQueueItem::FLAG_REMOVE)) {
 				//remove an existing waiting item, if exists
 				auto s = find_if(downloads.begin(), downloads.end(), [&](const ConnectionQueueItem* c) { 
-					return c->getUser() == cqi->getUser() && c->getType() != ConnectionQueueItem::TYPE_SMALL_CONF && c->getType() != ConnectionQueueItem::TYPE_SMALL &&
+					return c->getUser() == cqi->getUser() && c->getDownloadType() != ConnectionQueueItem::TYPE_SMALL_CONF && c->getDownloadType() != ConnectionQueueItem::TYPE_SMALL &&
 						c->getState() != ConnectionQueueItem::RUNNING && c->getState() != ConnectionQueueItem::ACTIVE && c != cqi && !c->isSet(ConnectionQueueItem::FLAG_REMOVE);
 				});
 
@@ -1000,7 +1044,7 @@ void ConnectionManager::failDownload(const string& aToken, const string& aError,
 					(*s)->setFlag(ConnectionQueueItem::FLAG_REMOVE);
 			} 
 				
-			if (cqi->getType() == ConnectionQueueItem::TYPE_SMALL_CONF && cqi->getState() == ConnectionQueueItem::ACTIVE) {
+			if (cqi->getDownloadType() == ConnectionQueueItem::TYPE_SMALL_CONF && cqi->getState() == ConnectionQueueItem::ACTIVE) {
 				//small slot item that was never used for downloading anything? check if we have normal files to download
 				if (allowNewMCN(cqi))
 					mcnUser = cqi->getHintedUser();
@@ -1043,15 +1087,22 @@ void ConnectionManager::failed(UserConnection* aSource, const string& aError, bo
 			} else {
 				failDownload(aSource->getToken(), aError, protocolError);
 			}
-		} else if(aSource->isSet(UserConnection::FLAG_UPLOAD)) {
-			{
-				WLock l (cs);
-				auto i = find(uploads.begin(), uploads.end(), aSource->getToken());
-				dcassert(i != uploads.end());
-				ConnectionQueueItem* cqi = *i;
-				putCQI(cqi);
+		} else {
+
+			auto type = aSource->isSet(UserConnection::FLAG_UPLOAD) ? CONNECTION_TYPE_UPLOAD :
+				aSource->isSet(UserConnection::FLAG_PM) ? CONNECTION_TYPE_PM : CONNECTION_TYPE_LAST;
+
+			if (type != CONNECTION_TYPE_LAST) {
+				WLock l(cs);
+				auto& container = cqis[type];
+				auto i = type == CONNECTION_TYPE_PM ? find(container.begin(), container.end(), aSource->getUser()) :
+					find(container.begin(), container.end(), aSource->getToken());
+				dcassert(i != container.end());
+				putCQI(*i);
 			}
-			UploadManager::getInstance()->removeDelayUpload(*aSource);
+
+			if (type == CONNECTION_TYPE_UPLOAD)
+				UploadManager::getInstance()->removeDelayUpload(*aSource);
 		}
 	}
 	putConnection(aSource);
@@ -1080,10 +1131,11 @@ void ConnectionManager::disconnect(const string& token) {
 		(*s)->disconnect(true);
 }
 
-void ConnectionManager::disconnect(const UserPtr& aUser, int isDownload) {
+void ConnectionManager::disconnect(const UserPtr& aUser, ConnectionType aConnType) {
 	RLock l(cs);
 	for(auto uc: userConnections) {
-		if(uc->getUser() == aUser && uc->isSet((Flags::MaskType)(isDownload ? UserConnection::FLAG_DOWNLOAD : UserConnection::FLAG_UPLOAD))) {
+		if (uc->getUser() == aUser && uc->isSet(aConnType == CONNECTION_TYPE_DOWNLOAD ? UserConnection::FLAG_DOWNLOAD :
+			aConnType == CONNECTION_TYPE_UPLOAD ? UserConnection::FLAG_UPLOAD : UserConnection::FLAG_PM)) {
 			uc->disconnect(true);
 		}
 	}

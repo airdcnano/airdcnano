@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -151,8 +151,8 @@ void HttpConnection::on(BufferedSocketListener::Connected) noexcept {
 	string sRemoteServer = server;
 	if(!SETTING(HTTP_PROXY).empty())
 	{
-		string tfile, tport, proto, query, fragment;
-		Util::decodeUrl(file, proto, sRemoteServer, tport, tfile, query, fragment);
+		string tfile, tport, proto, queryTmp, fragment;
+		Util::decodeUrl(file, proto, sRemoteServer, tport, tfile, queryTmp, fragment);
 	}
 
 	socket->write("Host: " + sRemoteServer + "\r\n");

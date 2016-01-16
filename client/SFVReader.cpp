@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,16 +43,17 @@ DirSFVReader::DirSFVReader(const string& aPath) : loaded(false) {
 	loadPath(aPath);
 }
 
-DirSFVReader::DirSFVReader(const string& /*aPath*/, const StringList& aSfvFiles) : loaded(false) {
+DirSFVReader::DirSFVReader(const string& /*aPath*/, const StringList& aSfvFiles, StringList& invalidSFV) : loaded(false) {
 	sfvFiles = aSfvFiles;
-	load();
+	load(invalidSFV);
 }
 
 void DirSFVReader::loadPath(const string& aPath) {
 	content.clear();
 	path = aPath;
 	sfvFiles = File::findFiles(path, "*.sfv", File::TYPE_FILE);
-	load();
+	StringList tmp;
+	load(tmp);
 }
 
 void DirSFVReader::unload() {
@@ -69,7 +70,8 @@ optional<uint32_t> DirSFVReader::hasFile(const string& fileName) const {
 			return p->second;
 		}
 	}
-	return nullptr;
+
+	return boost::none;
 }
 
 bool DirSFVReader::isCrcValid(const string& fileName) const {
@@ -96,15 +98,15 @@ std::istream& getline(std::istream &is, std::string &s) {
     return is;
 }
 
-void DirSFVReader::load() noexcept {
+void DirSFVReader::load(StringList& invalidSFV) noexcept {
 	string line;
 
-	for(auto path: sfvFiles) {
+	for(auto curPath: sfvFiles) {
 		ifstream sfv;
 		
 		/* Try to open the sfv */
 		try {
-			auto loadPath = Text::utf8ToAcp(Util::FormatPath(path));
+			auto loadPath = Text::utf8ToAcp(Util::FormatPath(curPath));
 			auto size = File::getSize(loadPath);
 			if (size > Util::convertSize(1, Util::MB)) {
 				//this isn't a proper sfv file
@@ -118,15 +120,23 @@ void DirSFVReader::load() noexcept {
 				throw FileException(STRING(CANT_OPEN_SFV));
 			}
 		} catch(const FileException& e) {
-			LogManager::getInstance()->message(path + ": " + e.getError(), LogManager::LOG_ERROR);
+			invalidSFV.push_back(curPath);
+			LogManager::getInstance()->message(curPath + ": " + e.getError(), LogManager::LOG_ERROR);
 			continue;
 		}
 
 		/* Get the filename and crc */
+		bool hasValidLines = false;
 		while(getline(sfv, line) || !line.empty()) {
 			line = Text::toUtf8(line);
 			//make sure that the line is valid
-			if(regex_search(line, AirUtil::crcReg) && (line.find("\\") == string::npos) && (line.find(";") == string::npos)) {
+			if(regex_search(line, AirUtil::crcReg) && (line.find(";") == string::npos)) {
+				//We cant handle sfv with files in subdirectories currently.
+				if (line.find("\\") != string::npos) {
+					hasValidLines = true;
+					continue;
+				}
+
 				//only keep the filename
 				size_t pos = line.rfind(" ");
 				if (pos == string::npos) {
@@ -146,10 +156,12 @@ void DirSFVReader::load() noexcept {
 				}
 
 				content[line] = crc32;
+				hasValidLines = true;
 			}
-
 		}
 		sfv.close();
+		if (!hasValidLines)
+			invalidSFV.push_back(curPath);
 	}
 
 	loaded = true;

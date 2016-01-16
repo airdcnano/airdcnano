@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -59,6 +59,10 @@ uint32_t IPToUInt(const string& ip) {
 }
 
 bool isIPInRange(const string& aIP1, const string& aIP2, uint8_t mask, bool v6) {
+#ifndef _WIN32
+	// not implemented
+	return true;
+#else
 	if (!v6) { 
 		uint32_t mmask = (~0u) << (32-mask);
 		uint32_t result1 = IPToUInt(aIP1) & mmask;
@@ -77,7 +81,6 @@ bool isIPInRange(const string& aIP1, const string& aIP2, uint8_t mask, bool v6) 
 		p = aIP2.find("%");
 		inet_pton(AF_INET6, (p != string::npos ? aIP2.substr(0, p) : aIP2).c_str(), &addr2);
 
-#ifdef _WIN32
 		//reset the non-common bytes
 		int resetPos = 16-((128-mask) / 16);
 		for (int i = resetPos; i < 16; ++i) {
@@ -86,10 +89,8 @@ bool isIPInRange(const string& aIP1, const string& aIP2, uint8_t mask, bool v6) 
 		}
 
 		return memcmp(addr1.u.Byte, addr2.u.Byte, 16) == 0;
-#else
-		return true;
-#endif
 	}
+#endif
 }
 
 bool Mapper_MiniUPnPc::init() {

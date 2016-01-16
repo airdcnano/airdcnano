@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,8 +41,8 @@ Mapper(localIp, v6)
 {
 }
 
-bool Mapper_WinUPnP::supportsProtocol(bool v6) const {
-	return !v6;
+bool Mapper_WinUPnP::supportsProtocol(bool aV6) const {
+	return !aV6;
 }
 
 #ifdef HAVE_WINUPNP_H

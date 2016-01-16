@@ -59,7 +59,7 @@ public:
 		TYPE_DOUBLE
 	};
 
-	void show(const string& aMsg, Type aType, optional<pair<double, double>> aNumRange = nullptr) {
+	void show(const string& aMsg, Type aType, optional<pair<double, double>> aNumRange = boost::none) {
 		numRange = aNumRange;
 		type = aType;
 
@@ -154,7 +154,7 @@ private:
 			return d;
 		}
 
-		return nullptr;
+		return boost::none;
 	}
 
 	optional<int> toInt() const {
@@ -163,7 +163,7 @@ private:
 			return n;
 		}
 
-		return nullptr;
+		return boost::none;
 	}
 
 	optional<bool> toQuestion() const {
@@ -175,7 +175,7 @@ private:
 			return false;
 		}
 
-		return nullptr;
+		return boost::none;
 	}
 
 	optional<bool> toBool() const {
@@ -187,7 +187,7 @@ private:
 			return false;
 		}
 
-		return nullptr;
+		return boost::none;
 	}
 
 	Type type;

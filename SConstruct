@@ -2,6 +2,7 @@
 import os
 import commands
 import string
+import multiprocessing
 
 EnsureSConsVersion(0, 98, 1)
 
@@ -69,6 +70,7 @@ vars.AddVariables(
 
 env = Environment(ENV = os.environ, variables = vars, package = PACKAGE)
 
+
 if env.get('debug'):
 	env['mode'] = 'debug'
 elif env.get('release'):
@@ -129,7 +131,7 @@ if not 'install' in COMMAND_LINE_TARGETS:
 			 print 'Compiler version check failed. Supported compilers: clang 3.3 or later, g++ 4.7 or later'
 			 Exit(1)
 
-	elif not conf.CheckCXXVersion(env['CXX'], 4, 7):
+	elif not conf.CheckCXXVersion(env['CXX'], 4, 8):
 		 print 'Compiler version check failed. Supported compilers: clang 3.3 or later, g++ 4.7 or later'
 		 Exit(1)
 
@@ -309,6 +311,11 @@ if not 'install' in COMMAND_LINE_TARGETS:
 # ----------------------------------------------------------------------
 # Build
 # ----------------------------------------------------------------------	
+
+	#num_cpu = multiprocessing.cpu_count()
+	#SetOption('num_jobs', num_cpu)
+	print 'Using %d threads for compiling (change with -j<number_of_threads>)' % GetOption('num_jobs')
+
 
 	build = env.Program('airdcnano', [
 		SConscript('client/SConscript', exports='env', variant_dir= env['build_path'] + 'client', duplicate=0),

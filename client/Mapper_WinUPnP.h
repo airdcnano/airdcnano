@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ private:
 
 	bool add(const string& port, const Protocol protocol, const string& description);
 	bool remove(const string& port, const Protocol protocol);
-	bool supportsProtocol(bool v6) const;
+	bool supportsProtocol(bool aV6) const;
 
 	uint32_t renewal() const { return 0; }
 

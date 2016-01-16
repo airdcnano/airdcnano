@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,8 @@
 #include "Transfer.h"
 #include "DebugManager.h"
 #include "FavoriteManager.h"
+#include "ChatMessage.h"
+
 
 #include "Download.h"
 
@@ -44,6 +46,7 @@ const string UserConnection::FEATURE_ADC_BZIP = "BZIP";
 const string UserConnection::FEATURE_ADC_TIGR = "TIGR";
 const string UserConnection::FEATURE_ADC_MCN1 = "MCN1";
 const string UserConnection::FEATURE_ADC_UBN1 = "UBN1";
+const string UserConnection::FEATURE_ADC_CPMI = "CPMI";
 
 const string UserConnection::FILE_NOT_AVAILABLE = "File Not Available";
 
@@ -154,7 +157,10 @@ void UserConnection::connect(const string& aServer, const string& aPort, const s
 
 	socket = BufferedSocket::getSocket(0);
 	socket->addListener(this);
-	socket->connect(aServer, aPort, localPort, natRole, secure, SETTING(ALLOW_UNTRUSTED_CLIENTS), true);
+
+	// TODO: verify that this KeyPrint was mediated by a trusted hub?
+	string expKP = user ? ClientManager::getInstance()->getField(user->getCID(), hubUrl, "KP") : Util::emptyString;
+	socket->connect(aServer, aPort, localPort, natRole, secure, SETTING(ALLOW_UNTRUSTED_CLIENTS), true, expKP);
 }
 
 int64_t UserConnection::getChunkSize() const {
@@ -208,7 +214,65 @@ void UserConnection::inf(bool withToken, int mcnSlots) {
 	if(withToken) {
 		c.addParam("TO", getToken());
 	}
+	if (isSet(FLAG_PM)) {
+		c.addParam("PM", "1");
+	}
 	send(c);
+}
+
+void UserConnection::pm(const string& message, bool thirdPerson) {
+
+	AdcCommand c(AdcCommand::CMD_MSG);
+	c.addParam(message);
+	if (thirdPerson)
+		c.addParam("ME", "1");
+	send(c);
+
+	// simulate an echo message.
+	callAsync([=]{ handlePM(c, true); });
+}
+
+void UserConnection::handle(AdcCommand::MSG t, const AdcCommand& c) {
+	handlePM(c, false);
+
+	fire(t, this, c);
+}
+
+void UserConnection::handle(AdcCommand::PMI t, const AdcCommand& c) {
+	fire(t, this, c);
+}
+
+
+void UserConnection::handlePM(const AdcCommand& c, bool echo) noexcept{
+	auto message = c.getParam(0);
+	OnlineUserPtr peer = nullptr;
+	OnlineUserPtr me = nullptr;
+	
+	auto cm = ClientManager::getInstance();
+	{
+		RLock l(cm->getCS());
+		peer = cm->findOnlineUser(user->getCID(), getHubUrl());
+		//try to use the same hub so nicks match to a hub, not the perfect solution for CCPM, nicks keep changing when hubs go offline.
+		if(peer && peer->getHubUrl() != hubUrl) 
+			setHubUrl(peer->getHubUrl());
+		me = cm->findOnlineUser(cm->getMe()->getCID(), getHubUrl());
+	}
+
+	if (!me || !peer){ //ChatMessage cant be formatted without the OnlineUser!
+		disconnect(true);
+		return;
+	}
+
+	if (echo) {
+		std::swap(peer, me);
+	}
+
+	string tmp;
+
+	ChatMessage msg = { message, peer, me, peer };
+	msg.timestamp = c.getParam("TS", 1, tmp) ? Util::toInt64(tmp) : 0;
+	msg.thirdPerson = c.hasFlag("ME", 1);
+	fire(UserConnectionListener::PrivateMessage(), this, msg);
 }
 
 void UserConnection::sup(const StringList& features) {

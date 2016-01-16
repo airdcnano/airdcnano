@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,23 +40,29 @@ void TimerManager::shutdown() {
 }
 
 int TimerManager::run() {
-	int nextMin = 0;
 
-	ptime now = microsec_clock::universal_time();
-	ptime nextSecond = now + seconds(1);
+	//https://bugs.launchpad.net/dcplusplus/+bug/713742
+	
+	auto now = microsec_clock::universal_time();
+	auto nextSecond = now + seconds(1);
+	auto nextMin = now + minutes(1);
+
 
 	while(!mtx.timed_lock(nextSecond)) {
-		uint64_t t = getTick();
-		now = microsec_clock::universal_time();
 		nextSecond += seconds(1);
-		if(nextSecond < now) {
-			nextSecond = now + seconds(1); //https://bugs.launchpad.net/dcplusplus/+bug/713742
+		now = microsec_clock::universal_time();
+		if (nextSecond <= now)
+		{
+			nextSecond = now + seconds(1);
 		}
 
+		const auto t = getTick();
 		fire(TimerManagerListener::Second(), t);
-		if(nextMin++ >= 60) {
+
+		if (nextMin <= now)
+		{
+			nextMin += minutes(1);
 			fire(TimerManagerListener::Minute(), t);
-			nextMin = 0;
 		}
 	}
 

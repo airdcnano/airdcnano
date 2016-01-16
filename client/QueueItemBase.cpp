@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 AirDC++ Project
+ * Copyright (C) 2011-2015 AirDC++ Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 namespace dcpp {
 
 QueueItemBase::QueueItemBase(const string& aTarget, int64_t aSize, Priority aPriority, time_t aAdded, Flags::MaskType aFlags) : 
-	target(aTarget), size(aSize), priority(aPriority), added(aAdded), autoPriority(false), Flags(aFlags) {
+	target(aTarget), size(aSize), priority(aPriority), timeAdded(aAdded), autoPriority(false), Flags(aFlags) {
 
 }
 

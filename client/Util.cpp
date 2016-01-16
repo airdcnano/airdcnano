@@ -1,5 +1,5 @@
 /* 
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,7 +63,7 @@ wstring Util::emptyStringW;
 tstring Util::emptyStringT;
 
 string Util::paths[Util::PATH_LAST];
-StringList Util::params;
+StringList Util::startupParams;
 
 bool Util::localMode = true;
 bool Util::wasUncleanShutdown = false;
@@ -139,34 +139,34 @@ string Util::getOpenPath(const string& aFileName) {
 	return getOpenPath() + fileName;
 }
 
-void Util::addParam(const string& aParam) {
+void Util::addStartupParam(const string& aParam) {
 	if (aParam.empty())
 		return;
 
-	if (!hasParam(aParam))
-		params.push_back(aParam);
+	if (!hasStartupParam(aParam))
+		startupParams.push_back(aParam);
 }
 
-bool Util::hasParam(const string& aParam) {
-	return find(params.begin(), params.end(), aParam) != params.end();
+bool Util::hasStartupParam(const string& aParam) {
+	return find(startupParams.begin(), startupParams.end(), aParam) != startupParams.end();
 }
 
-string Util::getParams(bool isFirst) {
-	if (params.empty()) {
+string Util::getStartupParams(bool isFirst) {
+	if (startupParams.empty()) {
 		return Util::emptyString;
 	}
 
-	return string(isFirst ? Util::emptyString : " ") + Util::toString(" ", params);
+	return string(isFirst ? Util::emptyString : " ") + Util::toString(" ", startupParams);
 }
 
-optional<string> Util::getParam(const string& aKey) {
-	for (const auto& p : params) {
+optional<string> Util::getStartupParam(const string& aKey) {
+	for (const auto& p : startupParams) {
 		auto pos = p.find("=");
 		if (pos != string::npos && pos != p.length() && Util::strnicmp(p, aKey, pos) == 0)
 			return p.substr(pos + 1, p.length() - pos - 1);
 	}
 
-	return nullptr;
+	return optional<string>();
 }
 
 string Util::getAppName() {
@@ -183,6 +183,18 @@ void Util::initialize() {
 	Text::initialize();
 
 	sgenrand((unsigned long)time(NULL));
+
+#ifdef _WIN64
+	// VS2013's CRT only checks the existence of FMA3 instructions, not the
+	// enabled-ness of them at the OS level (this is fixed in VS2015). We force
+	// off usage of FMA3 instructions in the CRT to avoid using that path and
+	// hitting illegal instructions when running on CPUs that support FMA3, but
+	// OSs that don't.
+	// https://connect.microsoft.com/VisualStudio/feedback/details/811093/visual-studio-2013-rtm-c-x64-code-generation-bug-for-avx2-instructions
+	#if _MSC_VER == 1800
+		_set_FMA3_enable(0);
+	#endif
+#endif
 
 #if (_MSC_VER >= 1400)
 	_set_invalid_parameter_handler(reinterpret_cast<_invalid_parameter_handler>(invalidParameterHandler));
@@ -312,7 +324,7 @@ void Util::migrate(const string& aNewDir, const string& aPattern) {
 
 void Util::loadBootConfig() {
 #ifndef _WIN32
-	auto c = getParam("-c");
+	auto c = getStartupParam("-c");
 	if (c) {
 		paths[PATH_USER_CONFIG] = *c;
 		return;
@@ -437,15 +449,22 @@ string Util::cleanPathChars(string tmp, bool isFileName) {
 	}
 
 	if (isFileName) {
-		i = 0;
-		while ((i = tmp.find(PATH_SEPARATOR, i)) != string::npos) {
-			tmp[i] = '_';
-		}
+		tmp = cleanPathSeparators(tmp);
 	}
 
 
 	return tmp;
 }
+
+string Util::cleanPathSeparators(const string& str) {
+	string ret(str);
+	string::size_type i = 0;
+	while ((i = ret.find_first_of("/\\", i)) != string::npos) {
+		ret[i] = '_';
+	}
+	return ret;
+}
+
 
 bool Util::checkExtension(const string& tmp) {
 	for(size_t i = 0, n = tmp.size(); i < n; ++i) {
@@ -574,6 +593,16 @@ void Util::decodeUrl(const string& url, string& protocol, string& host, string& 
 	path = url.substr(fileStart, fileEnd - fileStart);
 	query = url.substr(queryStart, queryEnd - queryStart);
 	fragment = url.substr(fragmentStart, fragmentEnd - fragmentStart);
+}
+
+void Util::parseIpPort(const string& aIpPort, string& ip, string& port) {
+	string::size_type i = aIpPort.rfind(':');
+	if (i == string::npos) {
+		ip = aIpPort;
+	} else {
+		ip = aIpPort.substr(0, i);
+		port = aIpPort.substr(i + 1);
+	}
 }
 
 map<string, string> Util::decodeQuery(const string& query) {
@@ -897,7 +926,7 @@ static wchar_t utf8ToLC(ccp& str) {
 			return 0;
 		}
 	} else {
-		wchar_t c = Text::asciiToLower((char)str[0]);
+		c = Text::asciiToLower((char)str[0]);
 		str++;
 		return c;
 	}
@@ -1072,8 +1101,8 @@ struct GetString : boost::static_visitor<string> {
  * it is removed from the string completely...
  */
 
-string Util::formatParams(const string& msg, const ParamMap& params, FilterF filter) {
-	string result = msg;
+string Util::formatParams(const string& aMsg, const ParamMap& aParams, FilterF filter) {
+	string result = aMsg;
 
 	string::size_type i, j, k;
 	i = 0;
@@ -1082,9 +1111,9 @@ string Util::formatParams(const string& msg, const ParamMap& params, FilterF fil
 			break;
 		}
 
-		auto param = params.find(result.substr(j + 2, k - j - 2));
+		auto param = aParams.find(result.substr(j + 2, k - j - 2));
 
-		if(param == params.end()) {
+		if(param == aParams.end()) {
 			result.erase(j, k - j + 1);
 			i = j;
 

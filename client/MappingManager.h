@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,8 +44,8 @@ public:
 	/** add an implementation derived from the base Mapper class, passed as template parameter.
 	the first added mapper will be tried first, unless the "MAPPER" setting is not empty. */
 	template<typename T> void addMapper() {
-		mappers.emplace_back(T::name, [](const string& localIp, bool v6) {
-			return new T(localIp, v6);
+		mappers.emplace_back(T::name, [](const string& localIp, bool aV6) {
+			return new T(localIp, aV6);
 		});
 	}
 	StringList getMappers() const;

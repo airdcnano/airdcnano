@@ -57,17 +57,17 @@ Nanodc::Nanodc(int argc, char **argv):
 int Nanodc::run()
 {
 	while (m_argc > 0) {
-		Util::addParam(Text::fromT(*m_argv));
+		Util::addStartupParam(Text::fromT(*m_argv));
 		m_argc--;
 		m_argv++;
 	}
 
-	if (Util::hasParam("-h")) {
+	if (Util::hasStartupParam("-h")) {
 		printHelp();
 		return 0;
 	}
 
-	if (Util::hasParam("-v")) {
+	if (Util::hasStartupParam("-v")) {
 		printVersion();
 		return 0;
 	}
@@ -177,6 +177,7 @@ void Nanodc::handle_crash(int sig)
     std::cerr << "pid: " << getpid() <<
         ", tid: " << utils::gettid() << std::endl;
 #if USE_STACKTRACE
+    std::cerr << "Collecting crash information, please wait..." << std::endl;
     cow::StackTrace trace;
     trace.generate_frames();
     std::copy(trace.begin(), trace.end(),

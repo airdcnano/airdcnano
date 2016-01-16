@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
 #include "BufferedSocket.h"
 #include "BufferedSocketListener.h"
 #include "ClientListener.h"
+#include "ConnectionType.h"
 #include "HubSettings.h"
 #include "OnlineUser.h"
 #include "Search.h"
@@ -86,7 +87,7 @@ public:
 	bool isSecure() const;
 	bool isTrusted() const;
 	std::string getCipherName() const;
-	vector<uint8_t> getKeyprint() const;
+	ByteVector getKeyprint() const;
 
 	bool isOp() const { return getMyIdentity().isOp(); }
 
@@ -158,6 +159,8 @@ public:
 	};
 	CountType getCountType() { return countType; }
 
+	void logStatusMessage(const string& aMessage);
+	void logChatMessage(const string& aMessage);
 protected:
 	friend class ClientManager;
 	Client(const string& hubURL, char separator);

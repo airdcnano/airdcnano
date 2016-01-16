@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -203,13 +203,13 @@ void Download::open(int64_t bytes, bool z, bool hasDownloadedBytes) {
 			File::ensureDirectory(target);
 		}
 
-		int flags = File::OPEN | File::CREATE | File::SHARED_WRITE;
+		int fileFlags = File::OPEN | File::CREATE | File::SHARED_WRITE;
 		if (getSegment().getEnd() != fullSize) {
 			//segmented download, let Windows decide the buffering
-			flags |= File::BUFFER_AUTO;
+			fileFlags |= File::BUFFER_AUTO;
 		}
 
-		unique_ptr<SharedFileStream> f(new SharedFileStream(target, File::WRITE, flags));
+		unique_ptr<SharedFileStream> f(new SharedFileStream(target, File::WRITE, fileFlags));
 
 		if(f->getSize() != fullSize) {
 			f->setSize(fullSize);

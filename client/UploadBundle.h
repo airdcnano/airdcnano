@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2014 AirDC++ Project
+ * Copyright (C) 2012-2015 AirDC++ Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,7 +51,7 @@ public:
 	uint64_t getStart() const { return start; }
 
 	bool getSingleUser() const { return singleUser; }
-	void setSingleUser(bool aSingleUser, int64_t uploadedSegments = 0);
+	void setSingleUser(bool aSingleUser, int64_t aUploadedSegments = 0);
 
 	string getName() const;
 	string getTarget() const { return target; }

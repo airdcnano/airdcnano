@@ -46,8 +46,7 @@ Window::Window(const std::string& aID, Type aType, bool aAllowCommands) :
     m_bindings(),
     m_insertMode(true),
     m_drawTitle(true),
-	allowCommands(aAllowCommands),
-	asyncConn(events::add_listener("async" + id, std::bind(&Window::handleAsync, this)))
+	allowCommands(aAllowCommands)
 {
     // ^X
     m_bindings['X' - '@'] = std::bind(&display::Manager::remove,
@@ -206,14 +205,6 @@ const gchar *Window::find_line_end(const gchar *line_start,
 
 void Window::setInsertMode(bool enable) {
 	m_insertMode = enable;
-}
-
-void Window::callAsync(std::function<void()> aF) {
-	events::emit("async" + id, aF);
-}
-
-void Window::handleAsync() {
-	events::arg<std::function<void()>>(0)();
 }
 
 Window::~Window()

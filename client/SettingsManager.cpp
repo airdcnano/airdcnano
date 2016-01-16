@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -184,11 +184,11 @@ const string SettingsManager::settingTags[] =
 	"ConfirmHubRemoval", "ConfirmUserRemoval", "Coral",
 	"DontDlAlreadyQueued", "DontDLAlreadyShared", "FavShowJoins", "FilterMessages",
 	"FollowLinks", "GetUserCountry", "GetUserInfo", "HubUserCommands",
-	"IgnoreBotPms", "IgnoreHubPms", "OpenNewWindow", "KeepFinishedFiles", "KeepLists",
+	"OpenNewWindow", "KeepFinishedFiles", "KeepLists",
 	"LogDownloads", "LogFilelistTransfers", "LogFinishedDownloads", "LogMainChat",
 	"LogPrivateChat", "LogStatusMessages", "LogSystem", "LogUploads", "MagnetAsk",
 	"MagnetRegister", "MinimizeToTray", "NoAwayMsgToBots", "NoIpOverride",
-	"PopupBotPms", "PopupHubPms", "PopupPMs", "PopunderFilelist", "PopunderPm",
+	"PopupBotPms", "PopupHubPms", "PopunderFilelist", "PopunderPm",
 	"LowestPrio", "PromptPassword", "QueueFrameShowTree", "SearchFilterShared",
 	"SearchOnlyFreeSlots", "SendUnknownCommands",
 	"ShareHidden", "ShowJoins", "ShowMenuBar", "ShowStatusbar", "ShowToolbar",
@@ -198,7 +198,7 @@ const string SettingsManager::settingTags[] =
 	"UsersFilterFavorite", "UsersFilterOnline", "UsersFilterQueue", "UsersFilterWaiting",
 	"AwayTimeStamp",
 
-	"PrivateMessageBeep", "PrivateMessageBeepOpen", "ShowProgressBars", "MDIMaxmimized", "SearchPassiveAlways", "RemoveForbidden", "ShowInfoTips", "MinimizeOnStratup", "ConfirmDelete", "ExpandQueue",
+	"PrivateMessageBeep", "PrivateMessageBeepOpen", "ShowProgressBars", "MDIMaxmimized", "SearchPassiveAlways", "RemoveForbidden", "ShowInfoTips", "MinimizeOnStratup", "ConfirmDelete",
 	"FilterEnter", "SpyFrameIgnoreTthSearches", "OpenWaitingUsers", "BoldWaitingUsers", "GroupSearchResults", "TabsOnTop", "OpenPublic", "OpenFavoriteHubs", "OpenFavoriteUsers", "OpenQueue",
 	"OpenFinishedUploads", "OpenSearchSpy", "OpenNotepad", "SuppressMainChat", "ProgressbaroDCStyle", "MultiChunk", "PopupAway", "PopupMinimized", "Away", "PopupHubConnected", "PopupHubDisconnected", "PopupFavoriteConnected", 
 	"PopupDownloadStart", "PopupDownloadFailed", "PopupDownloadFinished", "PopupUploadFinished", "PopupPm", "PopupNewPM", "UploadQueueFrameShowTree", "SegmentsManual", "SoundsDisabled", "ReportFoundAlternates",
@@ -211,7 +211,7 @@ const string SettingsManager::settingTags[] =
 	"UpdateIPHourly", "OpenTextOnBackground", "LockTB", "PopunderPartialList", "ShowTBStatusBar", "UseSlowDisconnectingDefault", "PrioListHighest", 
 	"UseFTPLogger", "QIAutoPrio", "ShowSharedDirsFav", "ReportAddedSources", "ExpandBundles", "OverlapSlowUser", "FormatDirRemoteTime", "TextQueueBold", "TextQueueItalic", "UnderlineQueue", "LogHashedFiles",
 	"UsePartialSharing", "PopupBundleDLs", "PopupBundleULs", "ListHighlightBold", "ListHighlightItalic", "ReportSkiplist", "ScanDLBundles", "MCNAutoDetect", "DLAutoDetect", "ULAutoDetect", "CheckUseSkiplist", "CheckIgnoreZeroByte", 
-	"TextDupeBold", "TextDupeItalic", "UnderlineLinks", "UnderlineDupes", "DupesInFilelists", "DupesInChat", "NoZeroByte", "CheckEmptyDirs","CheckEmptyReleases",  "CheckMissing", "CheckSfv", 
+	"TextDupeBold", "TextDupeItalic", "UnderlineLinks", "UnderlineDupes", "DupesInFilelists", "DupesInChat", "NoZeroByte", "CheckEmptyDirs","CheckEmptyReleases",  "CheckMissing", "CheckInvalidSFV", "CheckSfv", 
 	"CheckNfo", "CheckMp3Dir", "CheckExtraSfvNfo", "CheckExtraFiles", "CheckDupes", "CheckDiskCounts", "SortDirs", "WizardRunNew", "FormatRelease", "TextNormBold", "TextNormItalic", "SystemShowUploads", "SystemShowDownloads", 
 	"UseAdls", "DupeSearch", "passwd_protect", "passwd_protect_tray", "DisAllowConnectionToPassedHubs", "BoldHubTabsOnKick",
 	"AutoAddSource", "UseExplorerTheme", "TestWrite", "OpenSystemLog", "OpenLogsInternal", "UcSubMenu", "ShowQueueBars", "ExpandDefault",
@@ -220,7 +220,8 @@ const string SettingsManager::settingTags[] =
 	"ClearDirectoryHistory", "ClearExcludeHistory", "ClearDirHistory", "NoIpOverride6", "IPUpdate6", "SearchUseExcluded", "AutoSearchBold", "ShowEmoticon", "ShowMultiline", "ShowMagnet", "WarnElevated", "SkipEmptyDirsShare", "LogShareScans",
 	"AcceptFailoversFavs", "RemoveExpiredAs", "AdcLogGroupCID", "ShareFollowSymlinks", "ScanMonitoredFolders", "FinishedNoHash", "ConfirmFileDeletions", "UseDefaultCertPaths", "StartupRefresh", "DctmpStoreDestination", "FLReportDupeFiles",
 	"FilterFLShared", "FilterFLQueued", "FilterFLInversed", "FilterFLTop", "FilterFLPartialDupes", "FilterFLResetChange", "FilterSearchShared", "FilterSearchQueued", "FilterSearchInversed", "FilterSearchTop", "FilterSearchPartialDupes", "FilterSearchResetChange",
-	"SearchAschOnlyMan", "IgnoreIndirectSR", "UseUploadBundles", "CloseMinimize", "LogIgnored", "UsersFilterIgnore", "NfoExternal", "SingleClickTray", "QueueShowFinished", "RemoveFinishedBundles",
+	"SearchAschOnlyMan", "IgnoreIndirectSR", "UseUploadBundles", "CloseMinimize", "LogIgnored", "UsersFilterIgnore", "NfoExternal", "SingleClickTray", "QueueShowFinished", "RemoveFinishedBundles", "LogCRCOk",
+	"FilterQueueInverse", "FilterQueueTop", "FilterQueueReset", "AlwaysCCPM",
 	"SENTRY",
 	// Int64
 	"TotalUpload", "TotalDownload",
@@ -282,8 +283,6 @@ SettingsManager::SettingsManager()
 	setDefault(CONFIRM_EXIT, true);
 	setDefault(POPUP_HUB_PMS, true);
 	setDefault(POPUP_BOT_PMS, true);
-	setDefault(IGNORE_HUB_PMS, false);
-	setDefault(IGNORE_BOT_PMS, false);
 	setDefault(BUFFER_SIZE, 64);
 	setDefault(HUBLIST_SERVERS, "http://dchublist.com/hublist.xml.bz2;http://hublist.eu/hublist.xml.bz2;http://www.hublista.hu/hublist.xml.bz2;");
 	setDefault(DOWNLOAD_SLOTS, 50);
@@ -299,7 +298,6 @@ SettingsManager::SettingsManager()
 	setDefault(PRIVATE_MESSAGE_BEEP, false);
 	setDefault(PRIVATE_MESSAGE_BEEP_OPEN, false);
 	setDefault(USE_SYSTEM_ICONS, true);
-	setDefault(POPUP_PMS, true);
 	setDefault(MIN_UPLOAD_SPEED, 0);
 	setDefault(LOG_FORMAT_POST_DOWNLOAD, "%Y-%m-%d %H:%M: %[target] " + STRING(DOWNLOADED_FROM) + " %[userNI] (%[userCID]), %[fileSI] (%[fileSIchunk]), %[speed], %[time]");
 	setDefault(LOG_FORMAT_POST_UPLOAD, "%Y-%m-%d %H:%M: %[source] " + STRING(UPLOADED_TO) + " %[userNI] (%[userCID]), %[fileSI] (%[fileSIchunk]), %[speed], %[time]");
@@ -514,7 +512,6 @@ SettingsManager::SettingsManager()
 	setDefault(MINIMIZE_ON_STARTUP, false);
 	setDefault(FREE_SLOTS_DEFAULT, false);
 	setDefault(ERROR_COLOR, RGB(255, 0, 0));
-	setDefault(EXPAND_QUEUE, true);
 	setDefault(TRANSFER_SPLIT_SIZE, 8000);
 	setDefault(MENUBAR_TWO_COLORS, true);
 	setDefault(MENUBAR_LEFT_COLOR, RGB(255, 64, 64));
@@ -700,6 +697,7 @@ SettingsManager::SettingsManager()
 	setDefault(LOG_LINES, 500);
 
 	setDefault(CHECK_MISSING, true);
+	setDefault(CHECK_INVALID_SFV, true);
 	setDefault(CHECK_SFV, false);
 	setDefault(CHECK_NFO, false);
 	setDefault(CHECK_MP3_DIR, false);
@@ -858,6 +856,10 @@ SettingsManager::SettingsManager()
 	setDefault(FILTER_SEARCH_PARTIAL_DUPES, false);
 	setDefault(FILTER_SEARCH_RESET_CHANGE, true);
 
+	setDefault(FILTER_QUEUE_INVERSED, false);
+	setDefault(FILTER_QUEUE_TOP, true);
+	setDefault(FILTER_QUEUE_RESET_CHANGE, true);
+
 	setDefault(UPDATE_CHANNEL, VERSION_STABLE);
 	setDefault(CLOSE_USE_MINIMIZE, false);
 	setDefault(LOG_IGNORED, true);
@@ -867,6 +869,8 @@ SettingsManager::SettingsManager()
 	setDefault(QUEUE_SHOW_FINISHED, true);
 	setDefault(PROGRESS_LIGHTEN, 25);
 	setDefault(REMOVE_FINISHED_BUNDLES, false);
+	setDefault(LOG_CRC_OK, false);
+	setDefault(ALWAYS_CCPM, false);
 
 	// not in GUI
 	setDefault(IGNORE_INDIRECT_SR, false);
@@ -1198,12 +1202,11 @@ void SettingsManager::save() {
 	}
 	xml.stepOut();
 
-	for(int i = 0; i < HISTORY_LAST; ++i) {
+	for(i = 0; i < HISTORY_LAST; ++i) {
 		const auto& hist = history[i];
 		if (!hist.empty() && !get(clearSettings[i])) {
 			xml.addTag(historyTags[i]);
 			xml.stepIn();
-			const auto& hist = history[i];
 			for (auto& hi: hist) {
 				xml.addTag("HistoryItem", hi);
 			}

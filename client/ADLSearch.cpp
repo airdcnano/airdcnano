@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -541,8 +541,11 @@ void ADLSearchManager::PrepareDestinationDirectories(DestDirList& destDirs, Dire
 
 		if(isNew) {
 			// Add new destination directory
-			DestDir dir = { is.destDir, new DirectoryListing::Directory(root.get(), "<<<" + is.destDir + ">>>", DirectoryListing::Directory::TYPE_ADLS, GET_TIME()) };
-			destDirs.push_back(std::move(dir));
+			DestDir newDir = { is.destDir, 
+				new DirectoryListing::Directory(root.get(), "<<<" + is.destDir + ">>>", 
+					DirectoryListing::Directory::TYPE_ADLS, GET_TIME()) 
+			};
+			destDirs.push_back(std::move(newDir));
 			is.ddIndex = ddIndex;
 		}
 	}

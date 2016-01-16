@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@
 #include <boost/scoped_array.hpp>
 
 #include "ConnectivityManager.h"
-#include "CryptoManager.h"
 #include "SettingsManager.h"
 #include "SSLSocket.h"
 #include "Streams.h"
@@ -92,10 +91,10 @@ void BufferedSocket::setOptions() {
 		sock->setSocketOpt(SO_SNDBUF, SETTING(SOCKET_OUT_BUFFER));
 }
 
-void BufferedSocket::accept(const Socket& srv, bool secure, bool allowUntrusted) {
+void BufferedSocket::accept(const Socket& srv, bool secure, bool allowUntrusted, const string& expKP) {
 	//dcdebug("BufferedSocket::accept() %p\n", (void*)this);
 
-	unique_ptr<Socket> s(secure ? CryptoManager::getInstance()->getServerSocket(allowUntrusted) : new Socket(Socket::TYPE_TCP));
+	unique_ptr<Socket> s(secure ? new SSLSocket(CryptoManager::SSL_SERVER, allowUntrusted, expKP) : new Socket(Socket::TYPE_TCP));
 
 	s->accept(srv);
 
@@ -106,14 +105,13 @@ void BufferedSocket::accept(const Socket& srv, bool secure, bool allowUntrusted)
 	addTask(ACCEPTED, 0);
 }
 
-void BufferedSocket::connect(const string& aAddress, const string& aPort, bool secure, bool allowUntrusted, bool proxy) {
-	connect(aAddress, aPort, Util::emptyString, NAT_NONE, secure, allowUntrusted, proxy);
+void BufferedSocket::connect(const string& aAddress, const string& aPort, bool secure, bool allowUntrusted, bool proxy, const string& expKP) {
+	connect(aAddress, aPort, Util::emptyString, NAT_NONE, secure, allowUntrusted, proxy, expKP);
 }
 
-void BufferedSocket::connect(const string& aAddress, const string& aPort, const string& localPort, NatRoles natRole, bool secure, bool allowUntrusted, bool proxy) {
+void BufferedSocket::connect(const string& aAddress, const string& aPort, const string& localPort, NatRoles natRole, bool secure, bool allowUntrusted, bool proxy, const string& expKP) {
 	//dcdebug("BufferedSocket::connect() %p\n", (void*)this);
-	unique_ptr<Socket> s(secure ? (natRole == NAT_SERVER ? CryptoManager::getInstance()->getServerSocket(allowUntrusted) :
-		CryptoManager::getInstance()->getClientSocket(allowUntrusted)) : new Socket(Socket::TYPE_TCP));
+	unique_ptr<Socket> s(secure ? new SSLSocket(natRole == NAT_SERVER ? CryptoManager::SSL_SERVER : CryptoManager::SSL_CLIENT, allowUntrusted, expKP) : new Socket(Socket::TYPE_TCP));
 
 	s->setLocalIp4(CONNSETTING(BIND_ADDRESS));
 	s->setLocalIp6(CONNSETTING(BIND_ADDRESS6));
@@ -213,7 +211,6 @@ void BufferedSocket::threadRead() {
 			case MODE_ZPIPE: {
 					const int BUF_SIZE = 1024;
 					// Special to autodetect nmdc connections...
-					string::size_type pos = 0;
 					boost::scoped_array<char> buffer(new char[BUF_SIZE]);
 					l = line;
 					// decompress all input data and store in l.
@@ -308,7 +305,7 @@ void BufferedSocket::threadSendFile(InputStream* file) {
 	size_t bufSize = max(sockSize, (size_t)64*1024);
 
 	ByteVector readBuf(bufSize);
-	ByteVector writeBuf(bufSize);
+	ByteVector writeBufTmp(bufSize);
 
 	size_t readPos = 0;
 
@@ -336,24 +333,24 @@ void BufferedSocket::threadSendFile(InputStream* file) {
 			return;
 		}
 
-		readBuf.swap(writeBuf);
+		readBuf.swap(writeBufTmp);
 		readBuf.resize(bufSize);
-		writeBuf.resize(readPos);
+		writeBufTmp.resize(readPos);
 		readPos = 0;
 
 		size_t writePos = 0, writeSize = 0;
 		int written = 0;
 
-		while(writePos < writeBuf.size()) {
+		while(writePos < writeBufTmp.size()) {
 			if(disconnecting)
 				return;
 			
 			if(written == -1) {
 				// workaround for OpenSSL (crashes when previous write failed and now retrying with different writeSize)
-				written = sock->write(&writeBuf[writePos], writeSize);
+				written = sock->write(&writeBufTmp[writePos], writeSize);
 			} else {
-				writeSize = min(sockSize / 2, writeBuf.size() - writePos);	
-				written = useLimiter ? ThrottleManager::getInstance()->write(sock.get(), &writeBuf[writePos], writeSize) : sock->read(&inbuf[0], inbuf.size());
+				writeSize = min(sockSize / 2, writeBufTmp.size() - writePos);
+				written = useLimiter ? ThrottleManager::getInstance()->write(sock.get(), &writeBufTmp[writePos], writeSize) : sock->read(&inbuf[0], inbuf.size());
 			}
 			
 			if(written > 0) {
@@ -472,7 +469,7 @@ bool BufferedSocket::checkEvents() {
 			} else if(p.first == SEND_FILE) {
 				threadSendFile(static_cast<SendFileInfo*>(p.second.get())->stream); break;
 			} else if(p.first == DISCONNECT) {
-				fail("Disconnected");
+				fail(STRING(DISCONNECTED));
 			} else {
 				dcdebug("%d unexpected in RUNNING state\n", p.first);
 			}

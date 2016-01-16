@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@
 #include "Speaker.h"
 #include "LogManagerListener.h"
 #include "User.h"
+#include "DispatcherQueue.h"
 
 namespace dcpp {
 
@@ -79,6 +80,8 @@ private:
 
 	unordered_map<CID, string> pmPaths;
 	void ensureParam(const string& aParam, string& aFile);
+
+	DispatcherQueue tasks;
 };
 
 #define LOG(area, msg) LogManager::getInstance()->log(area, msg)

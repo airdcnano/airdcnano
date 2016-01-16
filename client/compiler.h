@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,21 +27,15 @@
 
 #elif defined(__GNUC__)
 
-#ifdef _WIN32
-
 #if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 8)
 #error GCC 4.8 is required
 #endif
 
+#ifdef _WIN32
+
 #ifdef HAVE_OLD_MINGW
 #error Regular MinGW has stability problems; use a MinGW package from mingw-w64
 // see <https://bugs.launchpad.net/dcplusplus/+bug/1029629> for details
-#endif
-
-#else // _WIN32
-
-#if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 7)
-#error GCC 4.7 is required
 #endif
 
 #endif // _WIN32
@@ -59,10 +53,13 @@
 #if defined(_MSC_VER)
 #define HAVE_LEVELDB_BLOOM
 #define strtoll _strtoi64
-#define snprintf _snprintf
 #define snwprintf _snwprintf
 #else
 #define snwprintf snprintf
+#endif
+
+#if defined(_MSC_VER) && (_MSC_VER < 1900)
+#define snprintf _snprintf
 #endif
 
 #else

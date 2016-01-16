@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -233,6 +233,9 @@ public:
 
 	static void sanitizeUrl(string& url);
 	static void decodeUrl(const string& aUrl, string& protocol, string& host, string& port, string& path, string& query, string& fragment);
+
+	// Used to parse NMDC-style ip:port combination
+	static void parseIpPort(const string& aIpPort, string& ip, string& port);
 	static map<string, string> decodeQuery(const string& query);
 
 	static bool isPathValid(const string& sPath);
@@ -244,6 +247,7 @@ public:
 		return path; 
 	}
 	static inline string validateFileName(const string& aFileName) { return cleanPathChars(aFileName, true); }
+	static string cleanPathSeparators(const string& str);
 	static bool checkExtension(const string& tmp);
 
 	static string addBrackets(const string& s);
@@ -580,10 +584,10 @@ public:
 	static uint32_t rand(uint32_t low, uint32_t high) { return rand(high-low) + low; }
 	static double randd() { return ((double)rand()) / ((double)0xffffffff); }
 
-	static bool hasParam(const string& aParam);
-	static string getParams(bool isFirst);
-	static void addParam(const string& aParam);
-	static optional<string> getParam(const string& aKey);
+	static bool hasStartupParam(const string& aParam);
+	static string getStartupParams(bool isFirst);
+	static void addStartupParam(const string& aParam);
+	static optional<string> getStartupParam(const string& aKey);
 
 	static bool usingLocalMode() { return localMode; }
 	static bool wasUncleanShutdown;
@@ -595,7 +599,7 @@ private:
 
 	static string paths[PATH_LAST];
 
-	static StringList params;
+	static StringList startupParams;
 
 	static time_t startTime;
 	

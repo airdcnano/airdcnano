@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -44,8 +44,8 @@ public:
 	template<typename... ArgT>
 	void fire(ArgT&&... args) noexcept {
 		Lock l(listenerCS);
-		tmp = listeners;
-		for(auto listener: tmp) {
+		tmpListeners = listeners;
+		for(auto listener: tmpListeners) {
 			listener->on(forward<ArgT>(args)...);
 		}
 	}
@@ -70,7 +70,7 @@ public:
 	
 protected:
 	ListenerList listeners;
-	ListenerList tmp;
+	ListenerList tmpListeners;
 	CriticalSection listenerCS;
 };
 

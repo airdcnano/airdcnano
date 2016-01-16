@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -177,7 +177,8 @@ public:
 	virtual bool isSecure() const noexcept { return false; }
 	virtual bool isTrusted() const noexcept { return false; }
 	virtual std::string getCipherName() const noexcept { return Util::emptyString; }
-	virtual vector<uint8_t> getKeyprint() const noexcept { return vector<uint8_t>(); }
+	virtual ByteVector getKeyprint() const noexcept{ return ByteVector(); }
+	virtual bool verifyKeyprint(const string&, bool) noexcept{ return true; };
 
 	/** When socks settings are updated, this has to be called... */
 	static void socksUpdated();

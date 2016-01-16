@@ -24,6 +24,7 @@
 #include <iostream>
 #include <cxxabi.h> // __cxxabiv1::__cxa_demangle
 #if USE_STACKTRACE
+#include <unistd.h>
 #include <execinfo.h> // backtrace_symbols
 #endif
 
@@ -63,7 +64,7 @@ void StackTrace::generate_frames()
 StackFrame StackTrace::parse_line(const std::string &line)
 {
 #if USE_STACKTRACE
-    std::string object;
+  std::string object;
     std::string function;
     std::string address;
     std::string file;
@@ -116,11 +117,30 @@ StackFrame StackTrace::parse_line(const std::string &line)
 }
 
 #if USE_ADDR2LINE
+
+std::string StackTrace::get_exe_path() {
+    char buff[1024];
+    ssize_t len = readlink("/proc/self/exe", buff, sizeof(buff)-1);
+    if (len != -1) {
+      buff[len] = '\0';
+      return std::string(buff);
+    }
+
+    return "";
+}
+
+
 void StackTrace::run_addr2line(const std::string &object, const std::string &address,
                                         std::string &function, std::string &file, int &linenum)
 {
-    std::string command = "addr2line -C -f -e " + object + " " + address + " 2>/dev/null";
+   auto cmdObject = object;
 
+   // get full path if we are reading from the client binary
+   if (get_exe_path().find(object) != std::string::npos) {
+	cmdObject = get_exe_path();
+   }
+
+   std::string command = "addr2line -C -f -e " + cmdObject + " " + address + " 2>/dev/null";
     std::string output;
     FILE *fd = popen(command.c_str(), "r");
     if(fd) {

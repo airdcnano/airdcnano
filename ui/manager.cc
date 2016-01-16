@@ -36,6 +36,7 @@
 #include <ui/window_favorites.h>
 #include <ui/window_transfers.h>
 #include <ui/window_log.h>
+#include <ui/window_privatemessage.h>
 #include <ui/window_publichubs.h>
 #include <ui/window_search.h>
 #include <ui/window_sharebrowser.h>
@@ -100,6 +101,7 @@ void Manager::create_windows()
 	ClientManager::getInstance()->addListener(this);
 	DirectoryListingManager::getInstance()->addListener(this);
 	TimerManager::getInstance()->addListener(this);
+    MessageManager::getInstance()->addListener(this);
 
 	try {
 		ConnectivityManager::getInstance()->setup(true, true);
@@ -108,7 +110,7 @@ void Manager::create_windows()
 	}
 
 	UpdateManager::getInstance()->checkVersion(false);
-	if (!Util::hasParam("-no-autoconnect"))
+	if (!Util::hasStartupParam("-no-autoconnect"))
 		FavoriteManager::getInstance()->autoConnect();
 
 	//core::Log::get()->log("Client loaded");
@@ -129,6 +131,7 @@ Manager::~Manager() {
 	ClientManager::getInstance()->removeListener(this);
 	DirectoryListingManager::getInstance()->removeListener(this);
 	TimerManager::getInstance()->removeListener(this);
+    MessageManager::getInstance()->removeListener(this);
 }
 
 void Manager::on(ClientManagerListener::ClientCreated, Client* c) noexcept {
@@ -145,14 +148,16 @@ void Manager::on(ClientManagerListener::ClientCreated, Client* c) noexcept {
 }
 
 void Manager::on(DirectoryListingManagerListener::OpenListing, DirectoryListing* aList, const std::string& aDir, const std::string& aXML) noexcept{
-	auto mger = display::Manager::get();
-	auto it = mger->find(display::TYPE_LISTBROWSER, aList->getUser()->getCID().toBase32());
-	if (it == mger->end()) {
-		auto dl = new ui::WindowShareBrowser(aList, aDir, aXML);
-		mger->push_back(dl);
-	}
+    callAsync([=] {
+        auto mger = display::Manager::get();
+	    auto it = mger->find(display::TYPE_LISTBROWSER, aList->getUser()->getCID().toBase32());
+	    if (it == mger->end()) {
+		    auto dl = new ui::WindowShareBrowser(aList, aDir, aXML);
+		    mger->push_back(dl);
+	    }
 
-	mger->set_current(it);
+	    mger->set_current(it);
+    });
 }
 
 void Manager::on(TimerManagerListener::Second, uint64_t aTick) noexcept{
@@ -173,6 +178,10 @@ void Manager::on(TimerManagerListener::Second, uint64_t aTick) noexcept{
 	lastUpdate = aTick;
 	lastUp = totalUp;
 	lastDown = totalDown;
+}
+
+void Manager::on(MessageManagerListener::PrivateMessage, const ChatMessage& aMessage) noexcept{
+    callAsync([=] { WindowPrivateMessage::onPrivateMessage(aMessage); });
 }
 
 } // namespace ui

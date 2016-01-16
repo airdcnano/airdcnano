@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2011-2014 AirDC++ Project
+* Copyright (C) 2011-2015 AirDC++ Project
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -152,7 +152,7 @@ public:
 	bool usingIncrementation() const noexcept;
 	string formatParams(bool formatMatcher) const noexcept;
 	void setUserMatcher(const string& aPattern) noexcept { userMatcher.pattern = aPattern; }
-	void prepareUserMatcher() { userMatcher.prepare(); }
+	void prepareUserMatcher() { userMatcher.setMethod(StringMatch::WILDCARD);  userMatcher.prepare(); }
 	const string& getTarget() { return target; }
 	void setTarget(const string& aTarget) noexcept;
 	bool removePostSearch() noexcept;

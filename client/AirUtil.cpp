@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 AirDC++ Project
+ * Copyright (C) 2011-2015 AirDC++ Project
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -212,27 +212,25 @@ void AirUtil::getIpAddresses(IpList& addresses, bool v6) {
 			if ((i->ifa_flags & IFF_UP) && !(i->ifa_flags & IFF_LOOPBACK) && sa != NULL) {
 				void* src = nullptr;
 				socklen_t len;
-				uint32_t scope = 0;
 
 				if (!v6 && sa->sa_family == AF_INET) {
 					// IPv4 address
 					struct sockaddr_in* sai = (struct sockaddr_in*)sa;
 					src = (void*) &(sai->sin_addr);
 					len = INET_ADDRSTRLEN;
-					scope = 4;
 				} else if (v6 && sa->sa_family == AF_INET6) {
 					// IPv6 address
 					struct sockaddr_in6* sai6 = (struct sockaddr_in6*)sa;
 					src = (void*) &(sai6->sin6_addr);
 					len = INET6_ADDRSTRLEN;
-					scope = sai6->sin6_scope_id;
 				}
 
 				// Convert the binary address to a string and add it to the output list
 				if (src) {
 					char address[len];
 					inet_ntop(sa->sa_family, src, address, len);
-					addresses.emplace_back("Unknown", (string)address, (uint8_t)scope);
+					// TODO: get the prefix
+					addresses.emplace_back("Unknown", (string)address, 0);
 				}
 			}
 		}
@@ -760,7 +758,6 @@ pair<string, string::size_type> AirUtil::getDirName(const string& aPath, char se
 			break;
 		}
 
-		//auto remoteDir = dir.substr(j + 1, i - j);
 		if (!boost::regex_match(aPath.substr(j + 1, i - j), subDirRegPlain)) {
 			j++;
 			break;
@@ -770,8 +767,7 @@ pair<string, string::size_type> AirUtil::getDirName(const string& aPath, char se
 		i = j - 1;
 	}
 
-	//return { aPath.substr(j, i - j + 1), isSub };
-	return make_pair(aPath.substr(j, i - j + 1), isSub ? i + 2 : string::npos);
+	return { aPath.substr(j, i - j + 1), isSub ? i + 2 : string::npos };
 }
 
 string AirUtil::getTitle(const string& searchTerm) {

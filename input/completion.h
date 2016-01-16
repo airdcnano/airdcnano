@@ -38,9 +38,9 @@ class Comparator {
 	/* Case insensitive string comparison classes */
 public:
 	Comparator(const string& compareTo) : a(compareTo) {}
-	bool operator()(const string& p);
+	bool operator()(const string& p) const;
 protected:
-	Comparator& operator=(const Comparator&);
+	Comparator& operator=(const Comparator&) const;
 	const string a;
 };
 
@@ -49,7 +49,7 @@ public:
 	string stripNick(const string& nick) const;
 
 	PrefixComparator(const string& compareTo);
-	bool operator()(const string& p);
+	bool operator()(const string& p) const;
 };
 
 class Completion {

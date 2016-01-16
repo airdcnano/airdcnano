@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2001-2014 Jacek Sieka, arnetheduck on gmail point com
+ * Copyright (C) 2001-2015 Jacek Sieka, arnetheduck on gmail point com
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,9 +75,9 @@ private:
 	size_t getBlockSize(size_t alignment);
 	void* align(void* buf, size_t alignment);
 
-	size_t readDirect(const string& file, const DataCallback& callback);
-	size_t readMapped(const string& file, const DataCallback& callback);
-	size_t readCached(const string& file, const DataCallback& callback);
+	size_t readDirect(const string& aFile, const DataCallback& callback);
+	size_t readMapped(const string& aFile, const DataCallback& callback);
+	size_t readCached(const string& aFile, const DataCallback& callback);
 };
 
 }

@@ -1,5 +1,5 @@
 ## THIS PROJECT ISN'T MAINTAINED ANYMORE
-### Use [AirDC++ Web Client](https://github.com/airdcpp-web/airdcpp-webclient) instead
+### Use [AirDC++ Web Client](https://github.com/airdcpp-web/airdcpp-webclient) instead (it will use your old settings automatically)
 
 AirDC++ nano is a high-performance text-mode client for sharing, downloading and chatting, which can be run on Linux servers. It allows you to exchange files with friends and other people, for example, in the following scenarios:
 
